@@ -23,10 +23,11 @@ THIN_BORDER = Border(
 )
 
 
-def export_to_excel(results: list[dict], output_dir: str = "outputs") -> str:
+def export_to_excel(results: list[dict], store_name: str = "", output_dir: str = "outputs") -> str:
     os.makedirs(output_dir, exist_ok=True)
     date_str = datetime.now().strftime("%Y-%m-%d_%H%M")
-    filename = os.path.join(output_dir, f"dias_stock_{date_str}.xlsx")
+    slug = store_name.lower().replace(" ", "_") + "_" if store_name else ""
+    filename = os.path.join(output_dir, f"dias_stock_{slug}{date_str}.xlsx")
 
     wb = Workbook()
     ws = wb.active

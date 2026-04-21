@@ -1,35 +1,30 @@
-import os
 import time
 from playwright.sync_api import sync_playwright
+from src.config import Store
 
 BOXFUL_URL = "https://app.goboxful.com"
 PRODUCTS_URL = f"{BOXFUL_URL}/fulfillment-products"
-TIMEOUT = 60000  # 60 segundos
+TIMEOUT = 60000
 
 
-def scrape_inventory() -> list[dict]:
-    email = os.environ["BOXFUL_EMAIL"]
-    password = os.environ["BOXFUL_PASSWORD"]
-
+def scrape_inventory(store: Store) -> list[dict]:
     products = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # visible para debug
+        browser = p.chromium.launch(headless=False)
         context = browser.new_context()
         page = context.new_page()
         page.set_default_timeout(TIMEOUT)
 
-        # Login
         print("  Abriendo Boxful...")
         page.goto(f"{BOXFUL_URL}/login", wait_until="domcontentloaded")
         time.sleep(3)
 
         print("  Ingresando credenciales...")
-        page.fill('input[type="email"]', email)
-        page.fill('input[type="password"]', password)
+        page.fill('input[type="email"]', store.boxful_email)
+        page.fill('input[type="password"]', store.boxful_password)
         page.click('button[type="submit"]')
 
-        # Esperar que la URL cambie (login exitoso)
         page.wait_for_url(lambda url: "/login" not in url, timeout=TIMEOUT)
         time.sleep(3)
 
@@ -44,7 +39,6 @@ def scrape_inventory() -> list[dict]:
             products.extend(rows)
             print(f"    → {len(rows)} productos en esta página")
 
-            # Ant Design pagination: verificar si el li.ant-pagination-next tiene clase disabled
             is_last_page = page.evaluate("""
                 () => {
                     const nextLi = document.querySelector('.ant-pagination-next');
@@ -97,15 +91,9 @@ def _extract_page_rows(page) -> list[dict]:
 
                 price = cells[3].inner_text().strip() if len(cells) >= 4 else ""
 
-                if name and name != "Nombre":  # saltar header si aparece como fila
-                    rows.append({
-                        "name": name,
-                        "sku": sku,
-                        "stock": stock,
-                        "price": price,
-                    })
+                if name and name != "Nombre":
+                    rows.append({"name": name, "sku": sku, "stock": stock, "price": price})
     else:
-        # Fallback JS
         rows = page.evaluate("""
             () => {
                 const results = [];
