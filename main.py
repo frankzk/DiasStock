@@ -7,7 +7,6 @@ from src.boxful_scraper import scrape_inventory
 from src.shopify_client import get_sales_last_7_days
 from src.calculator import calculate_days_of_stock
 from src.excel_exporter import export_to_excel
-from src.supabase_client import save_snapshot
 
 
 def run(skip_supabase: bool = False):
@@ -28,6 +27,7 @@ def run(skip_supabase: bool = False):
     if not skip_supabase:
         print(f"\n[+]   Guardando snapshot en Supabase...")
         try:
+            from src.supabase_client import save_snapshot
             save_snapshot(results)
         except Exception as e:
             print(f"  Supabase omitido: {e}")
