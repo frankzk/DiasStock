@@ -24,9 +24,9 @@ def save_snapshot(results: list[dict]) -> None:
             "sku": r["SKU"],
             "stock": r["Stock Actual"],
             "units_sold_7d": r["Ventas 7d"],
-            "daily_avg": r["Ventas/día (avg)"],
-            "days_of_stock": r["Días de Stock"],
-            "status": r["Estado"],
+            "daily_avg": r["Ventas/dia (avg)"],
+            "days_of_stock": r["Dias de Stock"],
+            "status": r["Estado de Inventario"],
         }
         for r in results
     ]

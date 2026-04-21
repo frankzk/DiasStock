@@ -1,7 +1,4 @@
 def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
-    """
-    Merges inventory and sales, calculates days of stock per product.
-    """
     results = []
 
     for product in inventory:
@@ -9,7 +6,6 @@ def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
         name = product.get("name", "")
         stock = product.get("stock", 0)
 
-        # Buscar ventas por SKU o por nombre como fallback
         sale_data = sales.get(sku) or sales.get(name) or {}
         units_sold_7d = sale_data.get("units_sold_7d", 0)
 
@@ -18,24 +14,25 @@ def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
         if daily_avg > 0:
             days_of_stock = round(stock / daily_avg, 1)
         else:
-            days_of_stock = None  # Sin ventas → no calculable
+            days_of_stock = None
 
         status = _stock_status(days_of_stock)
+        accion = _accion(status)
 
         results.append({
             "Producto": name,
             "SKU": sku,
             "Stock Actual": stock,
             "Ventas 7d": units_sold_7d,
-            "Ventas/día (avg)": round(daily_avg, 2),
-            "Días de Stock": days_of_stock,
-            "Estado": status,
+            "Ventas/dia (avg)": round(daily_avg, 2),
+            "Dias de Stock": days_of_stock,
+            "Estado de Inventario": status,
+            "Accion": accion,
         })
 
-    # Ordenar: primero los críticos, luego por días de stock asc
     results.sort(key=lambda r: (
-        r["Días de Stock"] is None,
-        r["Días de Stock"] if r["Días de Stock"] is not None else 9999
+        r["Dias de Stock"] is None,
+        r["Dias de Stock"] if r["Dias de Stock"] is not None else 9999
     ))
 
     return results
@@ -51,3 +48,13 @@ def _stock_status(days: float | None) -> str:
     if days <= 30:
         return "OK"
     return "ALTO"
+
+
+def _accion(status: str) -> str:
+    return {
+        "CRITICO":    "Reordenar urgente",
+        "BAJO":       "Reordenar pronto",
+        "OK":         "Monitorear",
+        "ALTO":       "Stock suficiente",
+        "Sin ventas": "Sin movimiento",
+    }.get(status, "")
