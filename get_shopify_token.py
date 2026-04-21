@@ -82,12 +82,12 @@ def _make_handler(client_id, client_secret, shop):
                         self.send_response(200)
                         self.send_header("Content-type", "text/html")
                         self.end_headers()
-                        self.wfile.write(b"""
-                            <html><body style="font-family:sans-serif;padding:40px">
-                            <h2>Token obtenido exitosamente</h2>
-                            <p>Cerrá esta ventana y volvé a la terminal.</p>
-                            </body></html>
-                        """)
+                        self.wfile.write(
+                            b"<html><body style='font-family:sans-serif;padding:40px'>"
+                            b"<h2>Token obtenido!</h2>"
+                            b"<p>Podes cerrar esta ventana y volver a la terminal.</p>"
+                            b"</body></html>"
+                        )
                         threading.Thread(target=self.server.shutdown, daemon=True).start()
                         return
                 self.send_response(400)
