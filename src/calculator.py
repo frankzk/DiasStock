@@ -68,7 +68,7 @@ def _estado_venta(daily_avg: float, max_daily: float) -> str:
 
 
 def _alerta(status: str, venta: str) -> str:
-    if status == "CRITICO" and venta == "ALTA":
+    if status == "CRITICO" and venta in ("ALTA", "MEDIA"):
         return "Reordenar urgente"
     if status == "BAJO" and venta == "ALTA":
         return "Reordenar pronto"
