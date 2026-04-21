@@ -44,18 +44,48 @@ def scrape_inventory() -> list[dict]:
             products.extend(rows)
             print(f"    → {len(rows)} productos en esta página")
 
-            # Buscar botón siguiente
-            next_btn = page.query_selector(
-                'button[aria-label="Next page"], '
-                'button[aria-label="Siguiente"], '
-                'li.next:not(.disabled) a, '
-                '.pagination button:last-child:not([disabled])'
-            )
+            # Debug: mostrar HTML de paginación para ajustar selector
+            pagination_html = page.evaluate("""
+                () => {
+                    const el = document.querySelector(
+                        '.pagination, [class*="pagination"], [class*="Pagination"], nav'
+                    );
+                    return el ? el.outerHTML.substring(0, 800) : 'NO PAGINATION FOUND';
+                }
+            """)
+            print(f"    [pagination HTML]: {pagination_html[:300]}")
+
+            # Buscar botón siguiente con múltiples selectores
+            NEXT_SELECTORS = [
+                'button[aria-label="Next page"]',
+                'button[aria-label="Siguiente"]',
+                'button[aria-label="next"]',
+                'li.next:not(.disabled) a',
+                '.pagination button:last-child:not([disabled])',
+                'nav button:last-child:not([disabled])',
+                '[class*="pagination"] button:last-child',
+                'button:has-text("›")',
+                'button:has-text("»")',
+                'button:has-text("Siguiente")',
+            ]
+
+            next_btn = None
+            for sel in NEXT_SELECTORS:
+                try:
+                    el = page.query_selector(sel)
+                    if el:
+                        print(f"    [next btn encontrado con]: {sel}")
+                        next_btn = el
+                        break
+                except Exception:
+                    continue
 
             if not next_btn:
+                print("    No se encontró botón siguiente — fin de paginación")
                 break
             try:
                 if next_btn.is_disabled():
+                    print("    Botón siguiente deshabilitado — fin de paginación")
                     break
             except Exception:
                 break
