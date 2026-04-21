@@ -44,50 +44,22 @@ def scrape_inventory() -> list[dict]:
             products.extend(rows)
             print(f"    → {len(rows)} productos en esta página")
 
-            # Debug: mostrar HTML de paginación para ajustar selector
-            pagination_html = page.evaluate("""
+            # Ant Design pagination: verificar si el li.ant-pagination-next tiene clase disabled
+            is_last_page = page.evaluate("""
                 () => {
-                    const el = document.querySelector(
-                        '.pagination, [class*="pagination"], [class*="Pagination"], nav'
-                    );
-                    return el ? el.outerHTML.substring(0, 800) : 'NO PAGINATION FOUND';
+                    const nextLi = document.querySelector('.ant-pagination-next');
+                    if (!nextLi) return true;
+                    return nextLi.classList.contains('ant-pagination-disabled');
                 }
             """)
-            print(f"    [pagination HTML]: {pagination_html[:300]}")
 
-            # Buscar botón siguiente con múltiples selectores
-            NEXT_SELECTORS = [
-                'button[aria-label="Next page"]',
-                'button[aria-label="Siguiente"]',
-                'button[aria-label="next"]',
-                'li.next:not(.disabled) a',
-                '.pagination button:last-child:not([disabled])',
-                'nav button:last-child:not([disabled])',
-                '[class*="pagination"] button:last-child',
-                'button:has-text("›")',
-                'button:has-text("»")',
-                'button:has-text("Siguiente")',
-            ]
-
-            next_btn = None
-            for sel in NEXT_SELECTORS:
-                try:
-                    el = page.query_selector(sel)
-                    if el:
-                        print(f"    [next btn encontrado con]: {sel}")
-                        next_btn = el
-                        break
-                except Exception:
-                    continue
-
-            if not next_btn:
-                print("    No se encontró botón siguiente — fin de paginación")
+            if is_last_page:
+                print("    Última página alcanzada.")
                 break
-            try:
-                if next_btn.is_disabled():
-                    print("    Botón siguiente deshabilitado — fin de paginación")
-                    break
-            except Exception:
+
+            next_btn = page.query_selector('.ant-pagination-next button')
+            if not next_btn:
+                print("    No se encontró botón siguiente.")
                 break
 
             next_btn.click()
