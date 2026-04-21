@@ -1,5 +1,4 @@
 playwright==1.44.0
-shopify==12.6.0
 supabase==2.4.2
 openpyxl==3.1.2
 python-dotenv==1.0.1
