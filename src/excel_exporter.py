@@ -85,8 +85,13 @@ def _build_detail_sheet(wb, results, store_name):
             if col_name == "Estado de Inventario":
                 cell.font = Font(bold=True, color=badge_color)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
-            elif col_name == "Analisis":
-                cell.font = Font(italic=True, color="333333")
+            elif col_name == "Estado de Venta":
+                venta_colors = {"ALTA": "007700", "MEDIA": "886600", "BAJA": "AA3300", "SIN VENTAS": "888888"}
+                cell.font = Font(bold=True, color=venta_colors.get(value, "333333"))
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            elif col_name == "Alerta" and value:
+                cell.font = Font(bold=True, color="CC0000")
+                cell.alignment = Alignment(horizontal="center", vertical="center")
 
     for col_idx, col_name in enumerate(columns, start=1):
         max_len = len(col_name)
@@ -157,14 +162,21 @@ def _build_summary_sheet(wb, results):
         ws.cell(row=11, column=2, value="Dias de Stock").font = Font(bold=True, color="FFFFFF")
         ws.cell(row=11, column=2).fill = PatternFill("solid", fgColor="FF4444")
         ws.cell(row=11, column=2).border = THIN_BORDER
-        ws.cell(row=11, column=3, value="Analisis").font = Font(bold=True, color="FFFFFF")
+        ws.cell(row=11, column=3, value="Estado de Venta").font = Font(bold=True, color="FFFFFF")
         ws.cell(row=11, column=3).fill = PatternFill("solid", fgColor="FF4444")
         ws.cell(row=11, column=3).border = THIN_BORDER
+        ws.cell(row=11, column=4, value="Alerta").font = Font(bold=True, color="FFFFFF")
+        ws.cell(row=11, column=4).fill = PatternFill("solid", fgColor="FF4444")
+        ws.cell(row=11, column=4).border = THIN_BORDER
 
         for i, r in enumerate(criticos, start=12):
             ws.cell(row=i, column=1, value=r["Producto"]).border = THIN_BORDER
             ws.cell(row=i, column=2, value=r["Dias de Stock"]).border = THIN_BORDER
             ws.cell(row=i, column=2).alignment = Alignment(horizontal="center")
-            ws.cell(row=i, column=3, value=r["Analisis"]).border = THIN_BORDER
+            ws.cell(row=i, column=3, value=r["Estado de Venta"]).border = THIN_BORDER
+            ws.cell(row=i, column=3).alignment = Alignment(horizontal="center")
+            ws.cell(row=i, column=4, value=r["Alerta"]).border = THIN_BORDER
+            for col in [1, 2, 3, 4]:
+                ws.cell(row=i, column=col).fill = PatternFill("solid", fgColor="FFECEC")
             for col in [1, 2, 3]:
                 ws.cell(row=i, column=col).fill = PatternFill("solid", fgColor="FFECEC")

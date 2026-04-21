@@ -21,7 +21,8 @@ def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
             "Ventas/dia (avg)": round(daily_avg, 2),
             "Dias de Stock": days_of_stock,
             "Estado de Inventario": status,
-            "Analisis": "",  # se rellena abajo con el contexto del max
+            "Estado de Venta": "",  # se rellena abajo
+            "Alerta": "",           # se rellena abajo
         })
 
     # Calcular max ventas diarias para referencia relativa (excluir sin ventas)
@@ -31,7 +32,9 @@ def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
     )
 
     for r in results:
-        r["Analisis"] = _analisis(r["Estado de Inventario"], r["Ventas/dia (avg)"], max_daily)
+        venta = _estado_venta(r["Ventas/dia (avg)"], max_daily)
+        r["Estado de Venta"] = venta
+        r["Alerta"] = _alerta(r["Estado de Inventario"], venta)
 
     results.sort(key=lambda r: (
         r["Dias de Stock"] is None,
@@ -53,25 +56,24 @@ def _stock_status(days: float | None) -> str:
     return "ALTO"
 
 
-def _analisis(status: str, daily_avg: float, max_daily: float) -> str:
-    if status == "Sin ventas":
-        return "Sin movimiento"
-
-    # Nivel de ventas relativo al top seller de la tienda
+def _estado_venta(daily_avg: float, max_daily: float) -> str:
+    if daily_avg == 0:
+        return "SIN VENTAS"
     ratio = daily_avg / max_daily if max_daily > 0 else 0
     if ratio >= 0.40:
-        ventas = "Ventas Altas"
-    elif ratio >= 0.10:
-        ventas = "Ventas Medias"
-    else:
-        ventas = "Pocas Ventas"
+        return "ALTA"
+    if ratio >= 0.10:
+        return "MEDIA"
+    return "BAJA"
 
-    # Nivel de stock
-    stock_label = {
-        "CRITICO": "Stock Critico",
-        "BAJO":    "Poco Stock",
-        "OK":      "Stock Normal",
-        "ALTO":    "Bastante Stock",
-    }.get(status, "")
 
-    return f"{stock_label}, {ventas}"
+def _alerta(status: str, venta: str) -> str:
+    if status == "CRITICO" and venta == "ALTA":
+        return "Reordenar urgente"
+    if status == "BAJO" and venta == "ALTA":
+        return "Reordenar pronto"
+    if status == "OK" and venta == "ALTA":
+        return "Vigilar stock"
+    if status == "ALTO" and venta == "BAJA":
+        return "Riesgo sobrestock"
+    return ""
