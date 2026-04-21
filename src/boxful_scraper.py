@@ -4,6 +4,7 @@ from playwright.sync_api import sync_playwright
 
 BOXFUL_URL = "https://app.goboxful.com"
 PRODUCTS_URL = f"{BOXFUL_URL}/fulfillment-products"
+TIMEOUT = 60000  # 60 segundos
 
 
 def scrape_inventory() -> list[dict]:
@@ -13,38 +14,54 @@ def scrape_inventory() -> list[dict]:
     products = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)  # visible para debug
         context = browser.new_context()
         page = context.new_page()
+        page.set_default_timeout(TIMEOUT)
 
         # Login
         print("  Abriendo Boxful...")
-        page.goto(f"{BOXFUL_URL}/login")
-        page.wait_for_load_state("networkidle")
+        page.goto(f"{BOXFUL_URL}/login", wait_until="domcontentloaded")
+        time.sleep(3)
 
-        page.fill('input[type="email"], input[name="email"]', email)
-        page.fill('input[type="password"], input[name="password"]', password)
+        print("  Ingresando credenciales...")
+        page.fill('input[type="email"]', email)
+        page.fill('input[type="password"]', password)
         page.click('button[type="submit"]')
-        page.wait_for_load_state("networkidle")
+
+        # Esperar que la URL cambie (login exitoso)
+        page.wait_for_url(lambda url: "/login" not in url, timeout=TIMEOUT)
+        time.sleep(3)
 
         print("  Login exitoso, navegando a productos...")
-        page.goto(PRODUCTS_URL)
-        page.wait_for_load_state("networkidle")
-        time.sleep(2)
+        page.goto(PRODUCTS_URL, wait_until="domcontentloaded")
+        time.sleep(4)
 
         page_num = 1
         while True:
             print(f"  Extrayendo página {page_num}...")
             rows = _extract_page_rows(page)
             products.extend(rows)
+            print(f"    → {len(rows)} productos en esta página")
 
-            next_btn = page.query_selector('button[aria-label="Next page"], .pagination-next:not([disabled])')
-            if not next_btn or next_btn.is_disabled():
+            # Buscar botón siguiente
+            next_btn = page.query_selector(
+                'button[aria-label="Next page"], '
+                'button[aria-label="Siguiente"], '
+                'li.next:not(.disabled) a, '
+                '.pagination button:last-child:not([disabled])'
+            )
+
+            if not next_btn:
+                break
+            try:
+                if next_btn.is_disabled():
+                    break
+            except Exception:
                 break
 
             next_btn.click()
-            page.wait_for_load_state("networkidle")
-            time.sleep(1)
+            time.sleep(3)
             page_num += 1
 
         browser.close()
@@ -56,10 +73,11 @@ def scrape_inventory() -> list[dict]:
 def _extract_page_rows(page) -> list[dict]:
     rows = []
 
-    # Esperar que la tabla cargue
-    page.wait_for_selector("table tbody tr, [data-testid='product-row']", timeout=10000)
+    try:
+        page.wait_for_selector("table tbody tr", timeout=15000)
+    except Exception:
+        print("    Advertencia: no se encontró tabla estándar, intentando fallback...")
 
-    # Intentar extraer filas de tabla estándar
     tr_elements = page.query_selector_all("table tbody tr")
 
     if tr_elements:
@@ -70,18 +88,14 @@ def _extract_page_rows(page) -> list[dict]:
                 sku = cells[1].inner_text().strip()
                 stock_text = cells[2].inner_text().strip()
 
-                # Limpiar stock (puede venir como "0" o con formato)
                 try:
                     stock = int(stock_text.replace(",", "").replace(".", ""))
                 except ValueError:
                     stock = 0
 
-                # Precio si existe
-                price = ""
-                if len(cells) >= 4:
-                    price = cells[3].inner_text().strip()
+                price = cells[3].inner_text().strip() if len(cells) >= 4 else ""
 
-                if name:
+                if name and name != "Nombre":  # saltar header si aparece como fila
                     rows.append({
                         "name": name,
                         "sku": sku,
@@ -89,16 +103,15 @@ def _extract_page_rows(page) -> list[dict]:
                         "price": price,
                     })
     else:
-        # Fallback: extraer via JavaScript si la estructura es distinta
+        # Fallback JS
         rows = page.evaluate("""
             () => {
                 const results = [];
-                const rows = document.querySelectorAll('tr, [class*="row"]');
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll('td, [class*="cell"]');
+                document.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
                     if (cells.length >= 3) {
                         const name = cells[0]?.innerText?.trim();
-                        const sku = cells[1]?.innerText?.trim();
+                        const sku  = cells[1]?.innerText?.trim();
                         const stock = parseInt(cells[2]?.innerText?.trim()) || 0;
                         const price = cells[3]?.innerText?.trim() || '';
                         if (name) results.push({ name, sku, stock, price });
