@@ -41,6 +41,8 @@ def load_stores() -> list[Store]:
                 name=_get(key, "NAME", default=key),
                 store_type="google_sheets",
                 csv_path=_get(key, "CSV_PATH"),
+                shopify_url=_get(key, "SHOPIFY_URL", default=""),
+                shopify_token=_get(key, "SHOPIFY_TOKEN", default=""),
             )
         else:
             store = Store(

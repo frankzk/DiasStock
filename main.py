@@ -15,8 +15,15 @@ def run_store(store: Store, skip_supabase: bool = False):
 
     if store.store_type == "google_sheets":
         from src.sheets_client import get_sheets_inventory_and_sales
-        print("[1/4] Leyendo inventario y ventas desde CSV (Google Sheets)...")
-        inventory, sales = get_sheets_inventory_and_sales(store)
+        print("[1/4] Leyendo inventario desde CSV (Google Sheets)...")
+        inventory, sales_csv = get_sheets_inventory_and_sales(store)
+
+        if store.shopify_token:
+            print(f"\n[2/4] Descargando ventas de Shopify (últimos 7 días)...")
+            sales = get_sales_last_7_days(store)
+        else:
+            print(f"\n[2/4] Usando ventas del CSV (columna 'Ultimos 7d')...")
+            sales = sales_csv
     else:
         print("[1/4] Extrayendo inventario de Boxful...")
         inventory = scrape_inventory(store)
