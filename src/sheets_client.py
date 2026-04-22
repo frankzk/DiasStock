@@ -25,16 +25,21 @@ def get_sheets_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
     date_row = [h.strip() for h in rows[header_idx - 1]] if header_idx > 0 else []
     stock_col = _last_date_col(date_row)
     sales_col = _find_col(headers, ["ultimos 7d", "últimos 7d", "ultimos7d"])
+    sku_col   = _find_col(headers, ["sku shopify", "shopify sku", "sku"])
 
     if stock_col is None:
         raise ValueError(
             f"No se encontró ninguna columna de fecha (ej: '21-abr.') en '{store.csv_path}'."
         )
 
-    stock_date = headers[stock_col]
+    stock_date = date_row[stock_col] if stock_col < len(date_row) else "?"
     print(f"  Columna de stock usada: '{stock_date}' (col {stock_col})")
+    if sku_col is not None:
+        print(f"  Columna SKU Shopify   : '{headers[sku_col]}' (col {sku_col})")
+    else:
+        print("  Columna 'SKU Shopify' no encontrada — se usará el nombre como SKU")
     if sales_col is not None:
-        print(f"  Columna de ventas 7d : '{headers[sales_col]}' (col {sales_col})")
+        print(f"  Columna de ventas 7d  : '{headers[sales_col]}' (col {sales_col})")
     else:
         print("  Columna 'Ultimos 7d' no encontrada — ventas se asumirán en 0")
 
@@ -48,12 +53,15 @@ def get_sheets_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
         if not name:
             continue
 
+        shopify_sku = row[sku_col].strip() if sku_col is not None and sku_col < len(row) else ""
+        sku = shopify_sku if shopify_sku else name
+
         stock = _int_val(row, stock_col)
         units_7d = _int_val(row, sales_col) if sales_col is not None else 0
 
-        inventory.append({"sku": name, "name": name, "stock": stock})
+        inventory.append({"sku": sku, "name": name, "stock": stock})
         if units_7d > 0:
-            sales[name] = {"sku": name, "name": name, "units_sold_7d": units_7d}
+            sales[sku] = {"sku": sku, "name": name, "units_sold_7d": units_7d}
 
     print(f"  Productos leídos del CSV: {len(inventory)}")
     return inventory, sales
