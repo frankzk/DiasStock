@@ -8,10 +8,17 @@ def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
 
         sale_data = sales.get(sku) or sales.get(name) or {}
         units_sold_7d = sale_data.get("units_sold_7d", 0)
-        daily_avg = units_sold_7d / 7 if units_sold_7d > 0 else 0
-
-        days_of_stock = round(stock / daily_avg, 1) if daily_avg > 0 else None
-        status = _stock_status(days_of_stock)
+        if daily_avg > 0:
+            days_of_stock = round(stock / daily_avg, 1)
+            status = _stock_status(days_of_stock)
+        elif stock > 0:
+            # Tiene stock pero sin ventas en 7 días → sobrestock potencial
+            days_of_stock = None
+            status = "ALTO"
+        else:
+            # Sin stock y sin ventas
+            days_of_stock = None
+            status = "Sin ventas"
 
         results.append({
             "Producto": name,
@@ -74,6 +81,6 @@ def _alerta(status: str, venta: str) -> str:
         return "Reordenar pronto"
     if status == "OK" and venta == "ALTA":
         return "Vigilar stock"
-    if status == "ALTO" and venta == "BAJA":
+    if status == "ALTO" and venta in ("BAJA", "SIN VENTAS"):
         return "Riesgo sobrestock"
     return ""
