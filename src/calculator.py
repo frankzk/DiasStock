@@ -8,6 +8,7 @@ def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
 
         sale_data = sales.get(sku) or sales.get(name) or {}
         units_sold_7d = sale_data.get("units_sold_7d", 0)
+        daily_avg = units_sold_7d / 7
         if daily_avg > 0:
             days_of_stock = round(stock / daily_avg, 1)
             status = _stock_status(days_of_stock)
