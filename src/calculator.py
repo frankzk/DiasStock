@@ -42,7 +42,7 @@ def calculate_days_of_stock(inventory: list[dict], sales: dict) -> list[dict]:
     for r in results:
         venta = _estado_venta(r["Ventas/dia (avg)"], max_daily)
         r["Estado de Venta"] = venta
-        r["Alerta"] = _alerta(r["Estado de Inventario"], venta)
+        r["Alerta"] = _alerta(r["Estado de Inventario"], venta, r["Dias de Stock"])
 
     results.sort(key=lambda r: (
         r["Dias de Stock"] is None,
@@ -75,13 +75,15 @@ def _estado_venta(daily_avg: float, max_daily: float) -> str:
     return "BAJA"
 
 
-def _alerta(status: str, venta: str) -> str:
+def _alerta(status: str, venta: str, days: float | None) -> str:
     if status == "CRITICO" and venta in ("ALTA", "MEDIA"):
         return "Reordenar urgente"
     if status == "BAJO" and venta == "ALTA":
         return "Reordenar pronto"
     if status == "OK" and venta == "ALTA":
         return "Vigilar stock"
+    if days is not None and days > 120:
+        return "Riesgo sobrestock"
     if status == "ALTO" and venta in ("BAJA", "SIN VENTAS"):
         return "Riesgo sobrestock"
     return ""
