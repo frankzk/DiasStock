@@ -20,7 +20,10 @@ def get_sheets_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
         rows = list(csv.reader(f))
 
     header_idx, headers = _find_header_row(rows)
-    stock_col = _last_date_col(headers)
+
+    # Las fechas están en la fila ANTERIOR a PRODUCTO
+    date_row = [h.strip() for h in rows[header_idx - 1]] if header_idx > 0 else []
+    stock_col = _last_date_col(date_row)
     sales_col = _find_col(headers, ["ultimos 7d", "últimos 7d", "ultimos7d"])
 
     if stock_col is None:
