@@ -24,6 +24,19 @@ def run_store(store: Store, skip_supabase: bool = False):
         else:
             print(f"\n[2/4] Usando ventas del CSV (columna 'Ultimos 7d')...")
             sales = sales_csv
+
+    elif store.store_type == "image_inventory":
+        from src.image_inventory_client import get_image_inventory_and_sales
+        print("[1/4] Leyendo inventario desde imagen (Claude Vision)...")
+        inventory, _ = get_image_inventory_and_sales(store)
+
+        if store.shopify_token:
+            print(f"\n[2/4] Descargando ventas de Shopify (últimos 7 días)...")
+            sales = get_sales_last_7_days(store)
+        else:
+            print(f"\n[2/4] Sin token Shopify — ventas en 0...")
+            sales = {}
+
     else:
         print("[1/4] Extrayendo inventario de Boxful...")
         inventory = scrape_inventory(store)

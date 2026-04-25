@@ -4,9 +4,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Store:
-    key: str           # ej: "CR", "HN", "KE"
+    key: str           # ej: "CR", "HN", "KE", "KA"
     name: str          # ej: "Mireva Costa Rica"
-    store_type: str = "boxful_shopify"  # o "google_sheets"
+    store_type: str = "boxful_shopify"  # "boxful_shopify" | "google_sheets" | "image_inventory"
 
     # Campos para boxful_shopify
     boxful_email: str = ""
@@ -15,7 +15,10 @@ class Store:
     shopify_token: str = ""
 
     # Campos para google_sheets
-    csv_path: str = ""   # ruta al CSV descargado del sheet
+    csv_path: str = ""    # ruta al CSV descargado del sheet
+
+    # Campos para image_inventory
+    image_path: str = ""  # ruta al screenshot del sistema de inventario
 
 
 def load_stores() -> list[Store]:
@@ -26,8 +29,13 @@ def load_stores() -> list[Store]:
       STORE_CR_NAME, STORE_CR_BOXFUL_EMAIL, STORE_CR_BOXFUL_PASSWORD,
       STORE_CR_SHOPIFY_URL, STORE_CR_SHOPIFY_TOKEN
 
-    Tiendas Google Sheets:
+    Tiendas Google Sheets (CSV):
       STORE_KE_NAME, STORE_KE_TYPE=google_sheets, STORE_KE_CSV_PATH=data/kenku_espana.csv
+      Opcionalmente: STORE_KE_SHOPIFY_URL, STORE_KE_SHOPIFY_TOKEN
+
+    Tiendas por imagen:
+      STORE_KA_NAME, STORE_KA_TYPE=image_inventory, STORE_KA_IMAGE_PATH=data/kenku_argentina.png
+      Opcionalmente: STORE_KA_SHOPIFY_URL, STORE_KA_SHOPIFY_TOKEN
     """
     stores = []
     keys = _discover_store_keys()
@@ -41,6 +49,15 @@ def load_stores() -> list[Store]:
                 name=_get(key, "NAME", default=key),
                 store_type="google_sheets",
                 csv_path=_get(key, "CSV_PATH"),
+                shopify_url=_get(key, "SHOPIFY_URL", default=""),
+                shopify_token=_get(key, "SHOPIFY_TOKEN", default=""),
+            )
+        elif store_type == "image_inventory":
+            store = Store(
+                key=key,
+                name=_get(key, "NAME", default=key),
+                store_type="image_inventory",
+                image_path=_get(key, "IMAGE_PATH"),
                 shopify_url=_get(key, "SHOPIFY_URL", default=""),
                 shopify_token=_get(key, "SHOPIFY_TOKEN", default=""),
             )
