@@ -482,18 +482,19 @@
       border-collapse: collapse;
     }
 
-    .col-date { width: 7%; }
+    .col-history { width: 4%; }
+    .col-date { width: 6%; }
     .col-store { width: 7%; }
     .col-image { width: 5%; }
-    .col-product { width: 20%; }
+    .col-product { width: 19%; }
     .col-sku { width: 8%; }
     .col-stock { width: 5%; }
-    .col-sold { width: 5.5%; }
+    .col-sold { width: 5%; }
     .col-average { width: 6%; }
     .col-days { width: 6%; }
     .col-inventory { width: 10%; }
-    .col-sale { width: 9%; }
-    .col-alert { width: 11.5%; }
+    .col-sale { width: 8%; }
+    .col-alert { width: 11%; }
 
     th,
     td {
@@ -554,6 +555,45 @@
       font-variant-numeric: tabular-nums;
       font-family: var(--mono);
       white-space: nowrap;
+    }
+
+    .history-toggle {
+      display: inline-grid;
+      width: 24px;
+      height: 24px;
+      min-height: 24px;
+      place-items: center;
+      border-radius: 6px;
+      padding: 0;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .history-toggle:disabled {
+      cursor: default;
+      opacity: 0.32;
+    }
+
+    .history-row td {
+      background: #fbfcfb;
+      color: #52605b;
+    }
+
+    .history-row .product-cell {
+      font-weight: 700;
+    }
+
+    .history-marker {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 0 6px;
+      text-transform: uppercase;
     }
 
     .product-cell {
@@ -937,6 +977,7 @@
       <div class="table-wrap">
         <table>
           <colgroup>
+            <col class="col-history">
             <col class="col-date">
             <col class="col-store">
             <col class="col-image">
@@ -952,6 +993,7 @@
           </colgroup>
           <thead>
             <tr>
+              <th>Hist.</th>
               <th><button type="button" class="sort-button" data-sort-key="date">Fecha <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="storeName">Tienda <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="imageUrl">Imagen <span class="sort-indicator"></span></button></th>
@@ -968,7 +1010,7 @@
           </thead>
           <tbody id="snapshotBody">
             <tr>
-              <td colspan="12" class="empty">Sin datos</td>
+              <td colspan="13" class="empty">Sin datos</td>
             </tr>
           </tbody>
         </table>
@@ -1019,6 +1061,8 @@
     const state = {
       rows: [],
       filteredRows: [],
+      historyRows: [],
+      expandedProductKeys: new Set(),
       loading: false,
       client: null,
       sort: { key: "date", direction: "desc" },
@@ -1210,6 +1254,7 @@
         if (error) throw error;
 
         state.rows = (data || []).map(normalizeRow);
+        state.expandedProductKeys.clear();
         buildFilters();
         applyFilters();
         closeConfig();
@@ -1299,9 +1344,17 @@
     function applyFilters() {
       const filters = getFilterValues();
 
-      state.filteredRows = state.rows
+      const productPool = state.rows
         .filter((row) => !filters.search || `${row.product} ${row.sku}`.toLowerCase().includes(filters.search))
-        .filter((row) => !filters.store || row.storeKey === filters.store || row.storeName === filters.store)
+        .filter((row) => !filters.store || row.storeKey === filters.store || row.storeName === filters.store);
+
+      state.historyRows = productPool.slice().sort(compareHistoryRows);
+
+      const displayRows = filters.date
+        ? productPool.filter((row) => row.date === filters.date)
+        : getLatestRowsByProduct(productPool);
+
+      state.filteredRows = displayRows
         .filter((row) => !filters.date || row.date === filters.date)
         .filter((row) => !filters.status || row.status === filters.status)
         .filter((row) => !filters.saleStatus || row.saleStatus === filters.saleStatus)
@@ -1312,7 +1365,44 @@
         .filter((row) => inRange(row.days, filters.daysMin, filters.daysMax))
         .sort(compareRows);
 
+      const visibleKeys = new Set(state.filteredRows.map(productKey));
+      for (const key of Array.from(state.expandedProductKeys)) {
+        if (!visibleKeys.has(key)) state.expandedProductKeys.delete(key);
+      }
+
       render();
+    }
+
+    function getLatestRowsByProduct(rows) {
+      const latest = new Map();
+      for (const row of rows) {
+        const key = productKey(row);
+        const current = latest.get(key);
+        if (!current || compareLatestRow(row, current) < 0) {
+          latest.set(key, row);
+        }
+      }
+      return Array.from(latest.values());
+    }
+
+    function compareLatestRow(a, b) {
+      const byDate = b.date.localeCompare(a.date);
+      if (byDate !== 0) return byDate;
+      return a.product.localeCompare(b.product, "es", { numeric: true, sensitivity: "base" });
+    }
+
+    function compareHistoryRows(a, b) {
+      const byDate = b.date.localeCompare(a.date);
+      if (byDate !== 0) return byDate;
+      const byStore = a.storeName.localeCompare(b.storeName, "es");
+      if (byStore !== 0) return byStore;
+      return a.product.localeCompare(b.product, "es", { numeric: true, sensitivity: "base" });
+    }
+
+    function productKey(row) {
+      const store = row.storeKey || row.storeName || "";
+      const product = row.sku || row.product || row.id || "";
+      return `${store}::${product}`.toLowerCase();
     }
 
     function getFilterValues() {
@@ -1465,30 +1555,76 @@
       const rows = state.filteredRows;
       renderSortIndicators();
       if (!rows.length) {
-        els.body.innerHTML = `<tr><td colspan="12" class="empty">Sin datos para estos filtros</td></tr>`;
+        els.body.innerHTML = `<tr><td colspan="13" class="empty">Sin datos para estos filtros</td></tr>`;
         return;
       }
 
-      els.body.innerHTML = rows.map((row) => {
-        const meta = STATUS_META[row.status] || STATUS_META["Sin ventas"];
-        const saleMeta = SALE_STATUS_META[row.saleStatus] || SALE_STATUS_META["SIN VENTAS"];
-        return `
-          <tr>
-            <td data-label="Fecha">${formatDate(row.date)}</td>
-            <td data-label="Tienda">${escapeHtml(row.storeName)}</td>
-            <td data-label="Imagen">${renderImageCell(row)}</td>
-            <td data-label="Producto" class="product-cell">${escapeHtml(row.product || "Sin nombre")}</td>
-            <td data-label="SKU" class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
-            <td data-label="Stock" class="number">${formatNumber(row.stock)}</td>
-            <td data-label="Ventas 7d" class="number">${formatNumber(row.sold7)}</td>
-            <td data-label="Prom/dia" class="number">${formatDecimal(row.dailyAvg)}</td>
-            <td data-label="Dias Stock" class="number">${formatDays(row.days)}</td>
-            <td data-label="Estado inventario"><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
-            <td data-label="Estado venta"><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
-            <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
-          </tr>
-        `;
-      }).join("");
+      const html = [];
+      for (const row of rows) {
+        const key = productKey(row);
+        const history = getHistoryRows(row);
+        const expanded = state.expandedProductKeys.has(key);
+        html.push(renderSnapshotRow(row, { key, historyCount: history.length, expanded }));
+        if (expanded) {
+          html.push(...history.map((historyRow) => renderSnapshotRow(historyRow, { isHistory: true })));
+        }
+      }
+
+      els.body.innerHTML = html.join("");
+      bindHistoryToggles();
+    }
+
+    function renderSnapshotRow(row, options = {}) {
+      const meta = STATUS_META[row.status] || STATUS_META["Sin ventas"];
+      const saleMeta = SALE_STATUS_META[row.saleStatus] || SALE_STATUS_META["SIN VENTAS"];
+      const isHistory = Boolean(options.isHistory);
+      return `
+        <tr class="${isHistory ? "history-row" : ""}">
+          <td data-label="Historial">${isHistory ? '<span class="history-marker">Hist.</span>' : renderHistoryToggle(options.key, options.historyCount, options.expanded)}</td>
+          <td data-label="Fecha">${formatDate(row.date)}</td>
+          <td data-label="Tienda">${escapeHtml(row.storeName)}</td>
+          <td data-label="Imagen">${renderImageCell(row)}</td>
+          <td data-label="Producto" class="product-cell">${escapeHtml(row.product || "Sin nombre")}</td>
+          <td data-label="SKU" class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
+          <td data-label="Stock" class="number">${formatNumber(row.stock)}</td>
+          <td data-label="Ventas 7d" class="number">${formatNumber(row.sold7)}</td>
+          <td data-label="Prom/dia" class="number">${formatDecimal(row.dailyAvg)}</td>
+          <td data-label="Dias Stock" class="number">${formatDays(row.days)}</td>
+          <td data-label="Estado inventario"><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
+          <td data-label="Estado venta"><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
+          <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
+        </tr>
+      `;
+    }
+
+    function renderHistoryToggle(key, historyCount, expanded) {
+      const disabled = historyCount ? "" : "disabled";
+      const label = historyCount
+        ? `${expanded ? "Ocultar" : "Ver"} historial (${historyCount})`
+        : "Sin historial";
+      return `
+        <button type="button" class="history-toggle" data-history-key="${escapeHtml(key || "")}" ${disabled} aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+          ${expanded ? "-" : "+"}
+        </button>
+      `;
+    }
+
+    function bindHistoryToggles() {
+      els.body.querySelectorAll("[data-history-key]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.historyKey;
+          if (state.expandedProductKeys.has(key)) state.expandedProductKeys.delete(key);
+          else state.expandedProductKeys.add(key);
+          renderTable();
+        });
+      });
+    }
+
+    function getHistoryRows(row) {
+      const key = productKey(row);
+      return state.historyRows
+        .filter((historyRow) => productKey(historyRow) === key && historyRow.date < row.date)
+        .sort(compareHistoryRows);
     }
 
     function renderImageCell(row) {
@@ -1541,6 +1677,7 @@
         control.value = "";
       });
       els.stockMin.value = DEFAULT_STOCK_MIN;
+      state.expandedProductKeys.clear();
       applyFilters();
     }
 
@@ -1633,6 +1770,8 @@
       localStorage.removeItem(STORAGE_KEY);
       state.rows = [];
       state.filteredRows = [];
+      state.historyRows = [];
+      state.expandedProductKeys.clear();
       openConfig("Credenciales locales borradas.");
       render();
       buildFilters();
