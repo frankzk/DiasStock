@@ -2,15 +2,17 @@ import base64
 import json
 import os
 from pathlib import Path
-from openai import OpenAI
+from openai import OpenAI, NotFoundError, BadRequestError
 from src.config import Store
 
 _MODELS = [
     "google/gemini-2.0-flash-exp:free",
     "google/gemini-flash-1.5-8b:free",
-    "qwen/qwen2.5-vl-7b-instruct:free",
-    "moonshotai/kimi-vl-a3b-thinking:free",
+    "qwen/qwen2-vl-7b-instruct:free",
+    "meta-llama/llama-3.2-90b-vision-instruct:free",
     "meta-llama/llama-3.2-11b-vision-instruct:free",
+    "microsoft/phi-3.5-vision-instruct:free",
+    "moonshotai/kimi-vl-a3b-thinking:free",
 ]
 
 _PROMPT = (
@@ -58,9 +60,10 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
             response = client.chat.completions.create(model=model, max_tokens=4096, messages=messages)
             print(f"  Modelo usado: {model}")
             break
+        except (NotFoundError, BadRequestError) as e:
+            print(f"  No disponible: {e.message if hasattr(e, 'message') else e}")
+            continue
         except Exception as e:
-            if "404" in str(e) or "No endpoints" in str(e) or "not found" in str(e).lower():
-                continue
             raise
 
     if response is None:
