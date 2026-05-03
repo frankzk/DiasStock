@@ -216,9 +216,7 @@
 
     .config-panel,
     .filters,
-    .panel,
-    .table-section,
-    .metric-card {
+    .table-section {
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: var(--surface);
@@ -306,98 +304,122 @@
       gap: 8px;
     }
 
-    .metrics {
+    .summary-strip {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr) minmax(0, 0.72fr);
       gap: 8px;
       margin-bottom: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: none;
+      padding: 8px;
     }
 
-    .metric-card {
-      padding: 10px 12px;
+    .summary-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .summary-chip,
+    .summary-group,
+    .summary-priority {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fcfdfc;
+    }
+
+    .summary-chip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "label value"
+        "note value";
+      align-items: center;
+      gap: 0 8px;
+      min-height: 38px;
+      padding: 5px 8px;
     }
 
     .metric-label {
+      grid-area: label;
       color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.15;
     }
 
     .metric-value {
-      margin-top: 8px;
-      font-size: 24px;
+      grid-area: value;
+      font-size: 18px;
       line-height: 1;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
     }
 
     .metric-note {
-      margin-top: 8px;
+      grid-area: note;
       color: var(--muted);
-      font-size: 13px;
-      min-height: 20px;
+      font-size: 11px;
+      line-height: 1.15;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .content-grid {
+    .summary-status {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
-      gap: 10px;
-      margin-bottom: 10px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+      gap: 6px;
+      min-width: 0;
     }
 
-    .panel {
-      padding: 10px 12px;
-      box-shadow: none;
+    .summary-group,
+    .summary-priority {
+      padding: 6px 8px;
     }
 
-    .panel-header {
+    .summary-group-header,
+    .priority-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-
-    .status-bars {
-      display: grid;
-      gap: 6px;
-    }
-
-    .bar-row {
-      display: grid;
-      grid-template-columns: 112px minmax(0, 1fr) 52px;
-      align-items: center;
-      gap: 10px;
-      min-height: 24px;
-    }
-
-    .bar-label {
-      display: flex;
-      align-items: center;
       gap: 8px;
-      min-width: 0;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
+      margin-bottom: 5px;
     }
 
-    .bar-track {
-      height: 10px;
+    .summary-group-header h2,
+    .priority-header h2 {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .status-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .status-count-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 22px;
+      border: 1px solid var(--line);
       border-radius: 999px;
-      background: #edf1ef;
-      overflow: hidden;
-    }
-
-    .bar-fill {
-      height: 100%;
-      min-width: 2px;
-      border-radius: inherit;
-      background: var(--primary);
-    }
-
-    .bar-count {
-      text-align: right;
+      background: white;
+      color: var(--muted);
+      font-size: 10px;
       font-weight: 800;
+      padding: 0 6px;
+      white-space: nowrap;
+    }
+
+    .status-count-chip strong {
+      color: var(--ink);
       font-variant-numeric: tabular-nums;
     }
 
@@ -411,30 +433,50 @@
 
     .priority-list {
       display: grid;
-      gap: 8px;
+      gap: 5px;
     }
 
     .priority-item {
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 12px;
+      gap: 8px;
       align-items: center;
-      min-height: 34px;
+      min-height: 27px;
       border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 7px 9px;
-      background: #fcfdfc;
+      border-radius: 6px;
+      padding: 4px 6px;
+      background: white;
     }
 
     .priority-title {
       font-weight: 800;
-      overflow-wrap: anywhere;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
     }
 
     .priority-meta {
       color: var(--muted);
-      font-size: 13px;
-      margin-top: 2px;
+      font-size: 11px;
+      line-height: 1.15;
+      margin-top: 1px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .priority-more {
+      width: 100%;
+      min-height: 26px;
+      margin-top: 5px;
+      border-radius: 6px;
+      padding: 0 8px;
+      font-size: 11px;
+    }
+
+    .priority-more.hidden {
+      display: none;
     }
 
     .table-section {
@@ -716,8 +758,8 @@
       .config-grid,
       .filters,
       .range-filters,
-      .metrics,
-      .content-grid {
+      .summary-strip,
+      .summary-status {
         grid-template-columns: 1fr;
       }
 
@@ -726,7 +768,7 @@
       }
 
       .metric-value {
-        font-size: 26px;
+        font-size: 20px;
       }
     }
 
@@ -871,43 +913,52 @@
       </form>
     </section>
 
-    <section class="metrics" aria-label="Resumen">
-      <article class="metric-card">
-        <p class="metric-label">Productos</p>
-        <p class="metric-value" id="metricProducts">0</p>
-        <p class="metric-note" id="metricProductsNote">Sin filtros</p>
-      </article>
-      <article class="metric-card">
-        <p class="metric-label">Reordenar</p>
-        <p class="metric-value" id="metricReorder">0</p>
-        <p class="metric-note">Urgente o pronto</p>
-      </article>
-      <article class="metric-card">
-        <p class="metric-label">Sobrestock</p>
-        <p class="metric-value" id="metricOverstock">0</p>
-        <p class="metric-note">Riesgo activo</p>
-      </article>
-      <article class="metric-card">
-        <p class="metric-label">Dias Stock medianos</p>
-        <p class="metric-value" id="metricMedian">0</p>
-        <p class="metric-note">Solo productos con venta</p>
-      </article>
-    </section>
-
-    <section class="content-grid">
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Estados</h2>
-          <span class="count-pill" id="stateTotal">0 filas</span>
-        </div>
-        <div class="status-bars" id="statusBars"></div>
-      </article>
-      <article class="panel">
-        <div class="panel-header">
+    <section class="summary-strip" aria-label="Resumen compacto">
+      <div class="summary-metrics" aria-label="Metricas">
+        <article class="summary-chip">
+          <p class="metric-label">Productos</p>
+          <p class="metric-value" id="metricProducts">0</p>
+          <p class="metric-note" id="metricProductsNote">Sin filtros</p>
+        </article>
+        <article class="summary-chip">
+          <p class="metric-label">Reordenar</p>
+          <p class="metric-value" id="metricReorder">0</p>
+          <p class="metric-note">Urgente o pronto</p>
+        </article>
+        <article class="summary-chip">
+          <p class="metric-label">Sobrestock</p>
+          <p class="metric-value" id="metricOverstock">0</p>
+          <p class="metric-note">Riesgo activo</p>
+        </article>
+        <article class="summary-chip">
+          <p class="metric-label">Dias Stock medianos</p>
+          <p class="metric-value" id="metricMedian">0</p>
+          <p class="metric-note">Con venta</p>
+        </article>
+      </div>
+      <div class="summary-status" aria-label="Estados">
+        <article class="summary-group">
+          <div class="summary-group-header">
+            <h2>Inventario</h2>
+            <span class="count-pill" id="stateTotal">0 filas</span>
+          </div>
+          <div class="status-chip-list" id="inventoryStatusList"></div>
+        </article>
+        <article class="summary-group">
+          <div class="summary-group-header">
+            <h2>Venta</h2>
+            <span class="count-pill" id="saleTotal">0 filas</span>
+          </div>
+          <div class="status-chip-list" id="saleStatusList"></div>
+        </article>
+      </div>
+      <article class="summary-priority">
+        <div class="priority-header">
           <h2>Prioridad</h2>
           <span class="count-pill" id="priorityTotal">0</span>
         </div>
         <div class="priority-list" id="priorityList"></div>
+        <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
       </article>
     </section>
 
@@ -1063,6 +1114,7 @@
       filteredRows: [],
       historyRows: [],
       expandedProductKeys: new Set(),
+      showAllPriority: false,
       loading: false,
       client: null,
       sort: { key: "date", direction: "desc" },
@@ -1099,9 +1151,12 @@
       lastUpdated: $("#lastUpdated"),
       resultCount: $("#resultCount"),
       stateTotal: $("#stateTotal"),
+      saleTotal: $("#saleTotal"),
       priorityTotal: $("#priorityTotal"),
-      statusBars: $("#statusBars"),
+      inventoryStatusList: $("#inventoryStatusList"),
+      saleStatusList: $("#saleStatusList"),
       priorityList: $("#priorityList"),
+      priorityMoreBtn: $("#priorityMoreBtn"),
       metricProducts: $("#metricProducts"),
       metricProductsNote: $("#metricProductsNote"),
       metricReorder: $("#metricReorder"),
@@ -1255,6 +1310,7 @@
 
         state.rows = (data || []).map(normalizeRow);
         state.expandedProductKeys.clear();
+        state.showAllPriority = false;
         buildFilters();
         applyFilters();
         closeConfig();
@@ -1498,45 +1554,54 @@
       els.metricMedian.textContent = formatDays(median);
       els.resultCount.textContent = `${formatNumber(rows.length)} resultado${rows.length === 1 ? "" : "s"}`;
       els.stateTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
+      els.saleTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
       els.exportExcelBtn.disabled = rows.length === 0;
       els.tableExportBtn.disabled = rows.length === 0;
     }
 
     function renderStatusBars() {
       const rows = state.filteredRows;
-      const counts = Object.fromEntries(STATUS_ORDER.map((status) => [status, 0]));
-      for (const row of rows) counts[row.status] = (counts[row.status] || 0) + 1;
-      const max = Math.max(1, ...Object.values(counts));
+      const inventoryCounts = Object.fromEntries(STATUS_ORDER.map((status) => [status, 0]));
+      const saleCounts = Object.fromEntries(SALE_STATUS_ORDER.map((status) => [status, 0]));
 
-      els.statusBars.innerHTML = STATUS_ORDER.map((status) => {
-        const meta = STATUS_META[status];
-        const count = counts[status] || 0;
-        const width = `${Math.round((count / max) * 100)}%`;
+      for (const row of rows) {
+        inventoryCounts[row.status] = (inventoryCounts[row.status] || 0) + 1;
+        saleCounts[row.saleStatus] = (saleCounts[row.saleStatus] || 0) + 1;
+      }
+
+      els.inventoryStatusList.innerHTML = renderStatusCountChips(STATUS_ORDER, inventoryCounts, STATUS_META);
+      els.saleStatusList.innerHTML = renderStatusCountChips(SALE_STATUS_ORDER, saleCounts, SALE_STATUS_META);
+    }
+
+    function renderStatusCountChips(order, counts, metaMap) {
+      return order.map((status) => {
+        const meta = metaMap[status] || { label: status, color: "#52605b" };
+        const label = meta.label || status;
         return `
-          <div class="bar-row">
-            <div class="bar-label"><span class="dot" style="background:${meta.color}"></span>${meta.label}</div>
-            <div class="bar-track" aria-hidden="true"><div class="bar-fill" style="width:${width};background:${meta.color}"></div></div>
-            <div class="bar-count">${formatNumber(count)}</div>
-          </div>
+          <span class="status-count-chip">
+            <span class="dot" style="background:${meta.color}"></span>
+            ${escapeHtml(label)} <strong>${formatNumber(counts[status] || 0)}</strong>
+          </span>
         `;
       }).join("");
     }
 
     function renderPriorityList() {
-      const priorities = state.filteredRows
+      const allPriorities = state.filteredRows
         .filter((row) => row.alert)
         .sort((a, b) => {
           const rankA = a.alert.includes("urgente") ? 0 : a.alert.includes("pronto") ? 1 : 2;
           const rankB = b.alert.includes("urgente") ? 0 : b.alert.includes("pronto") ? 1 : 2;
           if (rankA !== rankB) return rankA - rankB;
           return compareRows(a, b);
-        })
-        .slice(0, 5);
+        });
+      const priorities = state.showAllPriority ? allPriorities : allPriorities.slice(0, 3);
 
-      els.priorityTotal.textContent = formatNumber(priorities.length);
+      els.priorityTotal.textContent = formatNumber(allPriorities.length);
 
-      if (!priorities.length) {
+      if (!allPriorities.length) {
         els.priorityList.innerHTML = `<p class="empty">Sin alertas para estos filtros</p>`;
+        els.priorityMoreBtn.classList.add("hidden");
         return;
       }
 
@@ -1549,6 +1614,16 @@
           <span class="badge ${statusClass(row.status)}">${escapeHtml(row.alert)}</span>
         </div>
       `).join("");
+
+      if (allPriorities.length > 3) {
+        const hiddenCount = allPriorities.length - 3;
+        els.priorityMoreBtn.classList.remove("hidden");
+        els.priorityMoreBtn.textContent = state.showAllPriority ? "Ver menos" : `Ver ${formatNumber(hiddenCount)} mas`;
+        els.priorityMoreBtn.setAttribute("aria-expanded", state.showAllPriority ? "true" : "false");
+      } else {
+        els.priorityMoreBtn.classList.add("hidden");
+        els.priorityMoreBtn.setAttribute("aria-expanded", "false");
+      }
     }
 
     function renderTable() {
@@ -1678,6 +1753,7 @@
       });
       els.stockMin.value = DEFAULT_STOCK_MIN;
       state.expandedProductKeys.clear();
+      state.showAllPriority = false;
       applyFilters();
     }
 
@@ -1772,6 +1848,7 @@
       state.filteredRows = [];
       state.historyRows = [];
       state.expandedProductKeys.clear();
+      state.showAllPriority = false;
       openConfig("Credenciales locales borradas.");
       render();
       buildFilters();
@@ -1797,6 +1874,10 @@
     els.exportExcelBtn.addEventListener("click", exportExcel);
     els.tableExportBtn.addEventListener("click", exportExcel);
     els.resetFiltersBtn.addEventListener("click", resetFilters);
+    els.priorityMoreBtn.addEventListener("click", () => {
+      state.showAllPriority = !state.showAllPriority;
+      renderPriorityList();
+    });
     els.loginForm.addEventListener("submit", handleLogin);
     els.searchInput.addEventListener("input", applyFilters);
     els.storeFilter.addEventListener("change", applyFilters);
