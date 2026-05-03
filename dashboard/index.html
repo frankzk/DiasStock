@@ -638,7 +638,7 @@
 
     .priority-item {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
       align-items: center;
       min-height: 27px;
@@ -646,6 +646,17 @@
       border-radius: 6px;
       padding: 4px 6px;
       background: white;
+    }
+
+    .priority-item > div {
+      min-width: 0;
+    }
+
+    .priority-item .badge {
+      justify-self: end;
+      max-width: 126px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .priority-title {
