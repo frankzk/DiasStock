@@ -51,6 +51,10 @@ def save_snapshot(
     url, key = _get_supabase_config()
     response = _post_rows(url, key, rows)
     if response.status_code == 400 and "product_image_url" in response.text:
+        print(
+            "  Supabase: falta product_image_url; guardando snapshot sin imagenes. "
+            "Ejecuta dashboard/supabase-schema.sql para habilitarlas."
+        )
         rows = [
             {k: v for k, v in row.items() if k != "product_image_url"}
             for row in rows
