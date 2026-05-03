@@ -464,19 +464,137 @@
 
     .filters {
       display: grid;
-      grid-template-columns: repeat(6, minmax(140px, 1fr));
-      gap: 8px;
-      padding: 10px;
+      gap: 6px;
+      padding: 8px;
       margin-bottom: 10px;
     }
 
-    .search-field {
-      grid-column: span 2;
+    .filter-bar {
+      grid-template-columns:
+        minmax(200px, 1.5fr)
+        repeat(4, minmax(96px, 0.7fr))
+        repeat(4, minmax(108px, 0.75fr))
+        minmax(94px, auto);
+      align-items: end;
+      gap: 5px;
     }
 
-    .range-filters {
-      grid-template-columns: repeat(4, minmax(180px, 1fr)) auto;
-      align-items: end;
+    .filter-bar .field,
+    .filter-bar .range-field {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 3px;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+
+    .filter-bar .filter-active {
+      border-color: #c8ded8;
+      background: #eef8f5;
+    }
+
+    .filter-bar .field span,
+    .filter-bar .range-field > span {
+      font-size: 11px;
+      line-height: 1.1;
+    }
+
+    .filter-bar input,
+    .filter-bar select,
+    .filter-bar button {
+      min-height: 36px;
+      font-size: 12px;
+    }
+
+    .filter-bar input,
+    .filter-bar select {
+      padding: 0 8px;
+    }
+
+    .filter-bar .range-inputs {
+      gap: 5px;
+    }
+
+    .filter-bar #resetFiltersBtn {
+      padding: 0 10px;
+    }
+
+    .search-field {
+      position: relative;
+    }
+
+    .product-filter-control {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(78px, auto);
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .product-picker {
+      position: relative;
+      min-width: 0;
+    }
+
+    .product-menu-button {
+      width: 100%;
+      padding: 0 10px;
+      justify-content: space-between;
+      white-space: nowrap;
+    }
+
+    .product-menu-button::after {
+      content: "v";
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      margin-left: 8px;
+    }
+
+    .product-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 20;
+      width: min(420px, calc(100vw - 32px));
+      max-height: 320px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+      box-shadow: 0 20px 44px rgba(13, 35, 30, 0.16);
+      padding: 6px;
+    }
+
+    .product-menu.hidden {
+      display: none;
+    }
+
+    .product-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      min-height: 32px;
+      padding: 7px 8px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .product-option:hover {
+      background: var(--soft);
+    }
+
+    .product-option input {
+      width: 14px;
+      min-height: 14px;
+      margin: 0;
+    }
+
+    .product-option span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .range-field {
@@ -1283,52 +1401,57 @@
       </article>
     </section>
 
-    <section class="filters primary-filters" aria-label="Filtros principales">
-      <label class="field search-field" for="searchInput">
-        <span>Buscar</span>
-        <input id="searchInput" type="search" autocomplete="off" placeholder="Producto o SKU">
-      </label>
-      <label class="field" for="dateFilter">
+    <section class="filters filter-bar" aria-label="Filtros">
+      <div class="field search-field filter-control" data-filter-field="search">
+        <span id="searchFilterLabel">Buscar</span>
+        <div class="product-filter-control">
+          <input id="searchInput" type="search" autocomplete="off" placeholder="Producto o SKU" aria-labelledby="searchFilterLabel">
+          <div class="product-picker" id="productPicker">
+            <button type="button" class="product-menu-button" id="productMenuButton" aria-haspopup="true" aria-expanded="false">Lista</button>
+            <div class="product-menu hidden" id="productMenu">
+              <div id="productChecklist"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <label class="field filter-control" data-filter-field="date" for="dateFilter">
         <span>Fecha</span>
         <select id="dateFilter"></select>
       </label>
-      <label class="field" for="statusFilter">
+      <label class="field filter-control" data-filter-field="status" for="statusFilter">
         <span>Estado inventario</span>
         <select id="statusFilter"></select>
       </label>
-      <label class="field" for="saleStatusFilter">
+      <label class="field filter-control" data-filter-field="saleStatus" for="saleStatusFilter">
         <span>Estado venta</span>
         <select id="saleStatusFilter"></select>
       </label>
-      <label class="field" for="alertFilter">
+      <label class="field filter-control" data-filter-field="alert" for="alertFilter">
         <span>Alerta</span>
         <select id="alertFilter"></select>
       </label>
-    </section>
-
-    <section class="filters range-filters" aria-label="Filtros numericos">
-      <label class="range-field" for="stockMin">
+      <label class="range-field filter-control" data-filter-field="stock" for="stockMin">
         <span>Stock</span>
         <span class="range-inputs">
           <input id="stockMin" type="number" inputmode="decimal" min="1" placeholder="Min" value="1">
           <input id="stockMax" type="number" inputmode="decimal" placeholder="Max">
         </span>
       </label>
-      <label class="range-field" for="soldMin">
+      <label class="range-field filter-control" data-filter-field="sold" for="soldMin">
         <span>Ventas 7d</span>
         <span class="range-inputs">
           <input id="soldMin" type="number" inputmode="decimal" placeholder="Min">
           <input id="soldMax" type="number" inputmode="decimal" placeholder="Max">
         </span>
       </label>
-      <label class="range-field" for="avgMin">
+      <label class="range-field filter-control" data-filter-field="avg" for="avgMin">
         <span>Prom/dia</span>
         <span class="range-inputs">
           <input id="avgMin" type="number" inputmode="decimal" step="0.01" placeholder="Min">
           <input id="avgMax" type="number" inputmode="decimal" step="0.01" placeholder="Max">
         </span>
       </label>
-      <label class="range-field" for="daysMin">
+      <label class="range-field filter-control" data-filter-field="days" for="daysMin">
         <span>Dias Stock</span>
         <span class="range-inputs">
           <input id="daysMin" type="number" inputmode="decimal" step="0.1" placeholder="Min">
@@ -1477,6 +1600,10 @@
       adsMappingsList: $("#adsMappingsList"),
       adsStatus: $("#adsStatus"),
       searchInput: $("#searchInput"),
+      productPicker: $("#productPicker"),
+      productMenuButton: $("#productMenuButton"),
+      productMenu: $("#productMenu"),
+      productChecklist: $("#productChecklist"),
       storePicker: $("#storePicker"),
       storeMenuButton: $("#storeMenuButton"),
       storeMenu: $("#storeMenu"),
@@ -1848,6 +1975,7 @@
 
     function buildFilters() {
       const currentStores = getSelectedStoreValues();
+      const currentProducts = getSelectedProductValues();
       const current = {
         date: els.dateFilter.value,
         status: els.statusFilter.value,
@@ -1856,6 +1984,7 @@
       };
 
       const stores = getAvailableStores();
+      const products = getAvailableProducts();
 
       const dates = Array.from(new Set(state.rows.map((row) => row.date).filter(Boolean))).sort().reverse();
       const saleStatuses = uniqueOrdered(
@@ -1866,6 +1995,7 @@
         .sort((a, b) => a.localeCompare(b, "es"));
 
       renderStoreChecklist(stores, currentStores);
+      renderProductChecklist(products, currentProducts);
       fillSelect(els.dateFilter, [["", "Todas"], ...dates.map((date) => [date, formatDate(date)])], current.date);
       fillSelect(els.statusFilter, [["", "Todos"], ...STATUS_ORDER.map((status) => [status, status])], current.status);
       fillSelect(els.saleStatusFilter, [["", "Todos"], ...saleStatuses.map((status) => [status, status])], current.saleStatus);
@@ -1880,6 +2010,19 @@
             .map((row) => [row.storeKey || row.storeName, row.storeName || row.storeKey])
         )
       ).sort((a, b) => a[1].localeCompare(b[1], "es"));
+    }
+
+    function getAvailableProducts() {
+      const products = new Map();
+      for (const row of getLatestRowsByProduct(state.rows)) {
+        if (!row.sku && !row.product) continue;
+        const key = productFilterKey(row);
+        const name = row.product || row.sku || "Sin nombre";
+        const detail = row.sku && row.product ? `${row.sku} - ${name}` : name;
+        if (!products.has(key)) products.set(key, detail);
+      }
+      return Array.from(products)
+        .sort((a, b) => a[1].localeCompare(b[1], "es", { numeric: true, sensitivity: "base" }));
     }
 
     function uniqueOrdered(values, preferredOrder) {
@@ -1917,6 +2060,20 @@
       updateStoreMenuLabel(stores, Array.from(selectedSet));
     }
 
+    function renderProductChecklist(products, selectedValues) {
+      const availableValues = new Set(products.map(([value]) => value));
+      const selectedSet = new Set(selectedValues.filter((value) => availableValues.has(value)));
+
+      els.productChecklist.innerHTML = "";
+      els.productChecklist.appendChild(createProductOption("", "Todos los productos", selectedSet.size === 0, true));
+
+      for (const [value, label] of products) {
+        els.productChecklist.appendChild(createProductOption(value, label, selectedSet.has(value), false));
+      }
+
+      updateProductMenuLabel(products, Array.from(selectedSet));
+    }
+
     function createStoreOption(value, label, checked, isAllOption) {
       const wrapper = document.createElement("label");
       wrapper.className = "store-option";
@@ -1935,14 +2092,40 @@
       return wrapper;
     }
 
+    function createProductOption(value, label, checked, isAllOption) {
+      const wrapper = document.createElement("label");
+      wrapper.className = "product-option";
+
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = "productOption";
+      input.value = value;
+      input.checked = checked;
+      if (isAllOption) input.dataset.role = "all";
+
+      const text = document.createElement("span");
+      text.textContent = label;
+
+      wrapper.append(input, text);
+      return wrapper;
+    }
+
     function getSelectedStoreValues() {
       if (!els.storeChecklist) return [];
       return Array.from(els.storeChecklist.querySelectorAll('input[name="storeOption"]:checked'))
-        .map((input) => input.value);
+        .map((input) => input.value)
+        .filter(Boolean);
+    }
+
+    function getSelectedProductValues() {
+      if (!els.productChecklist) return [];
+      return Array.from(els.productChecklist.querySelectorAll('input[name="productOption"]:checked'))
+        .map((input) => input.value)
+        .filter(Boolean);
     }
 
     function updateStoreMenuLabel(stores = getStoreOptions(), selectedValues = getSelectedStoreValues()) {
-      const values = Array.isArray(selectedValues) ? selectedValues : Array.from(selectedValues);
+      const values = (Array.isArray(selectedValues) ? selectedValues : Array.from(selectedValues)).filter(Boolean);
       const labelByValue = new Map(stores);
       const allOption = els.storeChecklist.querySelector('input[data-role="all"]');
       if (allOption) allOption.checked = values.length === 0;
@@ -1956,10 +2139,30 @@
       }
     }
 
+    function updateProductMenuLabel(products = getProductOptions(), selectedValues = getSelectedProductValues()) {
+      const values = (Array.isArray(selectedValues) ? selectedValues : Array.from(selectedValues)).filter(Boolean);
+      const allOption = els.productChecklist.querySelector('input[data-role="all"]');
+      if (allOption) allOption.checked = values.length === 0;
+
+      if (!values.length) {
+        els.productMenuButton.textContent = "Lista";
+      } else if (values.length === 1) {
+        els.productMenuButton.textContent = "1 producto";
+      } else {
+        els.productMenuButton.textContent = `${values.length} productos`;
+      }
+    }
+
     function getStoreOptions() {
       return Array.from(
         els.storeChecklist.querySelectorAll('input[name="storeOption"]')
       ).map((input) => [input.value, input.closest(".store-option").textContent.trim()]);
+    }
+
+    function getProductOptions() {
+      return Array.from(
+        els.productChecklist.querySelectorAll('input[name="productOption"]')
+      ).map((input) => [input.value, input.closest(".product-option").textContent.trim()]);
     }
 
     function clearStoreSelection() {
@@ -1967,6 +2170,13 @@
         input.checked = false;
       });
       updateStoreMenuLabel();
+    }
+
+    function clearProductSelection() {
+      els.productChecklist.querySelectorAll('input[name="productOption"]').forEach((input) => {
+        input.checked = false;
+      });
+      updateProductMenuLabel();
     }
 
     function handleStoreChecklistChange(event) {
@@ -1983,9 +2193,28 @@
       applyFilters();
     }
 
+    function handleProductChecklistChange(event) {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") return;
+
+      if (input.dataset.role === "all") {
+        clearProductSelection();
+      } else {
+        updateProductMenuLabel();
+      }
+
+      state.expandedProductKeys.clear();
+      applyFilters();
+    }
+
     function setStoreMenuOpen(open) {
       els.storeMenu.classList.toggle("hidden", !open);
       els.storeMenuButton.setAttribute("aria-expanded", String(open));
+    }
+
+    function setProductMenuOpen(open) {
+      els.productMenu.classList.toggle("hidden", !open);
+      els.productMenuButton.setAttribute("aria-expanded", String(open));
     }
 
     function renderAdsConfig() {
@@ -2341,9 +2570,11 @@
 
     function applyFilters() {
       const filters = getFilterValues();
+      updateFilterActiveStates(filters);
 
       const productPool = state.rows
         .filter((row) => !filters.search || `${row.product} ${row.sku}`.toLowerCase().includes(filters.search))
+        .filter((row) => !filters.products.length || filters.products.includes(productFilterKey(row)))
         .filter((row) => !filters.stores.length || filters.stores.includes(row.storeKey) || filters.stores.includes(row.storeName));
 
       state.historyRows = productPool.slice().sort(compareHistoryRows);
@@ -2403,9 +2634,14 @@
       return `${store}::${product}`.toLowerCase();
     }
 
+    function productFilterKey(row) {
+      return String(row.sku || row.product || row.id || "").trim().toLowerCase();
+    }
+
     function getFilterValues() {
       return {
         search: els.searchInput.value.trim().toLowerCase(),
+        products: getSelectedProductValues(),
         stores: getSelectedStoreValues(),
         date: els.dateFilter.value,
         status: els.statusFilter.value,
@@ -2426,6 +2662,25 @@
       if (value === "") return null;
       const number = Number(value);
       return Number.isFinite(number) ? number : null;
+    }
+
+    function updateFilterActiveStates(filters = getFilterValues()) {
+      const defaultStockMin = Number(DEFAULT_STOCK_MIN);
+      const activeByField = {
+        search: Boolean(filters.search || filters.products.length),
+        date: Boolean(filters.date),
+        status: Boolean(filters.status),
+        saleStatus: Boolean(filters.saleStatus),
+        alert: Boolean(filters.alert),
+        stock: Boolean(filters.stockMax !== null || (filters.stockMin !== null && filters.stockMin !== defaultStockMin)),
+        sold: Boolean(filters.soldMin !== null || filters.soldMax !== null),
+        avg: Boolean(filters.avgMin !== null || filters.avgMax !== null),
+        days: Boolean(filters.daysMin !== null || filters.daysMax !== null),
+      };
+
+      document.querySelectorAll("[data-filter-field]").forEach((control) => {
+        control.classList.toggle("filter-active", Boolean(activeByField[control.dataset.filterField]));
+      });
     }
 
     function inRange(value, min, max) {
@@ -2761,7 +3016,9 @@
         control.value = "";
       });
       els.stockMin.value = DEFAULT_STOCK_MIN;
+      clearProductSelection();
       clearStoreSelection();
+      setProductMenuOpen(false);
       setStoreMenuOpen(false);
       state.expandedProductKeys.clear();
       state.showAllPriority = false;
@@ -2952,6 +3209,10 @@
     });
     els.loginForm.addEventListener("submit", handleLogin);
     els.searchInput.addEventListener("input", applyFilters);
+    els.productMenuButton.addEventListener("click", () => {
+      setProductMenuOpen(els.productMenu.classList.contains("hidden"));
+    });
+    els.productChecklist.addEventListener("change", handleProductChecklistChange);
     els.storeMenuButton.addEventListener("click", () => {
       setStoreMenuOpen(els.storeMenu.classList.contains("hidden"));
     });
@@ -2974,10 +3235,14 @@
       button.addEventListener("click", () => setSort(button.dataset.sortKey));
     });
     document.addEventListener("click", (event) => {
+      if (!els.productPicker.contains(event.target)) setProductMenuOpen(false);
       if (!els.storePicker.contains(event.target)) setStoreMenuOpen(false);
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") setStoreMenuOpen(false);
+      if (event.key === "Escape") {
+        setProductMenuOpen(false);
+        setStoreMenuOpen(false);
+      }
     });
 
     buildFilters();
