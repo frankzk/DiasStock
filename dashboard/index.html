@@ -198,6 +198,22 @@
       flex-wrap: wrap;
     }
 
+    .top-store-field {
+      display: grid;
+      gap: 4px;
+      min-width: 220px;
+    }
+
+    .top-store-field span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .top-store-field select {
+      min-height: 38px;
+    }
+
     .config-panel,
     .filters,
     .panel,
@@ -630,6 +646,10 @@
         width: 100%;
       }
 
+      .top-store-field {
+        flex: 1 1 100%;
+      }
+
       .top-actions button,
       .form-actions button {
         flex: 1 1 160px;
@@ -697,6 +717,10 @@
         </div>
       </div>
       <div class="top-actions">
+        <label class="top-store-field" for="storeFilter">
+          <span>Tienda</span>
+          <select id="storeFilter"></select>
+        </label>
         <button type="button" class="primary" id="refreshBtn">Actualizar</button>
         <button type="button" id="exportExcelBtn">Descargar Excel</button>
         <button type="button" id="configToggle">Configuracion</button>
@@ -724,14 +748,50 @@
       </form>
     </section>
 
+    <section class="metrics" aria-label="Resumen">
+      <article class="metric-card">
+        <p class="metric-label">Productos</p>
+        <p class="metric-value" id="metricProducts">0</p>
+        <p class="metric-note" id="metricProductsNote">Sin filtros</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Reordenar</p>
+        <p class="metric-value" id="metricReorder">0</p>
+        <p class="metric-note">Urgente o pronto</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Sobrestock</p>
+        <p class="metric-value" id="metricOverstock">0</p>
+        <p class="metric-note">Riesgo activo</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Dias medianos</p>
+        <p class="metric-value" id="metricMedian">0</p>
+        <p class="metric-note">Solo productos con venta</p>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Estados</h2>
+          <span class="count-pill" id="stateTotal">0 filas</span>
+        </div>
+        <div class="status-bars" id="statusBars"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Prioridad</h2>
+          <span class="count-pill" id="priorityTotal">0</span>
+        </div>
+        <div class="priority-list" id="priorityList"></div>
+      </article>
+    </section>
+
     <section class="filters primary-filters" aria-label="Filtros principales">
       <label class="field search-field" for="searchInput">
         <span>Buscar</span>
         <input id="searchInput" type="search" autocomplete="off" placeholder="Producto o SKU">
-      </label>
-      <label class="field" for="storeFilter">
-        <span>Tienda</span>
-        <select id="storeFilter"></select>
       </label>
       <label class="field" for="dateFilter">
         <span>Fecha</span>
@@ -781,46 +841,6 @@
         </span>
       </label>
       <button type="button" id="resetFiltersBtn">Limpiar filtros</button>
-    </section>
-
-    <section class="metrics" aria-label="Resumen">
-      <article class="metric-card">
-        <p class="metric-label">Productos</p>
-        <p class="metric-value" id="metricProducts">0</p>
-        <p class="metric-note" id="metricProductsNote">Sin filtros</p>
-      </article>
-      <article class="metric-card">
-        <p class="metric-label">Reordenar</p>
-        <p class="metric-value" id="metricReorder">0</p>
-        <p class="metric-note">Urgente o pronto</p>
-      </article>
-      <article class="metric-card">
-        <p class="metric-label">Sobrestock</p>
-        <p class="metric-value" id="metricOverstock">0</p>
-        <p class="metric-note">Riesgo activo</p>
-      </article>
-      <article class="metric-card">
-        <p class="metric-label">Dias medianos</p>
-        <p class="metric-value" id="metricMedian">0</p>
-        <p class="metric-note">Solo productos con venta</p>
-      </article>
-    </section>
-
-    <section class="content-grid">
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Estados</h2>
-          <span class="count-pill" id="stateTotal">0 filas</span>
-        </div>
-        <div class="status-bars" id="statusBars"></div>
-      </article>
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Prioridad</h2>
-          <span class="count-pill" id="priorityTotal">0</span>
-        </div>
-        <div class="priority-list" id="priorityList"></div>
-      </article>
     </section>
 
     <section class="table-section" aria-labelledby="tableTitle">
