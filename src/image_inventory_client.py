@@ -13,6 +13,7 @@ _MODELS = [
     "meta-llama/llama-3.2-11b-vision-instruct:free",
     "microsoft/phi-3.5-vision-instruct:free",
     "moonshotai/kimi-vl-a3b-thinking:free",
+    "google/gemini-flash-1.5-8b",  # pago, ~$0.001 por imagen — último recurso
 ]
 
 _PROMPT = (
