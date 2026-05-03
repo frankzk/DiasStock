@@ -765,7 +765,7 @@
         <p class="metric-note">Riesgo activo</p>
       </article>
       <article class="metric-card">
-        <p class="metric-label">Dias medianos</p>
+        <p class="metric-label">Dias Stock medianos</p>
         <p class="metric-value" id="metricMedian">0</p>
         <p class="metric-note">Solo productos con venta</p>
       </article>
@@ -815,7 +815,7 @@
       <label class="range-field" for="stockMin">
         <span>Stock</span>
         <span class="range-inputs">
-          <input id="stockMin" type="number" inputmode="decimal" placeholder="Min">
+          <input id="stockMin" type="number" inputmode="decimal" min="1" placeholder="Min" value="1">
           <input id="stockMax" type="number" inputmode="decimal" placeholder="Max">
         </span>
       </label>
@@ -834,7 +834,7 @@
         </span>
       </label>
       <label class="range-field" for="daysMin">
-        <span>Dias</span>
+        <span>Dias Stock</span>
         <span class="range-inputs">
           <input id="daysMin" type="number" inputmode="decimal" step="0.1" placeholder="Min">
           <input id="daysMax" type="number" inputmode="decimal" step="0.1" placeholder="Max">
@@ -863,7 +863,7 @@
               <th><button type="button" class="sort-button" data-sort-key="stock">Stock <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="sold7">Ventas 7d <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="dailyAvg">Prom/dia <span class="sort-indicator"></span></button></th>
-              <th><button type="button" class="sort-button" data-sort-key="days">Dias <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="days">Dias Stock <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="status">Estado inventario <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="saleStatus">Estado venta <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="alert">Alerta <span class="sort-indicator"></span></button></th>
@@ -887,6 +887,7 @@
     const LOGIN_STORAGE_KEY = "diasstock.dashboard.auth.v1";
     const DASHBOARD_USER = DEPLOY_CONFIG.DASHBOARD_USER || "";
     const DASHBOARD_PASSWORD_HASH = DEPLOY_CONFIG.DASHBOARD_PASSWORD_HASH || "";
+    const DEFAULT_STOCK_MIN = "1";
 
     const STATUS_ORDER = ["CRITICO", "BAJO", "OK", "ALTO", "Sin ventas"];
     const STATUS_META = {
@@ -912,7 +913,7 @@
       { key: "stock", label: "Stock", type: "number" },
       { key: "sold7", label: "Ventas 7d", type: "number" },
       { key: "dailyAvg", label: "Prom/dia", type: "number" },
-      { key: "days", label: "Dias", type: "number" },
+      { key: "days", label: "Dias Stock", type: "number" },
       { key: "status", label: "Estado de Inventario", type: "status" },
       { key: "saleStatus", label: "Estado de Venta", type: "saleStatus" },
       { key: "alert", label: "Alerta", type: "text" },
@@ -1299,7 +1300,9 @@
       const days = rows.map((row) => row.days).filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
       const median = days.length ? days[Math.floor(days.length / 2)] : 0;
       const filters = getFilterValues();
-      const activeFilters = Object.values(filters).filter((value) => value !== "" && value !== null).length;
+      const activeFilters = Object.entries(filters)
+        .filter(([key, value]) => value !== "" && value !== null && !(key === "stockMin" && value === Number(DEFAULT_STOCK_MIN)))
+        .length;
 
       els.metricProducts.textContent = formatNumber(rows.length);
       els.metricProductsNote.textContent = activeFilters ? `${activeFilters} filtro(s)` : "Sin filtros";
@@ -1440,6 +1443,7 @@
       ].forEach((control) => {
         control.value = "";
       });
+      els.stockMin.value = DEFAULT_STOCK_MIN;
       applyFilters();
     }
 
@@ -1459,7 +1463,7 @@
         "Stock": row.stock,
         "Ventas 7d": row.sold7,
         "Prom/dia": row.dailyAvg,
-        "Dias": row.days === null ? "" : row.days,
+        "Dias Stock": row.days === null ? "" : row.days,
         "Estado de Inventario": row.status,
         "Estado de Venta": row.saleStatus,
         "Alerta": row.alert,
