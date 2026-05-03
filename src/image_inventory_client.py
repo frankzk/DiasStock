@@ -1,8 +1,11 @@
 import base64
 import json
+import os
 from pathlib import Path
-import anthropic
+from openai import OpenAI
 from src.config import Store
+
+_MODEL = "meta-llama/llama-3.2-11b-vision-instruct:free"
 
 
 def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
@@ -17,20 +20,19 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
     image_data = base64.standard_b64encode(path.read_bytes()).decode("utf-8")
     media_type = _media_type(path.suffix)
 
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model="claude-haiku-4-5",
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ["OPENROUTER_API_KEY"],
+    )
+    response = client.chat.completions.create(
+        model=_MODEL,
         max_tokens=4096,
         messages=[{
             "role": "user",
             "content": [
                 {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": media_type,
-                        "data": image_data,
-                    },
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{media_type};base64,{image_data}"},
                 },
                 {
                     "type": "text",
@@ -50,7 +52,7 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
         }],
     )
 
-    raw = response.content[0].text.strip()
+    raw = response.choices[0].message.content.strip()
     # Strip markdown code fences if present
     if raw.startswith("```"):
         raw = raw.split("```")[1]
