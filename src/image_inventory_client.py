@@ -5,7 +5,7 @@ from pathlib import Path
 from openai import OpenAI
 from src.config import Store
 
-_MODEL = "meta-llama/llama-3.2-11b-vision-instruct:free"
+_MODEL = "google/gemini-2.0-flash-exp:free"
 
 
 def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
