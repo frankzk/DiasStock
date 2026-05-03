@@ -1529,12 +1529,12 @@
             <col class="col-product">
             <col class="col-sku">
             <col class="col-stock">
+            <col class="col-inventory">
             <col class="col-sold">
             <col class="col-ad-spend">
             <col class="col-ad-cpa">
             <col class="col-average">
             <col class="col-days">
-            <col class="col-inventory">
             <col class="col-sale">
             <col class="col-alert">
           </colgroup>
@@ -1547,12 +1547,12 @@
               <th><button type="button" class="sort-button" data-sort-key="product">Producto <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="sku">SKU <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="stock">Stock <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="status">Estado inventario <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="sold7">Ventas 7d <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="adSpend7">Gasto 7d <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="adCpa7">CPA 7d <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="dailyAvg">Prom/dia <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="days">Dias Stock <span class="sort-indicator"></span></button></th>
-              <th><button type="button" class="sort-button" data-sort-key="status">Estado inventario <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="saleStatus">Estado venta <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="alert">Alerta <span class="sort-indicator"></span></button></th>
             </tr>
@@ -1599,12 +1599,12 @@
       { key: "product", label: "Producto", type: "text" },
       { key: "sku", label: "SKU", type: "text" },
       { key: "stock", label: "Stock", type: "number" },
+      { key: "status", label: "Estado de Inventario", type: "status" },
       { key: "sold7", label: "Ventas 7d", type: "number" },
       { key: "adSpend7", label: "Gasto 7d", type: "number" },
       { key: "adCpa7", label: "CPA 7d", type: "number" },
       { key: "dailyAvg", label: "Prom/dia", type: "number" },
       { key: "days", label: "Dias Stock", type: "number" },
-      { key: "status", label: "Estado de Inventario", type: "status" },
       { key: "saleStatus", label: "Estado de Venta", type: "saleStatus" },
       { key: "alert", label: "Alerta", type: "text" },
     ];
@@ -3026,12 +3026,12 @@
           <td data-label="Producto" class="product-cell">${escapeHtml(row.product || "Sin nombre")}</td>
           <td data-label="SKU" class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
           <td data-label="Stock" class="number">${formatNumber(row.stock)}</td>
+          <td data-label="Estado inventario"><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
           <td data-label="Ventas 7d" class="number">${formatNumber(row.sold7)}</td>
           <td data-label="Gasto 7d" class="number">${row.adSpend7 ? formatMoney(row.adSpend7, row.adCurrency) : "-"}</td>
           <td data-label="CPA 7d" class="number">${row.adSpend7 ? formatMoney(row.adCpa7, row.adCurrency) : "-"}</td>
           <td data-label="Prom/dia" class="number">${formatDecimal(row.dailyAvg)}</td>
           <td data-label="Dias Stock" class="number">${formatDays(row.days)}</td>
-          <td data-label="Estado inventario"><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
           <td data-label="Estado venta"><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
           <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
         </tr>
@@ -3140,12 +3140,12 @@
         "Producto": row.product,
         "SKU": row.sku,
         "Stock": row.stock,
+        "Estado de Inventario": row.status,
         "Ventas 7d": row.sold7,
         "Gasto Ads 7d": row.adSpend7,
         "CPA 7d": row.adSpend7 ? row.adCpa7 : "",
         "Prom/dia": row.dailyAvg,
         "Dias Stock": row.days === null ? "" : row.days,
-        "Estado de Inventario": row.status,
         "Estado de Venta": row.saleStatus,
         "Alerta": row.alert,
       }));
@@ -3157,12 +3157,12 @@
         { wch: 48 },
         { wch: 18 },
         { wch: 14 },
+        { wch: 22 },
         { wch: 12 },
         { wch: 10 },
         { wch: 10 },
         { wch: 10 },
         { wch: 10 },
-        { wch: 22 },
         { wch: 18 },
         { wch: 24 },
       ];
