@@ -1120,8 +1120,43 @@
     }
 
     .alert-text {
-      color: var(--danger);
       font-weight: 800;
+    }
+
+    .alert-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px 6px;
+    }
+
+    .alert-tag {
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .alert-tag-default,
+    .alert-tag-pausar {
+      color: var(--danger);
+    }
+
+    .alert-tag-escalar {
+      color: #137333;
+    }
+
+    .cpa-signal {
+      font-weight: 800;
+    }
+
+    .cpa-good {
+      color: #137333;
+    }
+
+    .cpa-watch {
+      color: #a15c07;
+    }
+
+    .cpa-danger {
+      color: #b42318;
     }
 
     .empty {
@@ -1592,6 +1627,10 @@
       "BAJA": { className: "critical", color: "#b42318" },
       "SIN VENTAS": { className: "none", color: "#52605b" },
     };
+    const CPA_THRESHOLDS = {
+      scaleBelow: 7,
+      pauseFrom: 9,
+    };
     const TABLE_COLUMNS = [
       { key: "date", label: "Fecha", type: "date" },
       { key: "storeName", label: "Tienda", type: "text" },
@@ -1917,6 +1956,7 @@
 
     function normalizeRow(row) {
       const status = row.status || "Sin ventas";
+      const baseAlert = row.alerta || "";
       return {
         id: row.id || `${row.run_date}-${row.store_key || ""}-${row.sku || ""}`,
         date: row.run_date || "",
@@ -1931,9 +1971,12 @@
         days: row.days_of_stock === null || row.days_of_stock === undefined ? null : Number(row.days_of_stock),
         status,
         saleStatus: row.estado_venta || "SIN VENTAS",
-        alert: row.alerta || "",
+        baseAlert,
+        alertParts: splitAlerts(baseAlert),
+        alert: baseAlert,
         adSpend7: 0,
         adCpa7: 0,
+        adCpaClass: "",
         adCurrency: "USD",
       };
     }
@@ -2010,7 +2053,44 @@
         row.adSpend7 = spend;
         row.adCpa7 = spend ? (row.sold7 > 0 ? spend / row.sold7 : spend) : 0;
         row.adCurrency = matchingSpend.find((adRow) => adRow.currency)?.currency || "USD";
+        const cpaSignal = getCpaSignal(row.adCpa7, spend);
+        row.adCpaClass = cpaSignal?.className || "";
+        row.alertParts = mergeAlertParts(row.baseAlert, cpaSignal?.alert || "");
+        row.alert = row.alertParts.join(" · ");
       }
+    }
+
+    function getCpaSignal(cpa, spend) {
+      if (!spend || !Number.isFinite(Number(cpa))) return null;
+      const value = Number(cpa);
+      if (value < CPA_THRESHOLDS.scaleBelow) {
+        return { className: "cpa-good", alert: "Escalar" };
+      }
+      if (value < CPA_THRESHOLDS.pauseFrom) {
+        return { className: "cpa-watch", alert: "" };
+      }
+      return { className: "cpa-danger", alert: "Pausar Ads" };
+    }
+
+    function splitAlerts(value) {
+      return String(value || "")
+        .split(/\s*(?:·|\||,|;|\+)\s*/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function mergeAlertParts(...values) {
+      const seen = new Set();
+      const parts = [];
+      for (const value of values) {
+        for (const part of splitAlerts(value)) {
+          const key = normalizeKey(part);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          parts.push(part);
+        }
+      }
+      return parts;
     }
 
     function addDays(dateValue, delta) {
@@ -2043,7 +2123,7 @@
         state.rows.map((row) => row.saleStatus).filter(Boolean),
         SALE_STATUS_ORDER
       );
-      const alerts = Array.from(new Set(state.rows.map((row) => row.alert).filter(Boolean)))
+      const alerts = Array.from(new Set(state.rows.flatMap((row) => row.alertParts || splitAlerts(row.alert))))
         .sort((a, b) => a.localeCompare(b, "es"));
 
       renderStoreChecklist(stores, currentStores);
@@ -2688,7 +2768,7 @@
         .filter((row) => !filters.date || row.date === filters.date)
         .filter((row) => !filters.status || row.status === filters.status)
         .filter((row) => !filters.saleStatus || row.saleStatus === filters.saleStatus)
-        .filter((row) => !filters.alert || (filters.alert === "__empty__" ? !row.alert : row.alert === filters.alert))
+        .filter((row) => matchesAlertFilter(row, filters.alert))
         .filter((row) => inRange(row.stock, filters.stockMin, filters.stockMax))
         .filter((row) => inRange(row.sold7, filters.soldMin, filters.soldMax))
         .filter((row) => inRange(row.dailyAvg, filters.avgMin, filters.avgMax))
@@ -2791,6 +2871,13 @@
       if (min !== null && number < min) return false;
       if (max !== null && number > max) return false;
       return true;
+    }
+
+    function matchesAlertFilter(row, filterValue) {
+      if (!filterValue) return true;
+      const parts = row.alertParts || splitAlerts(row.alert);
+      if (filterValue === "__empty__") return parts.length === 0;
+      return parts.some((part) => normalizeKey(part) === normalizeKey(filterValue));
     }
 
     function compareRows(a, b) {
@@ -3029,13 +3116,34 @@
           <td data-label="Estado inventario"><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
           <td data-label="Ventas 7d" class="number">${formatNumber(row.sold7)}</td>
           <td data-label="Gasto 7d" class="number">${row.adSpend7 ? formatMoney(row.adSpend7, row.adCurrency) : "-"}</td>
-          <td data-label="CPA 7d" class="number">${row.adSpend7 ? formatMoney(row.adCpa7, row.adCurrency) : "-"}</td>
+          <td data-label="CPA 7d" class="number">${renderCpaCell(row)}</td>
           <td data-label="Prom/dia" class="number">${formatDecimal(row.dailyAvg)}</td>
           <td data-label="Dias Stock" class="number">${formatDays(row.days)}</td>
           <td data-label="Estado venta"><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
-          <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
+          <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${renderAlertCell(row)}</td>
         </tr>
       `;
+    }
+
+    function renderCpaCell(row) {
+      if (!row.adSpend7) return "-";
+      const className = row.adCpaClass ? `cpa-signal ${row.adCpaClass}` : "cpa-signal";
+      return `<span class="${className}">${formatMoney(row.adCpa7, row.adCurrency)}</span>`;
+    }
+
+    function renderAlertCell(row) {
+      const parts = row.alertParts || splitAlerts(row.alert);
+      if (!parts.length) return "";
+      return `<span class="alert-tags">${parts.map((part) => (
+        `<span class="alert-tag ${alertTagClass(part)}">${escapeHtml(part)}</span>`
+      )).join("")}</span>`;
+    }
+
+    function alertTagClass(value) {
+      const key = normalizeKey(value);
+      if (key === "escalar") return "alert-tag-escalar";
+      if (key === "pausar ads") return "alert-tag-pausar";
+      return "alert-tag-default";
     }
 
     function renderHistoryToggle(key, historyCount, expanded) {
