@@ -1,20 +1,8 @@
 import base64
 import json
-import os
 from pathlib import Path
-from openai import OpenAI, NotFoundError, BadRequestError
+import anthropic
 from src.config import Store
-
-_MODELS = [
-    "google/gemini-2.0-flash-exp:free",
-    "google/gemini-flash-1.5-8b:free",
-    "qwen/qwen2-vl-7b-instruct:free",
-    "meta-llama/llama-3.2-90b-vision-instruct:free",
-    "meta-llama/llama-3.2-11b-vision-instruct:free",
-    "microsoft/phi-3.5-vision-instruct:free",
-    "moonshotai/kimi-vl-a3b-thinking:free",
-    "google/gemini-flash-1.5-8b",  # pago, ~$0.001 por imagen — último recurso
-]
 
 _PROMPT = (
     "Esta imagen muestra una tabla de inventario. "
@@ -41,37 +29,27 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
     image_data = base64.standard_b64encode(path.read_bytes()).decode("utf-8")
     media_type = _media_type(path.suffix)
 
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=os.environ["OPENROUTER_API_KEY"],
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model="claude-haiku-4-5",
+        max_tokens=4096,
+        messages=[{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": image_data,
+                    },
+                },
+                {"type": "text", "text": _PROMPT},
+            ],
+        }],
     )
 
-    messages = [{
-        "role": "user",
-        "content": [
-            {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{image_data}"}},
-            {"type": "text", "text": _PROMPT},
-        ],
-    }]
-
-    response = None
-    for model in _MODELS:
-        try:
-            print(f"  Probando modelo: {model}")
-            response = client.chat.completions.create(model=model, max_tokens=4096, messages=messages)
-            print(f"  Modelo usado: {model}")
-            break
-        except (NotFoundError, BadRequestError) as e:
-            print(f"  No disponible: {e.message if hasattr(e, 'message') else e}")
-            continue
-        except Exception as e:
-            raise
-
-    if response is None:
-        raise RuntimeError("Ningún modelo de visión gratuito está disponible en OpenRouter. Intentá más tarde.")
-
-    raw = response.choices[0].message.content.strip()
-    # Strip markdown code fences if present
+    raw = response.content[0].text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
