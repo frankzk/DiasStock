@@ -330,6 +330,122 @@
       font-weight: 700;
     }
 
+    .ads-config {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .ads-config h3 {
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .ads-config p {
+      margin: 0;
+    }
+
+    .ads-help {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .ads-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .ads-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      gap: 10px;
+    }
+
+    .ads-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fcfdfc;
+      padding: 10px;
+    }
+
+    .ads-card h4 {
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .ads-list {
+      display: grid;
+      gap: 6px;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .ads-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: white;
+      padding: 7px 8px;
+    }
+
+    .ads-row strong,
+    .ads-row span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ads-row strong {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .ads-row span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .ads-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .mini-button {
+      min-height: 30px;
+      padding: 0 9px;
+      font-size: 11px;
+    }
+
+    .ads-mapping-form {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+      margin-bottom: 10px;
+    }
+
+    .ads-status {
+      min-height: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .ads-status.error {
+      color: var(--danger);
+    }
+
     .filters {
       display: grid;
       grid-template-columns: repeat(6, minmax(140px, 1fr));
@@ -378,7 +494,7 @@
 
     .summary-metrics {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 0.85fr)) repeat(2, minmax(0, 1.15fr));
+      grid-template-columns: repeat(6, minmax(0, 0.8fr)) repeat(2, minmax(0, 1.15fr));
       gap: 6px;
       min-width: 0;
     }
@@ -614,18 +730,20 @@
     }
 
     .col-history { width: 4%; }
-    .col-date { width: 6%; }
-    .col-store { width: 7%; }
-    .col-image { width: 5%; }
-    .col-product { width: 19%; }
-    .col-sku { width: 8%; }
-    .col-stock { width: 5%; }
-    .col-sold { width: 5%; }
-    .col-average { width: 6%; }
-    .col-days { width: 6%; }
-    .col-inventory { width: 10%; }
-    .col-sale { width: 8%; }
-    .col-alert { width: 11%; }
+    .col-date { width: 5.5%; }
+    .col-store { width: 6%; }
+    .col-image { width: 4%; }
+    .col-product { width: 15%; }
+    .col-sku { width: 7%; }
+    .col-stock { width: 4.5%; }
+    .col-sold { width: 4.5%; }
+    .col-ad-spend { width: 5.5%; }
+    .col-ad-cpa { width: 5%; }
+    .col-average { width: 5%; }
+    .col-days { width: 5.5%; }
+    .col-inventory { width: 9%; }
+    .col-sale { width: 7%; }
+    .col-alert { width: 12.5%; }
 
     th,
     td {
@@ -845,6 +963,9 @@
       }
 
       .config-grid,
+      .ads-grid,
+      .ads-workspace,
+      .ads-mapping-form,
       .filters,
       .range-filters,
       .summary-strip,
@@ -1017,6 +1138,60 @@
         </div>
         <p class="form-message" id="configError" role="alert"></p>
       </form>
+
+      <div class="ads-config" aria-label="Configuracion de Ads">
+        <div>
+          <h3>Ads Google Sheets</h3>
+          <p class="ads-help">Registra pestañas/cuentas, asigna tienda y mapea campañas a SKUs Shopify.</p>
+        </div>
+
+        <form class="ads-grid" id="adsSourceForm">
+          <label class="field" for="adsSheetUrl">
+            <span>Google Sheet URL</span>
+            <input id="adsSheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
+          </label>
+          <label class="field" for="adsSheetName">
+            <span>Pestaña</span>
+            <input id="adsSheetName" type="text" placeholder="HN| Tula tkqc 3">
+          </label>
+          <label class="field" for="adsAccountName">
+            <span>Cuenta publicitaria</span>
+            <input id="adsAccountName" type="text" placeholder="Tula tkqc 3">
+          </label>
+          <label class="field" for="adsStoreSelect">
+            <span>Tienda</span>
+            <select id="adsStoreSelect"></select>
+          </label>
+          <button type="submit" class="primary">Registrar</button>
+        </form>
+
+        <div class="ads-workspace">
+          <section class="ads-card" aria-label="Pestañas Ads registradas">
+            <h4>Pestañas registradas</h4>
+            <div class="ads-list" id="adsSourcesList"></div>
+          </section>
+          <section class="ads-card" aria-label="Mapeo campaña SKU">
+            <h4>Mapeo campaña a SKU</h4>
+            <form class="ads-mapping-form" id="adsMappingForm">
+              <label class="field" for="adsMappingSource">
+                <span>Pestaña</span>
+                <select id="adsMappingSource"></select>
+              </label>
+              <label class="field" for="adsCampaignSelect">
+                <span>Campaña</span>
+                <select id="adsCampaignSelect"></select>
+              </label>
+              <label class="field" for="adsSkuSelect">
+                <span>SKU Shopify</span>
+                <select id="adsSkuSelect"></select>
+              </label>
+              <button type="submit" class="primary">Mapear</button>
+            </form>
+            <div class="ads-list" id="adsMappingsList"></div>
+          </section>
+        </div>
+        <p class="ads-status" id="adsStatus"></p>
+      </div>
     </section>
 
     <section class="summary-strip" aria-label="Resumen compacto">
@@ -1040,6 +1215,16 @@
           <p class="metric-label">Dias Stock promedio</p>
           <p class="metric-value" id="metricMedian">0</p>
           <p class="metric-note">Promedio</p>
+        </article>
+        <article class="summary-chip">
+          <p class="metric-label">Gasto Ads 7d</p>
+          <p class="metric-value" id="metricAdSpend">-</p>
+          <p class="metric-note">Mapeado a SKU</p>
+        </article>
+        <article class="summary-chip">
+          <p class="metric-label">CPA 7d</p>
+          <p class="metric-value" id="metricAdCpa">-</p>
+          <p class="metric-note">Gasto / ventas</p>
         </article>
         <article class="summary-group">
           <div class="summary-group-header">
@@ -1155,6 +1340,8 @@
             <col class="col-sku">
             <col class="col-stock">
             <col class="col-sold">
+            <col class="col-ad-spend">
+            <col class="col-ad-cpa">
             <col class="col-average">
             <col class="col-days">
             <col class="col-inventory">
@@ -1171,6 +1358,8 @@
               <th><button type="button" class="sort-button" data-sort-key="sku">SKU <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="stock">Stock <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="sold7">Ventas 7d <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="adSpend7">Gasto 7d <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="adCpa7">CPA 7d <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="dailyAvg">Prom/dia <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="days">Dias Stock <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="status">Estado inventario <span class="sort-indicator"></span></button></th>
@@ -1180,7 +1369,7 @@
           </thead>
           <tbody id="snapshotBody">
             <tr>
-              <td colspan="13" class="empty">Sin datos</td>
+              <td colspan="15" class="empty">Sin datos</td>
             </tr>
           </tbody>
         </table>
@@ -1221,6 +1410,8 @@
       { key: "sku", label: "SKU", type: "text" },
       { key: "stock", label: "Stock", type: "number" },
       { key: "sold7", label: "Ventas 7d", type: "number" },
+      { key: "adSpend7", label: "Gasto 7d", type: "number" },
+      { key: "adCpa7", label: "CPA 7d", type: "number" },
       { key: "dailyAvg", label: "Prom/dia", type: "number" },
       { key: "days", label: "Dias Stock", type: "number" },
       { key: "status", label: "Estado de Inventario", type: "status" },
@@ -1232,6 +1423,10 @@
       rows: [],
       filteredRows: [],
       historyRows: [],
+      adSources: [],
+      campaignMappings: [],
+      adDaily: [],
+      adsProblem: "",
       expandedProductKeys: new Set(),
       showAllPriority: false,
       loading: false,
@@ -1250,6 +1445,18 @@
       refreshBtn: $("#refreshBtn"),
       configToggle: $("#configToggle"),
       clearConfigBtn: $("#clearConfigBtn"),
+      adsSourceForm: $("#adsSourceForm"),
+      adsSheetUrl: $("#adsSheetUrl"),
+      adsSheetName: $("#adsSheetName"),
+      adsAccountName: $("#adsAccountName"),
+      adsStoreSelect: $("#adsStoreSelect"),
+      adsSourcesList: $("#adsSourcesList"),
+      adsMappingForm: $("#adsMappingForm"),
+      adsMappingSource: $("#adsMappingSource"),
+      adsCampaignSelect: $("#adsCampaignSelect"),
+      adsSkuSelect: $("#adsSkuSelect"),
+      adsMappingsList: $("#adsMappingsList"),
+      adsStatus: $("#adsStatus"),
       searchInput: $("#searchInput"),
       storePicker: $("#storePicker"),
       storeMenuButton: $("#storeMenuButton"),
@@ -1287,6 +1494,8 @@
       metricReorder: $("#metricReorder"),
       metricOverstock: $("#metricOverstock"),
       metricMedian: $("#metricMedian"),
+      metricAdSpend: $("#metricAdSpend"),
+      metricAdCpa: $("#metricAdCpa"),
       appShell: $("#appShell"),
       loginScreen: $("#loginScreen"),
       loginForm: $("#loginForm"),
@@ -1422,6 +1631,7 @@
 
       state.client = client;
       setLoading(true);
+      state.adsProblem = "";
       els.lastUpdated.textContent = "Cargando snapshots";
 
       try {
@@ -1434,9 +1644,11 @@
         if (error) throw error;
 
         state.rows = (data || []).map(normalizeRow);
+        await loadAdsTables(client);
         state.expandedProductKeys.clear();
         state.showAllPriority = false;
         buildFilters();
+        renderAdsConfig();
         applyFilters();
         closeConfig();
         const now = new Date();
@@ -1447,6 +1659,27 @@
       } finally {
         setLoading(false);
       }
+    }
+
+    async function loadAdsTables(client) {
+      state.adsProblem = "";
+      const [sources, mappings, adDaily] = await Promise.all([
+        fetchOptionalAdsTable(client.from("ad_sheet_sources").select("*").order("sheet_name", { ascending: true })),
+        fetchOptionalAdsTable(client.from("campaign_sku_mappings").select("*").order("campaign_name", { ascending: true })),
+        fetchOptionalAdsTable(client.from("ad_campaign_daily").select("*").order("spend_date", { ascending: false }).limit(20000)),
+      ]);
+
+      state.adSources = sources.map(normalizeAdSource);
+      state.campaignMappings = mappings.map(normalizeCampaignMapping);
+      state.adDaily = adDaily.map(normalizeAdDaily);
+      enrichRowsWithAdMetrics();
+    }
+
+    async function fetchOptionalAdsTable(query) {
+      const { data, error } = await query;
+      if (!error) return data || [];
+      state.adsProblem = "Ejecuta dashboard/supabase-schema.sql para habilitar Ads.";
+      return [];
     }
 
     function normalizeRow(row) {
@@ -1466,7 +1699,97 @@
         status,
         saleStatus: row.estado_venta || "SIN VENTAS",
         alert: row.alerta || "",
+        adSpend7: 0,
+        adCpa7: 0,
+        adCurrency: "USD",
       };
+    }
+
+    function normalizeAdSource(row) {
+      return {
+        id: Number(row.id),
+        spreadsheetId: row.spreadsheet_id || extractSpreadsheetId(row.spreadsheet_url || ""),
+        spreadsheetUrl: row.spreadsheet_url || "",
+        sheetName: row.sheet_name || "",
+        accountName: row.ad_account_name || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "Sin tienda",
+        active: row.active !== false,
+      };
+    }
+
+    function normalizeCampaignMapping(row) {
+      return {
+        id: Number(row.id),
+        sourceId: Number(row.source_id),
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "Sin tienda",
+        campaignName: row.campaign_name || "",
+        sku: row.sku || "",
+        productName: row.product_name || "",
+      };
+    }
+
+    function normalizeAdDaily(row) {
+      const sourceId = Number(row.source_id || 0);
+      const mapping = findCampaignMapping(sourceId, row.campaign_name || "");
+      const source = state.adSources.find((item) => item.id === sourceId);
+      return {
+        id: Number(row.id),
+        sourceId,
+        date: row.spend_date || "",
+        spreadsheetId: row.spreadsheet_id || source?.spreadsheetId || "",
+        sheetName: row.sheet_name || source?.sheetName || "",
+        storeKey: row.store_key || mapping?.storeKey || source?.storeKey || "",
+        storeName: row.store_name || mapping?.storeName || source?.storeName || "",
+        accountName: row.ad_account_name || source?.accountName || "",
+        campaignName: row.campaign_name || "",
+        sku: row.sku || mapping?.sku || "",
+        productName: row.product_name || mapping?.productName || "",
+        currency: row.currency || "USD",
+        spend: Number(row.spend || 0),
+        clicks: Number(row.clicks || 0),
+        cpc: row.cpc === null || row.cpc === undefined ? null : Number(row.cpc),
+        cpm: row.cpm === null || row.cpm === undefined ? null : Number(row.cpm),
+        ctr: row.ctr === null || row.ctr === undefined ? null : Number(row.ctr),
+        impressions: Number(row.impressions || 0),
+      };
+    }
+
+    function findCampaignMapping(sourceId, campaignName) {
+      const campaign = normalizeKey(campaignName);
+      return state.campaignMappings.find((item) => (
+        item.sourceId === Number(sourceId) && normalizeKey(item.campaignName) === campaign
+      ));
+    }
+
+    function enrichRowsWithAdMetrics() {
+      for (const row of state.rows) {
+        const startDate = addDays(row.date, -6);
+        const matchingSpend = state.adDaily.filter((adRow) => (
+          adRow.sku &&
+          normalizeKey(adRow.storeKey) === normalizeKey(row.storeKey) &&
+          normalizeKey(adRow.sku) === normalizeKey(row.sku) &&
+          adRow.date >= startDate &&
+          adRow.date <= row.date
+        ));
+        const spend = matchingSpend.reduce((sum, adRow) => sum + adRow.spend, 0);
+        row.adSpend7 = spend;
+        row.adCpa7 = spend ? (row.sold7 > 0 ? spend / row.sold7 : spend) : 0;
+        row.adCurrency = matchingSpend.find((adRow) => adRow.currency)?.currency || "USD";
+      }
+    }
+
+    function addDays(dateValue, delta) {
+      if (!dateValue) return "";
+      const [year, month, day] = dateValue.split("-").map(Number);
+      if (!year || !month || !day) return "";
+      const date = new Date(Date.UTC(year, month - 1, day + delta));
+      return date.toISOString().slice(0, 10);
+    }
+
+    function normalizeKey(value) {
+      return String(value || "").trim().toLowerCase();
     }
 
     function buildFilters() {
@@ -1478,13 +1801,7 @@
         alert: els.alertFilter.value,
       };
 
-      const stores = Array.from(
-        new Map(
-          state.rows
-            .filter((row) => row.storeKey || row.storeName)
-            .map((row) => [row.storeKey || row.storeName, row.storeName || row.storeKey])
-        )
-      ).sort((a, b) => a[1].localeCompare(b[1], "es"));
+      const stores = getAvailableStores();
 
       const dates = Array.from(new Set(state.rows.map((row) => row.date).filter(Boolean))).sort().reverse();
       const saleStatuses = uniqueOrdered(
@@ -1499,6 +1816,16 @@
       fillSelect(els.statusFilter, [["", "Todos"], ...STATUS_ORDER.map((status) => [status, status])], current.status);
       fillSelect(els.saleStatusFilter, [["", "Todos"], ...saleStatuses.map((status) => [status, status])], current.saleStatus);
       fillSelect(els.alertFilter, [["", "Todas"], ["__empty__", "Sin alerta"], ...alerts.map((alert) => [alert, alert])], current.alert);
+    }
+
+    function getAvailableStores() {
+      return Array.from(
+        new Map(
+          state.rows
+            .filter((row) => row.storeKey || row.storeName)
+            .map((row) => [row.storeKey || row.storeName, row.storeName || row.storeKey])
+        )
+      ).sort((a, b) => a[1].localeCompare(b[1], "es"));
     }
 
     function uniqueOrdered(values, preferredOrder) {
@@ -1605,6 +1932,227 @@
     function setStoreMenuOpen(open) {
       els.storeMenu.classList.toggle("hidden", !open);
       els.storeMenuButton.setAttribute("aria-expanded", String(open));
+    }
+
+    function renderAdsConfig() {
+      const currentStore = els.adsStoreSelect.value;
+      const currentSource = els.adsMappingSource.value;
+      fillSelect(els.adsStoreSelect, [["", "Selecciona"], ...getAvailableStores()], currentStore);
+
+      const sourceOptions = state.adSources.map((source) => [String(source.id), `${source.sheetName} - ${source.storeName}`]);
+      fillSelect(els.adsMappingSource, [["", "Selecciona"], ...sourceOptions], currentSource);
+      if (!els.adsMappingSource.value && state.adSources.length) {
+        els.adsMappingSource.value = String(state.adSources[0].id);
+      }
+
+      renderAdsSourcesList();
+      renderAdsMappingChoices();
+      renderAdsMappingsList();
+      setAdsStatus(state.adsProblem || adsCountsText());
+    }
+
+    function renderAdsSourcesList() {
+      if (!state.adSources.length) {
+        els.adsSourcesList.innerHTML = `<p class="empty compact-empty">Sin pestañas registradas</p>`;
+        return;
+      }
+
+      els.adsSourcesList.innerHTML = state.adSources.map((source) => `
+        <div class="ads-row">
+          <div>
+            <strong>${escapeHtml(source.sheetName)}</strong>
+            <span>${escapeHtml(source.accountName || "Cuenta sin nombre")} · ${escapeHtml(source.storeName)} · ${source.active ? "activa" : "pausada"}</span>
+          </div>
+          <div class="ads-actions">
+            <button type="button" class="mini-button" data-ads-toggle-source="${source.id}" data-next-active="${source.active ? "false" : "true"}">${source.active ? "Pausar" : "Activar"}</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderAdsMappingChoices() {
+      const source = selectedAdsSource();
+      const campaigns = source ? getCampaignOptions(source.id) : [];
+      const products = source ? getSkuOptions(source.storeKey) : [];
+
+      fillSelect(els.adsCampaignSelect, [["", campaigns.length ? "Selecciona" : "Sin campañas importadas"], ...campaigns], els.adsCampaignSelect.value);
+      fillSelect(els.adsSkuSelect, [["", products.length ? "Selecciona" : "Sin SKUs visibles"], ...products], els.adsSkuSelect.value);
+      els.adsCampaignSelect.disabled = !campaigns.length;
+      els.adsSkuSelect.disabled = !products.length;
+    }
+
+    function renderAdsMappingsList() {
+      const source = selectedAdsSource();
+      const mappings = source
+        ? state.campaignMappings.filter((item) => item.sourceId === source.id)
+        : state.campaignMappings;
+
+      if (!mappings.length) {
+        els.adsMappingsList.innerHTML = `<p class="empty compact-empty">Sin campañas mapeadas</p>`;
+        return;
+      }
+
+      els.adsMappingsList.innerHTML = mappings.map((mapping) => `
+        <div class="ads-row">
+          <div>
+            <strong>${escapeHtml(shortProductName(mapping.campaignName))}</strong>
+            <span>${escapeHtml(mapping.sku)} · ${escapeHtml(mapping.productName || mapping.storeName)}</span>
+          </div>
+          <div class="ads-actions">
+            <button type="button" class="mini-button" data-ads-delete-mapping="${mapping.id}">Quitar</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function selectedAdsSource() {
+      const id = Number(els.adsMappingSource.value || 0);
+      return state.adSources.find((source) => source.id === id) || null;
+    }
+
+    function getCampaignOptions(sourceId) {
+      const campaigns = new Set();
+      state.adDaily
+        .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
+        .forEach((row) => campaigns.add(row.campaignName));
+      state.campaignMappings
+        .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
+        .forEach((row) => campaigns.add(row.campaignName));
+      return Array.from(campaigns)
+        .sort((a, b) => a.localeCompare(b, "es", { numeric: true, sensitivity: "base" }))
+        .map((campaign) => [campaign, campaign]);
+    }
+
+    function getSkuOptions(storeKey) {
+      const products = new Map();
+      state.rows
+        .filter((row) => (!storeKey || row.storeKey === storeKey) && row.sku)
+        .forEach((row) => {
+          if (!products.has(row.sku)) products.set(row.sku, `${row.sku} - ${row.product || "Sin nombre"}`);
+        });
+      return Array.from(products)
+        .sort((a, b) => a[1].localeCompare(b[1], "es", { numeric: true, sensitivity: "base" }));
+    }
+
+    function adsCountsText() {
+      const mappedRows = state.adDaily.filter((row) => row.sku).length;
+      return `${formatNumber(state.adSources.length)} fuente(s), ${formatNumber(state.campaignMappings.length)} mapeo(s), ${formatNumber(mappedRows)} fila(s) Ads con SKU.`;
+    }
+
+    function setAdsStatus(message, isError = false) {
+      els.adsStatus.textContent = message || "";
+      els.adsStatus.classList.toggle("error", Boolean(isError));
+    }
+
+    async function saveAdsSource(event) {
+      event.preventDefault();
+      const client = state.client || createClient();
+      if (!client) return;
+
+      const spreadsheetUrl = els.adsSheetUrl.value.trim();
+      const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
+      const sheetName = els.adsSheetName.value.trim();
+      const storeKey = els.adsStoreSelect.value;
+      const storeName = new Map(getAvailableStores()).get(storeKey) || storeKey;
+
+      if (!spreadsheetId || !sheetName || !storeKey) {
+        setAdsStatus("Completa URL, pestaña y tienda.", true);
+        return;
+      }
+
+      setAdsStatus("Guardando fuente Ads...");
+      const { error } = await client.from("ad_sheet_sources").upsert({
+        spreadsheet_id: spreadsheetId,
+        spreadsheet_url: spreadsheetUrl,
+        sheet_name: sheetName,
+        ad_account_name: els.adsAccountName.value.trim(),
+        store_key: storeKey,
+        store_name: storeName,
+        active: true,
+      }, { onConflict: "spreadsheet_id,sheet_name" });
+
+      if (error) {
+        setAdsStatus(error.message || "No se pudo guardar la fuente Ads.", true);
+        return;
+      }
+
+      els.adsSheetName.value = "";
+      els.adsAccountName.value = "";
+      await loadAdsTables(client);
+      renderAdsConfig();
+      applyFilters();
+      setAdsStatus("Fuente Ads guardada.");
+    }
+
+    async function saveCampaignMapping(event) {
+      event.preventDefault();
+      const client = state.client || createClient();
+      const source = selectedAdsSource();
+      const campaignName = els.adsCampaignSelect.value;
+      const sku = els.adsSkuSelect.value;
+      if (!client || !source || !campaignName || !sku) {
+        setAdsStatus("Selecciona pestaña, campaña y SKU.", true);
+        return;
+      }
+
+      const product = state.rows.find((row) => row.storeKey === source.storeKey && row.sku === sku);
+      setAdsStatus("Guardando mapeo...");
+      const { error } = await client.from("campaign_sku_mappings").upsert({
+        source_id: source.id,
+        store_key: source.storeKey,
+        store_name: source.storeName,
+        campaign_name: campaignName,
+        sku,
+        product_name: product?.product || "",
+      }, { onConflict: "source_id,campaign_name" });
+
+      if (error) {
+        setAdsStatus(error.message || "No se pudo guardar el mapeo.", true);
+        return;
+      }
+
+      await loadAdsTables(client);
+      renderAdsConfig();
+      applyFilters();
+      setAdsStatus("Mapeo guardado.");
+    }
+
+    async function toggleAdsSource(sourceId, nextActive) {
+      const client = state.client || createClient();
+      if (!client) return;
+      const { error } = await client
+        .from("ad_sheet_sources")
+        .update({ active: nextActive })
+        .eq("id", sourceId);
+      if (error) {
+        setAdsStatus(error.message || "No se pudo actualizar la fuente.", true);
+        return;
+      }
+      await loadAdsTables(client);
+      renderAdsConfig();
+      applyFilters();
+    }
+
+    async function deleteCampaignMapping(mappingId) {
+      const client = state.client || createClient();
+      if (!client) return;
+      const { error } = await client
+        .from("campaign_sku_mappings")
+        .delete()
+        .eq("id", mappingId);
+      if (error) {
+        setAdsStatus(error.message || "No se pudo quitar el mapeo.", true);
+        return;
+      }
+      await loadAdsTables(client);
+      renderAdsConfig();
+      applyFilters();
+    }
+
+    function extractSpreadsheetId(value) {
+      const match = String(value || "").match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) return match[1];
+      return /^[a-zA-Z0-9-_]{20,}$/.test(value || "") ? value : "";
     }
 
     function applyFilters() {
@@ -1752,6 +2300,10 @@
       const overstock = rows.filter((row) => row.alert.toLowerCase().includes("sobrestock")).length;
       const days = rows.map((row) => row.days).filter((value) => Number.isFinite(value));
       const averageDays = days.length ? days.reduce((sum, value) => sum + value, 0) / days.length : 0;
+      const adSpend = rows.reduce((sum, row) => sum + Number(row.adSpend7 || 0), 0);
+      const adSold = rows.reduce((sum, row) => sum + Number(row.sold7 || 0), 0);
+      const adCpa = adSpend ? (adSold > 0 ? adSpend / adSold : adSpend) : 0;
+      const adCurrency = rows.find((row) => row.adSpend7 > 0)?.adCurrency || "USD";
       const filters = getFilterValues();
       const activeFilters = Object.entries(filters)
         .filter(([key, value]) => {
@@ -1765,6 +2317,8 @@
       els.metricReorder.textContent = formatNumber(reorder);
       els.metricOverstock.textContent = formatNumber(overstock);
       els.metricMedian.textContent = formatDays(averageDays);
+      els.metricAdSpend.textContent = adSpend ? formatMoney(adSpend, adCurrency) : "-";
+      els.metricAdCpa.textContent = adSpend ? formatMoney(adCpa, adCurrency) : "-";
       els.resultCount.textContent = `${formatNumber(rows.length)} resultado${rows.length === 1 ? "" : "s"}`;
       els.stateTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
       els.saleTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
@@ -1900,7 +2454,7 @@
       const rows = state.filteredRows;
       renderSortIndicators();
       if (!rows.length) {
-        els.body.innerHTML = `<tr><td colspan="13" class="empty">Sin datos para estos filtros</td></tr>`;
+        els.body.innerHTML = `<tr><td colspan="15" class="empty">Sin datos para estos filtros</td></tr>`;
         return;
       }
 
@@ -1933,6 +2487,8 @@
           <td data-label="SKU" class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
           <td data-label="Stock" class="number">${formatNumber(row.stock)}</td>
           <td data-label="Ventas 7d" class="number">${formatNumber(row.sold7)}</td>
+          <td data-label="Gasto 7d" class="number">${row.adSpend7 ? formatMoney(row.adSpend7, row.adCurrency) : "-"}</td>
+          <td data-label="CPA 7d" class="number">${row.adSpend7 ? formatMoney(row.adCpa7, row.adCurrency) : "-"}</td>
           <td data-label="Prom/dia" class="number">${formatDecimal(row.dailyAvg)}</td>
           <td data-label="Dias Stock" class="number">${formatDays(row.days)}</td>
           <td data-label="Estado inventario"><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
@@ -1998,7 +2554,7 @@
     }
 
     function getDefaultSortDirection(key) {
-      if (key === "date" || key === "stock" || key === "sold7" || key === "dailyAvg") return "desc";
+      if (key === "date" || key === "stock" || key === "sold7" || key === "adSpend7" || key === "adCpa7" || key === "dailyAvg") return "desc";
       return "asc";
     }
 
@@ -2043,6 +2599,8 @@
         "SKU": row.sku,
         "Stock": row.stock,
         "Ventas 7d": row.sold7,
+        "Gasto Ads 7d": row.adSpend7,
+        "CPA 7d": row.adSpend7 ? row.adCpa7 : "",
         "Prom/dia": row.dailyAvg,
         "Dias Stock": row.days === null ? "" : row.days,
         "Estado de Inventario": row.status,
@@ -2056,6 +2614,8 @@
         { wch: 42 },
         { wch: 48 },
         { wch: 18 },
+        { wch: 14 },
+        { wch: 12 },
         { wch: 10 },
         { wch: 10 },
         { wch: 10 },
@@ -2081,6 +2641,21 @@
 
     function formatDecimal(value) {
       return new Intl.NumberFormat("es-PE", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value || 0));
+    }
+
+    function formatMoney(value, currency = "USD") {
+      const number = Number(value || 0);
+      const code = String(currency || "USD").toUpperCase();
+      try {
+        return new Intl.NumberFormat("es-PE", {
+          style: "currency",
+          currency: code,
+          minimumFractionDigits: number >= 100 ? 0 : 2,
+          maximumFractionDigits: 2,
+        }).format(number);
+      } catch {
+        return `${formatDecimal(number)} ${escapeHtml(code)}`;
+      }
     }
 
     function formatDays(value) {
@@ -2118,11 +2693,16 @@
       state.rows = [];
       state.filteredRows = [];
       state.historyRows = [];
+      state.adSources = [];
+      state.campaignMappings = [];
+      state.adDaily = [];
+      state.adsProblem = "";
       state.expandedProductKeys.clear();
       state.showAllPriority = false;
       openConfig("Credenciales locales borradas.");
       render();
       buildFilters();
+      renderAdsConfig();
       els.lastUpdated.textContent = "Sin datos cargados";
     });
 
@@ -2139,6 +2719,22 @@
       }
       saveConfig(config.url, config.anon);
       refreshData();
+    });
+    els.adsSourceForm.addEventListener("submit", saveAdsSource);
+    els.adsMappingForm.addEventListener("submit", saveCampaignMapping);
+    els.adsMappingSource.addEventListener("change", () => {
+      renderAdsMappingChoices();
+      renderAdsMappingsList();
+    });
+    els.adsSourcesList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-ads-toggle-source]");
+      if (!button) return;
+      toggleAdsSource(Number(button.dataset.adsToggleSource), button.dataset.nextActive === "true");
+    });
+    els.adsMappingsList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-ads-delete-mapping]");
+      if (!button) return;
+      deleteCampaignMapping(Number(button.dataset.adsDeleteMapping));
     });
 
     els.refreshBtn.addEventListener("click", refreshData);
@@ -2180,6 +2776,7 @@
     });
 
     buildFilters();
+    renderAdsConfig();
     render();
     if (isLoggedIn()) {
       showApp();

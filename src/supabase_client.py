@@ -132,4 +132,88 @@ end $$;
 create index if not exists idx_snapshots_date on inventory_snapshots(run_date);
 create index if not exists idx_snapshots_sku on inventory_snapshots(sku);
 create index if not exists idx_snapshots_store_date on inventory_snapshots(store_key, run_date desc);
+
+create table if not exists ad_sheet_sources (
+    id              bigserial primary key,
+    spreadsheet_id  text not null,
+    spreadsheet_url text not null,
+    sheet_name      text not null,
+    ad_account_name text,
+    store_key       text not null,
+    store_name      text,
+    active          boolean not null default true,
+    created_at      timestamptz default now(),
+    updated_at      timestamptz default now(),
+    unique(spreadsheet_id, sheet_name)
+);
+
+create table if not exists campaign_sku_mappings (
+    id            bigserial primary key,
+    source_id     bigint not null references ad_sheet_sources(id) on delete cascade,
+    store_key     text not null,
+    store_name    text,
+    campaign_name text not null,
+    sku           text not null,
+    product_name  text,
+    created_at    timestamptz default now(),
+    updated_at    timestamptz default now(),
+    unique(source_id, campaign_name)
+);
+
+create table if not exists ad_campaign_daily (
+    id              bigserial primary key,
+    spend_date      date not null,
+    spreadsheet_id  text not null,
+    sheet_name      text not null,
+    source_id       bigint references ad_sheet_sources(id) on delete set null,
+    store_key       text,
+    store_name      text,
+    ad_account_name text,
+    campaign_name   text not null,
+    sku             text,
+    product_name    text,
+    currency        text,
+    spend           numeric(12,2) not null default 0,
+    clicks          int not null default 0,
+    cpc             numeric(12,4),
+    cpm             numeric(12,4),
+    ctr             numeric(12,6),
+    impressions     int not null default 0,
+    created_at      timestamptz default now(),
+    updated_at      timestamptz default now(),
+    unique(spend_date, spreadsheet_id, sheet_name, campaign_name)
+);
+
+create index if not exists idx_ad_sources_store on ad_sheet_sources(store_key);
+create index if not exists idx_campaign_mappings_source on campaign_sku_mappings(source_id);
+create index if not exists idx_ad_daily_store_sku_date on ad_campaign_daily(store_key, sku, spend_date desc);
+create index if not exists idx_ad_daily_source_campaign on ad_campaign_daily(source_id, campaign_name);
+
+alter table ad_sheet_sources enable row level security;
+alter table campaign_sku_mappings enable row level security;
+alter table ad_campaign_daily enable row level security;
+
+drop policy if exists "Public manage ad sheet sources" on ad_sheet_sources;
+create policy "Public manage ad sheet sources"
+on ad_sheet_sources
+for all
+to anon
+using (true)
+with check (true);
+
+drop policy if exists "Public manage campaign sku mappings" on campaign_sku_mappings;
+create policy "Public manage campaign sku mappings"
+on campaign_sku_mappings
+for all
+to anon
+using (true)
+with check (true);
+
+drop policy if exists "Public manage ad campaign daily" on ad_campaign_daily;
+create policy "Public manage ad campaign daily"
+on ad_campaign_daily
+for all
+to anon
+using (true)
+with check (true);
 """
