@@ -4,32 +4,73 @@ from dataclasses import dataclass
 
 @dataclass
 class Store:
-    key: str           # ej: "CR", "HN"
+    key: str           # ej: "CR", "HN", "KE", "KA"
     name: str          # ej: "Mireva Costa Rica"
-    boxful_email: str
-    boxful_password: str
-    shopify_url: str
-    shopify_token: str
+    store_type: str = "boxful_shopify"  # "boxful_shopify" | "google_sheets" | "image_inventory"
+
+    # Campos para boxful_shopify
+    boxful_email: str = ""
+    boxful_password: str = ""
+    shopify_url: str = ""
+    shopify_token: str = ""
+
+    # Campos para google_sheets
+    csv_path: str = ""    # ruta al CSV descargado del sheet
+
+    # Campos para image_inventory
+    image_path: str = ""  # ruta al screenshot del sistema de inventario
 
 
 def load_stores() -> list[Store]:
     """
-    Lee todas las tiendas definidas en el .env con el formato:
-      STORE_CR_NAME, STORE_CR_BOXFUL_EMAIL, ...
-      STORE_HN_NAME, STORE_HN_BOXFUL_EMAIL, ...
+    Lee todas las tiendas definidas en el .env.
+
+    Tiendas Boxful+Shopify:
+      STORE_CR_NAME, STORE_CR_BOXFUL_EMAIL, STORE_CR_BOXFUL_PASSWORD,
+      STORE_CR_SHOPIFY_URL, STORE_CR_SHOPIFY_TOKEN
+
+    Tiendas Google Sheets (CSV):
+      STORE_KE_NAME, STORE_KE_TYPE=google_sheets, STORE_KE_CSV_PATH=data/kenku_espana.csv
+      Opcionalmente: STORE_KE_SHOPIFY_URL, STORE_KE_SHOPIFY_TOKEN
+
+    Tiendas por imagen:
+      STORE_KA_NAME, STORE_KA_TYPE=image_inventory, STORE_KA_IMAGE_PATH=data/kenku_argentina.png
+      Opcionalmente: STORE_KA_SHOPIFY_URL, STORE_KA_SHOPIFY_TOKEN
     """
     stores = []
     keys = _discover_store_keys()
 
     for key in keys:
-        store = Store(
-            key=key,
-            name=_get(key, "NAME", default=key),
-            boxful_email=_get(key, "BOXFUL_EMAIL"),
-            boxful_password=_get(key, "BOXFUL_PASSWORD"),
-            shopify_url=_get(key, "SHOPIFY_URL"),
-            shopify_token=_get(key, "SHOPIFY_TOKEN"),
-        )
+        store_type = _get(key, "TYPE", default="boxful_shopify")
+
+        if store_type == "google_sheets":
+            store = Store(
+                key=key,
+                name=_get(key, "NAME", default=key),
+                store_type="google_sheets",
+                csv_path=_get(key, "CSV_PATH"),
+                shopify_url=_get(key, "SHOPIFY_URL", default=""),
+                shopify_token=_get(key, "SHOPIFY_TOKEN", default=""),
+            )
+        elif store_type == "image_inventory":
+            store = Store(
+                key=key,
+                name=_get(key, "NAME", default=key),
+                store_type="image_inventory",
+                image_path=_get(key, "IMAGE_PATH"),
+                shopify_url=_get(key, "SHOPIFY_URL", default=""),
+                shopify_token=_get(key, "SHOPIFY_TOKEN", default=""),
+            )
+        else:
+            store = Store(
+                key=key,
+                name=_get(key, "NAME", default=key),
+                store_type="boxful_shopify",
+                boxful_email=_get(key, "BOXFUL_EMAIL"),
+                boxful_password=_get(key, "BOXFUL_PASSWORD"),
+                shopify_url=_get(key, "SHOPIFY_URL"),
+                shopify_token=_get(key, "SHOPIFY_TOKEN"),
+            )
         stores.append(store)
 
     if not stores:

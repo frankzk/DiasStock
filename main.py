@@ -13,11 +13,36 @@ from src.excel_exporter import export_to_excel
 def run_store(store: Store, skip_supabase: bool = False):
     print(f"\n--- Tienda: {store.name} ---")
 
-    print("[1/4] Extrayendo inventario de Boxful...")
-    inventory = scrape_inventory(store)
+    if store.store_type == "google_sheets":
+        from src.sheets_client import get_sheets_inventory_and_sales
+        print("[1/4] Leyendo inventario desde CSV (Google Sheets)...")
+        inventory, sales_csv = get_sheets_inventory_and_sales(store)
 
-    print(f"\n[2/4] Descargando ventas de Shopify (últimos 7 días)...")
-    sales = get_sales_last_7_days(store)
+        if store.shopify_token:
+            print(f"\n[2/4] Descargando ventas de Shopify (últimos 7 días)...")
+            sales = get_sales_last_7_days(store)
+        else:
+            print(f"\n[2/4] Usando ventas del CSV (columna 'Ultimos 7d')...")
+            sales = sales_csv
+
+    elif store.store_type == "image_inventory":
+        from src.image_inventory_client import get_image_inventory_and_sales
+        print("[1/4] Leyendo inventario desde imagen (Claude Vision)...")
+        inventory, _ = get_image_inventory_and_sales(store)
+
+        if store.shopify_token:
+            print(f"\n[2/4] Descargando ventas de Shopify (últimos 7 días)...")
+            sales = get_sales_last_7_days(store)
+        else:
+            print(f"\n[2/4] Sin token Shopify — ventas en 0...")
+            sales = {}
+
+    else:
+        print("[1/4] Extrayendo inventario de Boxful...")
+        inventory = scrape_inventory(store)
+
+        print(f"\n[2/4] Descargando ventas de Shopify (últimos 7 días)...")
+        sales = get_sales_last_7_days(store)
 
     print(f"\n[3/4] Calculando días de stock...")
     results = calculate_days_of_stock(inventory, sales)
