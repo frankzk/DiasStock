@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timezone
-from supabase import create_client, Client
+
+from supabase import Client, create_client
 
 
 def get_client() -> Client:
@@ -9,17 +10,25 @@ def get_client() -> Client:
     return create_client(url, key)
 
 
-def save_snapshot(results: list[dict]) -> None:
+def save_snapshot(
+    results: list[dict],
+    store_key: str = "",
+    store_name: str = "",
+) -> None:
     """
     Saves a daily snapshot of dias_stock per product to Supabase.
     Table: inventory_snapshots
     """
     client = get_client()
     run_date = datetime.now(timezone.utc).date().isoformat()
+    store_key = store_key.strip()
+    store_name = store_name.strip()
 
     rows = [
         {
             "run_date": run_date,
+            "store_key": store_key,
+            "store_name": store_name,
             "product_name": r["Producto"],
             "sku": r["SKU"],
             "stock": r["Stock Actual"],
@@ -33,20 +42,27 @@ def save_snapshot(results: list[dict]) -> None:
         for r in results
     ]
 
-    # Upsert por fecha + SKU para evitar duplicados si se corre 2 veces al día
+    if not rows:
+        print(f"  Supabase: no hay filas para guardar para {run_date}")
+        return
+
+    # Upsert by date + store + SKU so repeated runs replace the same snapshot.
     client.table("inventory_snapshots").upsert(
-        rows, on_conflict="run_date,sku"
+        rows, on_conflict="run_date,store_key,sku"
     ).execute()
 
-    print(f"  Supabase: {len(rows)} filas guardadas para {run_date}")
+    store_label = f" ({store_key})" if store_key else ""
+    print(f"  Supabase: {len(rows)} filas guardadas para {run_date}{store_label}")
 
 
 SUPABASE_SCHEMA = """
--- Correr esto una sola vez en el SQL Editor de Supabase:
+-- Run this once in the Supabase SQL Editor:
 
 create table if not exists inventory_snapshots (
     id            bigserial primary key,
     run_date      date not null,
+    store_key     text not null default '',
+    store_name    text,
     product_name  text,
     sku           text,
     stock         int,
@@ -54,10 +70,34 @@ create table if not exists inventory_snapshots (
     daily_avg     numeric(10,2),
     days_of_stock numeric(10,1),
     status        text,
+    estado_venta  text,
+    alerta        text,
     created_at    timestamptz default now(),
-    unique(run_date, sku)
+    unique(run_date, store_key, sku)
 );
 
+alter table inventory_snapshots add column if not exists store_key text not null default '';
+alter table inventory_snapshots add column if not exists store_name text;
+alter table inventory_snapshots add column if not exists estado_venta text;
+alter table inventory_snapshots add column if not exists alerta text;
+
+alter table inventory_snapshots
+    drop constraint if exists inventory_snapshots_run_date_sku_key;
+
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'inventory_snapshots_run_date_store_key_sku_key'
+    ) then
+        alter table inventory_snapshots
+            add constraint inventory_snapshots_run_date_store_key_sku_key
+            unique(run_date, store_key, sku);
+    end if;
+end $$;
+
 create index if not exists idx_snapshots_date on inventory_snapshots(run_date);
-create index if not exists idx_snapshots_sku  on inventory_snapshots(sku);
+create index if not exists idx_snapshots_sku on inventory_snapshots(sku);
+create index if not exists idx_snapshots_store_date on inventory_snapshots(store_key, run_date desc);
 """

@@ -54,7 +54,7 @@ def run_store(store: Store, skip_supabase: bool = False):
         print(f"\n[+]   Guardando snapshot en Supabase...")
         try:
             from src.supabase_client import save_snapshot
-            save_snapshot(results, store_key=store.key)
+            save_snapshot(results, store_key=store.key, store_name=store.name)
         except Exception as e:
             print(f"  Supabase omitido: {e}")
 

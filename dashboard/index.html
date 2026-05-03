@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DiasStock Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --surface: #ffffff;
+      --surface-soft: #eef4f1;
+      --ink: #17211f;
+      --muted: #63706b;
+      --line: #d9e1dc;
+      --primary: #0f766e;
+      --primary-strong: #115e59;
+      --danger: #b42318;
+      --danger-soft: #fff1ef;
+      --warn: #a15c07;
+      --warn-soft: #fff6e6;
+      --good: #137333;
+      --good-soft: #edf8ef;
+      --info: #2458c9;
+      --info-soft: #edf3ff;
+      --shadow: 0 16px 40px rgba(23, 33, 31, 0.08);
+      --radius: 8px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 700;
+      padding: 0 16px;
+      transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+    }
+
+    button:hover {
+      border-color: #b9c6c0;
+      background: #f9fbfa;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid rgba(15, 118, 110, 0.25);
+      outline-offset: 2px;
+    }
+
+    button.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    button.primary:hover {
+      background: var(--primary-strong);
+      border-color: var(--primary-strong);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.55;
+    }
+
+    .app-shell {
+      width: min(1280px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: var(--radius);
+      background: #14332f;
+      color: #d7fff7;
+      font-weight: 800;
+      letter-spacing: 0;
+      flex: 0 0 auto;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 16px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 3px;
+      overflow-wrap: anywhere;
+    }
+
+    .top-actions,
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .config-panel,
+    .filters,
+    .panel,
+    .table-section,
+    .metric-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .config-panel {
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .config-panel.hidden {
+      display: none;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+      gap: 14px;
+      margin: 14px 0;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .field span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+      color: var(--ink);
+      padding: 0 12px;
+    }
+
+    .form-message {
+      min-height: 22px;
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.35fr) repeat(3, minmax(150px, 1fr));
+      gap: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      padding: 16px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric-value {
+      margin-top: 8px;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 20px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      padding: 16px;
+      box-shadow: none;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .status-bars {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr) 52px;
+      align-items: center;
+      gap: 10px;
+      min-height: 32px;
+    }
+
+    .bar-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #edf1ef;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 2px;
+      border-radius: inherit;
+      background: var(--primary);
+    }
+
+    .bar-count {
+      text-align: right;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      background: var(--muted);
+    }
+
+    .priority-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .priority-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      background: #fcfdfc;
+    }
+
+    .priority-title {
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .priority-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .table-section {
+      overflow: hidden;
+      box-shadow: none;
+    }
+
+    .table-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .count-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: #1e3f39;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1040px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: middle;
+      font-size: 14px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #f9fbfa;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      z-index: 1;
+    }
+
+    td.number {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--mono);
+    }
+
+    .product-cell {
+      max-width: 360px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .sku {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge.critical {
+      border-color: #ffd5d0;
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .badge.low {
+      border-color: #ffdf9a;
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
+
+    .badge.ok {
+      border-color: #c7ebcf;
+      background: var(--good-soft);
+      color: var(--good);
+    }
+
+    .badge.high {
+      border-color: #cfe0ff;
+      background: var(--info-soft);
+      color: var(--info);
+    }
+
+    .badge.none {
+      border-color: #d8dde0;
+      background: #f3f5f5;
+      color: #52605b;
+    }
+
+    .alert-text {
+      color: var(--danger);
+      font-weight: 800;
+    }
+
+    .empty {
+      padding: 38px 16px;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    @media (max-width: 920px) {
+      .app-shell {
+        width: min(100% - 24px, 1280px);
+        padding-top: 16px;
+      }
+
+      .topbar,
+      .table-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .top-actions,
+      .form-actions {
+        width: 100%;
+      }
+
+      .top-actions button,
+      .form-actions button {
+        flex: 1 1 160px;
+      }
+
+      .config-grid,
+      .filters,
+      .metrics,
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-value {
+        font-size: 26px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">DS</span>
+        <div>
+          <h1>DiasStock</h1>
+          <p class="subtitle" id="lastUpdated">Sin datos cargados</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button type="button" class="primary" id="refreshBtn">Actualizar</button>
+        <button type="button" id="configToggle">Configuracion</button>
+      </div>
+    </header>
+
+    <section class="config-panel hidden" id="configPanel" aria-labelledby="configTitle">
+      <h2 id="configTitle">Supabase</h2>
+      <form id="configForm">
+        <div class="config-grid">
+          <label class="field" for="supabaseUrl">
+            <span>Project URL</span>
+            <input id="supabaseUrl" name="url" type="url" autocomplete="url" placeholder="https://xxxx.supabase.co">
+          </label>
+          <label class="field" for="supabaseAnon">
+            <span>Anon public key</span>
+            <input id="supabaseAnon" name="anon" type="password" autocomplete="off" placeholder="eyJhbGciOi...">
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary">Guardar</button>
+          <button type="button" id="clearConfigBtn">Olvidar</button>
+        </div>
+        <p class="form-message" id="configError" role="alert"></p>
+      </form>
+    </section>
+
+    <section class="filters" aria-label="Filtros">
+      <label class="field" for="searchInput">
+        <span>Buscar</span>
+        <input id="searchInput" type="search" autocomplete="off" placeholder="Producto o SKU">
+      </label>
+      <label class="field" for="storeFilter">
+        <span>Tienda</span>
+        <select id="storeFilter"></select>
+      </label>
+      <label class="field" for="dateFilter">
+        <span>Fecha</span>
+        <select id="dateFilter"></select>
+      </label>
+      <label class="field" for="statusFilter">
+        <span>Estado</span>
+        <select id="statusFilter"></select>
+      </label>
+    </section>
+
+    <section class="metrics" aria-label="Resumen">
+      <article class="metric-card">
+        <p class="metric-label">Productos</p>
+        <p class="metric-value" id="metricProducts">0</p>
+        <p class="metric-note" id="metricProductsNote">Sin filtros</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Reordenar</p>
+        <p class="metric-value" id="metricReorder">0</p>
+        <p class="metric-note">Urgente o pronto</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Sobrestock</p>
+        <p class="metric-value" id="metricOverstock">0</p>
+        <p class="metric-note">Riesgo activo</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">Dias medianos</p>
+        <p class="metric-value" id="metricMedian">0</p>
+        <p class="metric-note">Solo productos con venta</p>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Estados</h2>
+          <span class="count-pill" id="stateTotal">0 filas</span>
+        </div>
+        <div class="status-bars" id="statusBars"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Prioridad</h2>
+          <span class="count-pill" id="priorityTotal">0</span>
+        </div>
+        <div class="priority-list" id="priorityList"></div>
+      </article>
+    </section>
+
+    <section class="table-section" aria-labelledby="tableTitle">
+      <div class="table-head">
+        <h2 id="tableTitle">Snapshots</h2>
+        <span class="count-pill" id="resultCount">0 resultados</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tienda</th>
+              <th>Producto</th>
+              <th>SKU</th>
+              <th>Stock</th>
+              <th>Ventas 7d</th>
+              <th>Prom/dia</th>
+              <th>Dias</th>
+              <th>Estado</th>
+              <th>Alerta</th>
+            </tr>
+          </thead>
+          <tbody id="snapshotBody">
+            <tr>
+              <td colspan="10" class="empty">Sin datos</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const DEPLOY_CONFIG = window.DIASSTOCK_CONFIG || {};
+    const SUPABASE_URL = DEPLOY_CONFIG.SUPABASE_URL || "";
+    const SUPABASE_ANON = DEPLOY_CONFIG.SUPABASE_ANON_KEY || "";
+    const STORAGE_KEY = "diasstock.supabase.config.v1";
+
+    const STATUS_ORDER = ["CRITICO", "BAJO", "OK", "ALTO", "Sin ventas"];
+    const STATUS_META = {
+      "CRITICO": { label: "CRITICO", className: "critical", color: "#b42318" },
+      "BAJO": { label: "BAJO", className: "low", color: "#a15c07" },
+      "OK": { label: "OK", className: "ok", color: "#137333" },
+      "ALTO": { label: "ALTO", className: "high", color: "#2458c9" },
+      "Sin ventas": { label: "Sin ventas", className: "none", color: "#52605b" },
+    };
+
+    const state = {
+      rows: [],
+      filteredRows: [],
+      loading: false,
+      client: null,
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const els = {
+      body: $("#snapshotBody"),
+      configPanel: $("#configPanel"),
+      configForm: $("#configForm"),
+      configError: $("#configError"),
+      supabaseUrl: $("#supabaseUrl"),
+      supabaseAnon: $("#supabaseAnon"),
+      refreshBtn: $("#refreshBtn"),
+      configToggle: $("#configToggle"),
+      clearConfigBtn: $("#clearConfigBtn"),
+      searchInput: $("#searchInput"),
+      storeFilter: $("#storeFilter"),
+      dateFilter: $("#dateFilter"),
+      statusFilter: $("#statusFilter"),
+      lastUpdated: $("#lastUpdated"),
+      resultCount: $("#resultCount"),
+      stateTotal: $("#stateTotal"),
+      priorityTotal: $("#priorityTotal"),
+      statusBars: $("#statusBars"),
+      priorityList: $("#priorityList"),
+      metricProducts: $("#metricProducts"),
+      metricProductsNote: $("#metricProductsNote"),
+      metricReorder: $("#metricReorder"),
+      metricOverstock: $("#metricOverstock"),
+      metricMedian: $("#metricMedian"),
+    };
+
+    function getStoredConfig() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function getConfig() {
+      const stored = getStoredConfig();
+      return {
+        url: SUPABASE_URL.trim() || (stored.url || "").trim(),
+        anon: SUPABASE_ANON.trim() || (stored.anon || "").trim(),
+      };
+    }
+
+    function saveConfig(url, anon) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ url, anon }));
+    }
+
+    function getJwtRole(token) {
+      const parts = token.split(".");
+      if (parts.length < 2) return "";
+      try {
+        const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(atob(normalized));
+        return payload.role || "";
+      } catch {
+        return "";
+      }
+    }
+
+    function getConfigProblem(config) {
+      if (!config.url || !config.anon) return "Completa Project URL y anon public key.";
+      if (!config.url.includes(".supabase.co")) return "Project URL no parece ser de Supabase.";
+      if (config.anon.startsWith("sb_secret_")) return "Esa key es privada. Usa la anon public key.";
+      if (getJwtRole(config.anon) === "service_role") return "Esa key tiene rol service_role. Usa la anon public key.";
+      return "";
+    }
+
+    function openConfig(message) {
+      const config = getConfig();
+      els.supabaseUrl.value = config.url;
+      els.supabaseAnon.value = config.anon;
+      els.configError.textContent = message || "";
+      els.configPanel.classList.remove("hidden");
+      els.supabaseUrl.focus();
+    }
+
+    function closeConfig() {
+      els.configPanel.classList.add("hidden");
+      els.configError.textContent = "";
+    }
+
+    function setLoading(isLoading) {
+      state.loading = isLoading;
+      els.refreshBtn.disabled = isLoading;
+      els.refreshBtn.textContent = isLoading ? "Cargando" : "Actualizar";
+    }
+
+    function createClient() {
+      const config = getConfig();
+      const problem = getConfigProblem(config);
+      if (problem) {
+        openConfig(problem);
+        return null;
+      }
+      if (!window.supabase || !window.supabase.createClient) {
+        openConfig("No se pudo cargar Supabase JS. Revisa la conexion.");
+        return null;
+      }
+      return window.supabase.createClient(config.url, config.anon);
+    }
+
+    async function refreshData() {
+      const client = createClient();
+      if (!client) return;
+
+      state.client = client;
+      setLoading(true);
+      els.lastUpdated.textContent = "Cargando snapshots";
+
+      try {
+        const { data, error } = await client
+          .from("inventory_snapshots")
+          .select("*")
+          .order("run_date", { ascending: false })
+          .limit(5000);
+
+        if (error) throw error;
+
+        state.rows = (data || []).map(normalizeRow);
+        buildFilters();
+        applyFilters();
+        closeConfig();
+        const now = new Date();
+        els.lastUpdated.textContent = `Actualizado ${now.toLocaleString("es-PE")}`;
+      } catch (error) {
+        openConfig(error.message || "No se pudieron cargar los snapshots.");
+        els.lastUpdated.textContent = "Error al cargar";
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function normalizeRow(row) {
+      const status = row.status || "Sin ventas";
+      return {
+        id: row.id || `${row.run_date}-${row.store_key || ""}-${row.sku || ""}`,
+        date: row.run_date || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "Sin tienda",
+        product: row.product_name || "",
+        sku: row.sku || "",
+        stock: Number(row.stock || 0),
+        sold7: Number(row.units_sold_7d || 0),
+        dailyAvg: Number(row.daily_avg || 0),
+        days: row.days_of_stock === null || row.days_of_stock === undefined ? null : Number(row.days_of_stock),
+        status,
+        saleStatus: row.estado_venta || "",
+        alert: row.alerta || "",
+      };
+    }
+
+    function buildFilters() {
+      const current = {
+        store: els.storeFilter.value,
+        date: els.dateFilter.value,
+        status: els.statusFilter.value,
+      };
+
+      const stores = Array.from(
+        new Map(
+          state.rows
+            .filter((row) => row.storeKey || row.storeName)
+            .map((row) => [row.storeKey || row.storeName, row.storeName || row.storeKey])
+        )
+      ).sort((a, b) => a[1].localeCompare(b[1], "es"));
+
+      const dates = Array.from(new Set(state.rows.map((row) => row.date).filter(Boolean))).sort().reverse();
+
+      fillSelect(els.storeFilter, [["", "Todas"], ...stores], current.store);
+      fillSelect(els.dateFilter, [["", "Todas"], ...dates.map((date) => [date, formatDate(date)])], current.date);
+      fillSelect(els.statusFilter, [["", "Todos"], ...STATUS_ORDER.map((status) => [status, status])], current.status);
+    }
+
+    function fillSelect(select, options, selectedValue) {
+      select.innerHTML = "";
+      for (const [value, label] of options) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+      }
+      if (options.some(([value]) => value === selectedValue)) {
+        select.value = selectedValue;
+      }
+    }
+
+    function applyFilters() {
+      const search = els.searchInput.value.trim().toLowerCase();
+      const store = els.storeFilter.value;
+      const date = els.dateFilter.value;
+      const status = els.statusFilter.value;
+
+      state.filteredRows = state.rows
+        .filter((row) => !search || `${row.product} ${row.sku}`.toLowerCase().includes(search))
+        .filter((row) => !store || row.storeKey === store || row.storeName === store)
+        .filter((row) => !date || row.date === date)
+        .filter((row) => !status || row.status === status)
+        .sort(compareRows);
+
+      render();
+    }
+
+    function compareRows(a, b) {
+      const byDate = b.date.localeCompare(a.date);
+      if (byDate !== 0) return byDate;
+      const byStore = a.storeName.localeCompare(b.storeName, "es");
+      if (byStore !== 0) return byStore;
+      const byStatus = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+      if (byStatus !== 0) return byStatus;
+      const aDays = a.days === null ? Number.POSITIVE_INFINITY : a.days;
+      const bDays = b.days === null ? Number.POSITIVE_INFINITY : b.days;
+      return aDays - bDays;
+    }
+
+    function render() {
+      renderMetrics();
+      renderStatusBars();
+      renderPriorityList();
+      renderTable();
+    }
+
+    function renderMetrics() {
+      const rows = state.filteredRows;
+      const reorder = rows.filter((row) => row.alert.toLowerCase().includes("reordenar")).length;
+      const overstock = rows.filter((row) => row.alert.toLowerCase().includes("sobrestock")).length;
+      const days = rows.map((row) => row.days).filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+      const median = days.length ? days[Math.floor(days.length / 2)] : 0;
+      const activeFilters = [els.searchInput.value, els.storeFilter.value, els.dateFilter.value, els.statusFilter.value]
+        .filter(Boolean).length;
+
+      els.metricProducts.textContent = formatNumber(rows.length);
+      els.metricProductsNote.textContent = activeFilters ? `${activeFilters} filtro(s)` : "Sin filtros";
+      els.metricReorder.textContent = formatNumber(reorder);
+      els.metricOverstock.textContent = formatNumber(overstock);
+      els.metricMedian.textContent = formatDays(median);
+      els.resultCount.textContent = `${formatNumber(rows.length)} resultado${rows.length === 1 ? "" : "s"}`;
+      els.stateTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
+    }
+
+    function renderStatusBars() {
+      const rows = state.filteredRows;
+      const counts = Object.fromEntries(STATUS_ORDER.map((status) => [status, 0]));
+      for (const row of rows) counts[row.status] = (counts[row.status] || 0) + 1;
+      const max = Math.max(1, ...Object.values(counts));
+
+      els.statusBars.innerHTML = STATUS_ORDER.map((status) => {
+        const meta = STATUS_META[status];
+        const count = counts[status] || 0;
+        const width = `${Math.round((count / max) * 100)}%`;
+        return `
+          <div class="bar-row">
+            <div class="bar-label"><span class="dot" style="background:${meta.color}"></span>${meta.label}</div>
+            <div class="bar-track" aria-hidden="true"><div class="bar-fill" style="width:${width};background:${meta.color}"></div></div>
+            <div class="bar-count">${formatNumber(count)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderPriorityList() {
+      const priorities = state.filteredRows
+        .filter((row) => row.alert)
+        .sort((a, b) => {
+          const rankA = a.alert.includes("urgente") ? 0 : a.alert.includes("pronto") ? 1 : 2;
+          const rankB = b.alert.includes("urgente") ? 0 : b.alert.includes("pronto") ? 1 : 2;
+          if (rankA !== rankB) return rankA - rankB;
+          return compareRows(a, b);
+        })
+        .slice(0, 5);
+
+      els.priorityTotal.textContent = formatNumber(priorities.length);
+
+      if (!priorities.length) {
+        els.priorityList.innerHTML = `<p class="empty">Sin alertas para estos filtros</p>`;
+        return;
+      }
+
+      els.priorityList.innerHTML = priorities.map((row) => `
+        <div class="priority-item">
+          <div>
+            <div class="priority-title">${escapeHtml(row.product || row.sku || "Producto sin nombre")}</div>
+            <div class="priority-meta">${escapeHtml(row.storeName)} · ${formatDate(row.date)} · ${escapeHtml(row.sku || "sin SKU")}</div>
+          </div>
+          <span class="badge ${statusClass(row.status)}">${escapeHtml(row.alert)}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderTable() {
+      const rows = state.filteredRows;
+      if (!rows.length) {
+        els.body.innerHTML = `<tr><td colspan="10" class="empty">Sin datos para estos filtros</td></tr>`;
+        return;
+      }
+
+      els.body.innerHTML = rows.map((row) => {
+        const meta = STATUS_META[row.status] || STATUS_META["Sin ventas"];
+        return `
+          <tr>
+            <td>${formatDate(row.date)}</td>
+            <td>${escapeHtml(row.storeName)}</td>
+            <td class="product-cell">${escapeHtml(row.product || "Sin nombre")}</td>
+            <td class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
+            <td class="number">${formatNumber(row.stock)}</td>
+            <td class="number">${formatNumber(row.sold7)}</td>
+            <td class="number">${formatDecimal(row.dailyAvg)}</td>
+            <td class="number">${formatDays(row.days)}</td>
+            <td><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
+            <td class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function statusClass(status) {
+      return (STATUS_META[status] || STATUS_META["Sin ventas"]).className;
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("es-PE", { maximumFractionDigits: 0 }).format(Number(value || 0));
+    }
+
+    function formatDecimal(value) {
+      return new Intl.NumberFormat("es-PE", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value || 0));
+    }
+
+    function formatDays(value) {
+      if (value === null || value === undefined || !Number.isFinite(Number(value))) return "-";
+      return formatDecimal(value);
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const [year, month, day] = value.split("-").map(Number);
+      if (!year || !month || !day) return value;
+      return new Date(year, month - 1, day).toLocaleDateString("es-PE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    els.configToggle.addEventListener("click", () => {
+      if (els.configPanel.classList.contains("hidden")) openConfig();
+      else closeConfig();
+    });
+
+    els.clearConfigBtn.addEventListener("click", () => {
+      localStorage.removeItem(STORAGE_KEY);
+      state.rows = [];
+      state.filteredRows = [];
+      openConfig("Credenciales locales borradas.");
+      render();
+      buildFilters();
+      els.lastUpdated.textContent = "Sin datos cargados";
+    });
+
+    els.configForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const config = {
+        url: els.supabaseUrl.value.trim(),
+        anon: els.supabaseAnon.value.trim(),
+      };
+      const problem = getConfigProblem(config);
+      if (problem) {
+        els.configError.textContent = problem;
+        return;
+      }
+      saveConfig(config.url, config.anon);
+      refreshData();
+    });
+
+    els.refreshBtn.addEventListener("click", refreshData);
+    els.searchInput.addEventListener("input", applyFilters);
+    els.storeFilter.addEventListener("change", applyFilters);
+    els.dateFilter.addEventListener("change", applyFilters);
+    els.statusFilter.addEventListener("change", applyFilters);
+
+    buildFilters();
+    render();
+    refreshData();
+  </script>
+</body>
+</html>
