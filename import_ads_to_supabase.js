@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { getSheetValues, hasGoogleServiceAccountConfig } = require("./google_sheets_api");
 
 const SOURCE_TABLE = "ad_sheet_sources";
 const MAPPING_TABLE = "campaign_sku_mappings";
@@ -149,6 +150,10 @@ function valuesForSource(source, payloadItems) {
 async function fetchSheetValues(source) {
   const spreadsheetId = source.spreadsheet_id || extractSpreadsheetId(source.spreadsheet_url || "");
   const sheetName = source.sheet_name;
+  if (hasGoogleServiceAccountConfig()) {
+    return getSheetValues(spreadsheetId, sheetName, "A:J");
+  }
+
   const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Google Sheets HTTP ${response.status} en ${sheetName}`);

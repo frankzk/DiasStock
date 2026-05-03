@@ -1,3 +1,5 @@
+const { getSheetTabs, hasGoogleServiceAccountConfig } = require("../google_sheets_api");
+
 module.exports = async function handler(req, res) {
   const spreadsheetId = String(req.query.spreadsheetId || "").trim();
   if (!/^[a-zA-Z0-9-_]{20,}$/.test(spreadsheetId)) {
@@ -6,6 +8,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    if (hasGoogleServiceAccountConfig()) {
+      const tabs = await getSheetTabs(spreadsheetId);
+      res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
+      res.status(200).json({ tabs: tabs.map((name) => ({ name })) });
+      return;
+    }
+
     const response = await fetch(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`);
     if (!response.ok) {
       res.status(response.status).send(`Google Sheets HTTP ${response.status}`);

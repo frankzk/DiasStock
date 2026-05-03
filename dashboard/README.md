@@ -65,3 +65,12 @@ node import_ads_to_supabase.js
 ```
 
 El importador lee solo las fuentes activas con tienda asignada, normaliza `FECHA`, `Campaign Name` y `Spend`, aplica los mapeos campaña -> SKU y sube `ad_campaign_daily`. El dashboard calcula `Gasto Ads 7d` y `CPA 7d` contra las ventas visibles.
+
+### Sheets privados
+
+Si el Google Sheet no puede ser publico, crea una Google Service Account, comparte el Sheet con el email de esa service account y agrega estas variables en Vercel y/o `.env` local:
+
+- `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+- `GOOGLE_PRIVATE_KEY`
+
+Con esas variables, `/api/sheets-tabs` y `node import_ads_to_supabase.js` leen el archivo privado desde backend.

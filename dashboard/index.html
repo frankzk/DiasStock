@@ -1701,8 +1701,16 @@
     async function fetchOptionalAdsTable(query) {
       const { data, error } = await query;
       if (!error) return data || [];
-      state.adsProblem = "Ejecuta dashboard/supabase-schema.sql para habilitar Ads.";
+      state.adsProblem = formatAdsSchemaError(error);
       return [];
+    }
+
+    function formatAdsSchemaError(error) {
+      const message = error?.message || String(error || "");
+      if (error?.code === "PGRST205" || message.includes("ad_sheet_sources") || message.includes("schema cache")) {
+        return "Faltan tablas Ads en Supabase. Ejecuta dashboard/supabase-schema.sql una vez en el SQL Editor.";
+      }
+      return message || "No se pudieron cargar las tablas Ads.";
     }
 
     function normalizeRow(row) {
@@ -2075,6 +2083,10 @@
       event.preventDefault();
       const client = state.client || createClient();
       if (!client) return;
+      if (state.adsProblem) {
+        setAdsStatus(state.adsProblem, true);
+        return;
+      }
 
       const spreadsheetUrl = els.adsSheetUrl.value.trim();
       const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
@@ -2119,7 +2131,7 @@
       setAdsStatus(`Guardando ${formatNumber(rows.length)} pestaña(s)...`);
       const { error } = await client.from("ad_sheet_sources").upsert(rows, { onConflict: "spreadsheet_id,sheet_name" });
       if (error) {
-        setAdsStatus(error.message || "No se pudieron guardar las pestañas Ads.", true);
+        setAdsStatus(formatAdsSchemaError(error) || "No se pudieron guardar las pestañas Ads.", true);
         return;
       }
 
@@ -2145,6 +2157,10 @@
       const source = selectedAdsSource();
       const campaignName = els.adsCampaignSelect.value;
       const sku = els.adsSkuSelect.value;
+      if (state.adsProblem) {
+        setAdsStatus(state.adsProblem, true);
+        return;
+      }
       if (!client || !source || !source.storeKey || !campaignName || !sku) {
         setAdsStatus("Selecciona pestaña, campaña y SKU.", true);
         return;
@@ -2162,7 +2178,7 @@
       }, { onConflict: "source_id,campaign_name" });
 
       if (error) {
-        setAdsStatus(error.message || "No se pudo guardar el mapeo.", true);
+        setAdsStatus(formatAdsSchemaError(error) || "No se pudo guardar el mapeo.", true);
         return;
       }
 
@@ -2175,13 +2191,17 @@
     async function updateAdsSourceStore(sourceId, storeKey) {
       const client = state.client || createClient();
       if (!client) return;
+      if (state.adsProblem) {
+        setAdsStatus(state.adsProblem, true);
+        return;
+      }
       const storeName = new Map(getAvailableStores()).get(storeKey) || "";
       const { error } = await client
         .from("ad_sheet_sources")
         .update({ store_key: storeKey, store_name: storeName })
         .eq("id", sourceId);
       if (error) {
-        setAdsStatus(error.message || "No se pudo asignar la tienda.", true);
+        setAdsStatus(formatAdsSchemaError(error) || "No se pudo asignar la tienda.", true);
         return;
       }
       await client
@@ -2197,12 +2217,16 @@
     async function toggleAdsSource(sourceId, nextActive) {
       const client = state.client || createClient();
       if (!client) return;
+      if (state.adsProblem) {
+        setAdsStatus(state.adsProblem, true);
+        return;
+      }
       const { error } = await client
         .from("ad_sheet_sources")
         .update({ active: nextActive })
         .eq("id", sourceId);
       if (error) {
-        setAdsStatus(error.message || "No se pudo actualizar la fuente.", true);
+        setAdsStatus(formatAdsSchemaError(error) || "No se pudo actualizar la fuente.", true);
         return;
       }
       await loadAdsTables(client);
@@ -2213,12 +2237,16 @@
     async function deleteCampaignMapping(mappingId) {
       const client = state.client || createClient();
       if (!client) return;
+      if (state.adsProblem) {
+        setAdsStatus(state.adsProblem, true);
+        return;
+      }
       const { error } = await client
         .from("campaign_sku_mappings")
         .delete()
         .eq("id", mappingId);
       if (error) {
-        setAdsStatus(error.message || "No se pudo quitar el mapeo.", true);
+        setAdsStatus(formatAdsSchemaError(error) || "No se pudo quitar el mapeo.", true);
         return;
       }
       await loadAdsTables(client);
