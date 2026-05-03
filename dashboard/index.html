@@ -406,6 +406,12 @@
       padding: 0 8px;
     }
 
+    .ads-source-row select:disabled {
+      color: var(--text);
+      background: #f5f8f6;
+      opacity: 1;
+    }
+
     .ads-row strong,
     .ads-row span {
       display: block;
@@ -1437,6 +1443,9 @@
       adSources: [],
       campaignMappings: [],
       adDaily: [],
+      sheetCampaigns: {},
+      campaignLoadingSourceIds: new Set(),
+      editingAdSourceIds: new Set(),
       adsProblem: "",
       expandedProductKeys: new Set(),
       showAllPriority: false,
@@ -1695,7 +1704,21 @@
       state.adSources = sources.map(normalizeAdSource);
       state.campaignMappings = mappings.map(normalizeCampaignMapping);
       state.adDaily = adDaily.map(normalizeAdDaily);
+      pruneAdsUiState();
       enrichRowsWithAdMetrics();
+    }
+
+    function pruneAdsUiState() {
+      const sourceIds = new Set(state.adSources.map((source) => source.id));
+      for (const sourceId of Array.from(state.editingAdSourceIds)) {
+        if (!sourceIds.has(sourceId)) state.editingAdSourceIds.delete(sourceId);
+      }
+      for (const sourceId of Array.from(state.campaignLoadingSourceIds)) {
+        if (!sourceIds.has(sourceId)) state.campaignLoadingSourceIds.delete(sourceId);
+      }
+      for (const sourceId of Object.keys(state.sheetCampaigns)) {
+        if (!sourceIds.has(Number(sourceId))) delete state.sheetCampaigns[sourceId];
+      }
     }
 
     async function fetchOptionalAdsTable(query) {
@@ -1987,29 +2010,41 @@
       }
 
       const stores = [["", "Sin tienda"], ...getAvailableStores()];
-      els.adsSourcesList.innerHTML = state.adSources.map((source) => `
+      els.adsSourcesList.innerHTML = state.adSources.map((source) => {
+        const isEditing = state.editingAdSourceIds.has(source.id) || !source.storeKey;
+        return `
         <div class="ads-row ads-source-row">
           <div>
             <strong>${escapeHtml(source.sheetName)}</strong>
             <span>${escapeHtml(source.accountName || source.sheetName)} · ${source.active ? "activa" : "pausada"}</span>
           </div>
-          <select data-ads-store-source="${source.id}" aria-label="Tienda para ${escapeHtml(source.sheetName)}">
+          <select data-ads-store-source="${source.id}" aria-label="Tienda para ${escapeHtml(source.sheetName)}" ${isEditing ? "" : "disabled"}>
             ${stores.map(([value, label]) => `<option value="${escapeHtml(value)}" ${source.storeKey === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
           </select>
           <div class="ads-actions">
-            <button type="button" class="mini-button" data-ads-save-store="${source.id}">Guardar</button>
-            <button type="button" class="mini-button" data-ads-toggle-source="${source.id}" data-next-active="${source.active ? "false" : "true"}">${source.active ? "Pausar" : "Activar"}</button>
+            ${isEditing ? `
+              <button type="button" class="mini-button" data-ads-save-store="${source.id}">Guardar</button>
+              <button type="button" class="mini-button" data-ads-toggle-source="${source.id}" data-next-active="${source.active ? "false" : "true"}">${source.active ? "Pausar" : "Activar"}</button>
+            ` : `
+              <button type="button" class="mini-button" data-ads-edit-source="${source.id}">Editar</button>
+            `}
           </div>
         </div>
-      `).join("");
+      `;
+      }).join("");
     }
 
     function renderAdsMappingChoices() {
       const source = selectedAdsSource();
+      ensureCampaignOptionsForSource(source);
       const campaigns = source && source.storeKey ? getCampaignOptions(source.id) : [];
       const products = source && source.storeKey ? getSkuOptions(source.storeKey) : [];
+      const isLoadingCampaigns = source ? state.campaignLoadingSourceIds.has(source.id) : false;
+      const campaignPlaceholder = source?.storeKey
+        ? (isLoadingCampaigns ? "Cargando campanas..." : (campaigns.length ? "Selecciona" : "Sin campanas encontradas"))
+        : "Asigna tienda primero";
 
-      fillSelect(els.adsCampaignSelect, [["", source?.storeKey ? (campaigns.length ? "Selecciona" : "Sin campañas importadas") : "Asigna tienda primero"], ...campaigns], els.adsCampaignSelect.value);
+      fillSelect(els.adsCampaignSelect, [["", campaignPlaceholder], ...campaigns], els.adsCampaignSelect.value);
       fillSelect(els.adsSkuSelect, [["", source?.storeKey ? (products.length ? "Selecciona" : "Sin SKUs visibles") : "Asigna tienda primero"], ...products], els.adsSkuSelect.value);
       els.adsCampaignSelect.disabled = !campaigns.length;
       els.adsSkuSelect.disabled = !products.length;
@@ -2044,8 +2079,51 @@
       return state.adSources.find((source) => source.id === id) || null;
     }
 
+    function ensureCampaignOptionsForSource(source) {
+      if (!source || !source.storeKey || !source.spreadsheetId || !source.sheetName) return;
+      const key = String(source.id);
+      if (Object.prototype.hasOwnProperty.call(state.sheetCampaigns, key)) return;
+      if (state.campaignLoadingSourceIds.has(source.id)) return;
+      loadCampaignOptionsForSource(source);
+    }
+
+    async function loadCampaignOptionsForSource(source) {
+      state.campaignLoadingSourceIds.add(source.id);
+      setAdsStatus(`Cargando campanas de ${source.sheetName}...`);
+      try {
+        const campaigns = await discoverSheetCampaigns(source);
+        state.sheetCampaigns[String(source.id)] = campaigns;
+        setAdsStatus(campaigns.length
+          ? `${formatNumber(campaigns.length)} campana(s) cargadas desde la columna B.`
+          : `No encontre campanas en la columna B de ${source.sheetName}.`
+        );
+      } catch (error) {
+        state.sheetCampaigns[String(source.id)] = [];
+        setAdsStatus(error.message || "No pude cargar campanas.", true);
+      } finally {
+        state.campaignLoadingSourceIds.delete(source.id);
+        renderAdsMappingChoices();
+      }
+    }
+
+    async function discoverSheetCampaigns(source) {
+      const params = new URLSearchParams({
+        spreadsheetId: source.spreadsheetId,
+        sheetName: source.sheetName,
+      });
+      const response = await fetch(`/api/sheet-campaigns?${params}`);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "No pude consultar campanas del Sheet.");
+      }
+      const data = await response.json();
+      return Array.from(new Set((data.campaigns || []).map((campaign) => String(campaign.name || campaign).trim()).filter(Boolean)));
+    }
+
     function getCampaignOptions(sourceId) {
       const campaigns = new Set();
+      (state.sheetCampaigns[String(sourceId)] || [])
+        .forEach((campaign) => campaigns.add(campaign));
       state.adDaily
         .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
         .forEach((row) => campaigns.add(row.campaignName));
@@ -2208,6 +2286,7 @@
         .from("campaign_sku_mappings")
         .update({ store_key: storeKey, store_name: storeName })
         .eq("source_id", sourceId);
+      state.editingAdSourceIds.delete(sourceId);
       await loadAdsTables(client);
       renderAdsConfig();
       applyFilters();
@@ -2805,6 +2884,9 @@
       state.adSources = [];
       state.campaignMappings = [];
       state.adDaily = [];
+      state.sheetCampaigns = {};
+      state.campaignLoadingSourceIds.clear();
+      state.editingAdSourceIds.clear();
       state.adsProblem = "";
       state.expandedProductKeys.clear();
       state.showAllPriority = false;
@@ -2837,6 +2919,12 @@
       renderAdsMappingsList();
     });
     els.adsSourcesList.addEventListener("click", (event) => {
+      const editButton = event.target.closest("[data-ads-edit-source]");
+      if (editButton) {
+        state.editingAdSourceIds.add(Number(editButton.dataset.adsEditSource));
+        renderAdsSourcesList();
+        return;
+      }
       const saveButton = event.target.closest("[data-ads-save-store]");
       if (saveButton) {
         const sourceId = Number(saveButton.dataset.adsSaveStore);
