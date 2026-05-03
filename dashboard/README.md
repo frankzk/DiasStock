@@ -32,3 +32,7 @@ Sube la carpeta `dashboard` a <https://app.netlify.com/drop>. Si prefieres dejar
 4. Deploy. Cada push a la rama conectada vuelve a publicar el dashboard.
 
 El login es basico y se aplica en el navegador. Para cambiar la clave, cambia `DASHBOARD_PASSWORD` en Vercel y redeploya.
+
+## Exportacion
+
+El boton `Descargar Excel` genera un `.xlsx` con las filas visibles del dashboard, respetando filtros y orden aplicado.

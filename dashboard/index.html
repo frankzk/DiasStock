@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DiasStock Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./config.js"></script>
   <style>
     :root {
@@ -256,10 +257,37 @@
 
     .filters {
       display: grid;
-      grid-template-columns: minmax(220px, 1.35fr) repeat(3, minmax(150px, 1fr));
+      grid-template-columns: repeat(6, minmax(140px, 1fr));
       gap: 12px;
       padding: 14px;
       margin-bottom: 16px;
+    }
+
+    .search-field {
+      grid-column: span 2;
+    }
+
+    .range-filters {
+      grid-template-columns: repeat(4, minmax(180px, 1fr)) auto;
+      align-items: end;
+    }
+
+    .range-field {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .range-field > span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .range-inputs {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
     }
 
     .metrics {
@@ -407,6 +435,13 @@
       border-bottom: 1px solid var(--line);
     }
 
+    .table-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .count-pill {
       display: inline-flex;
       align-items: center;
@@ -426,7 +461,7 @@
 
     table {
       width: 100%;
-      min-width: 1040px;
+      min-width: 1220px;
       border-collapse: collapse;
     }
 
@@ -448,6 +483,36 @@
       font-weight: 800;
       text-transform: uppercase;
       z-index: 1;
+    }
+
+    .sort-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      width: 100%;
+      min-height: 36px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      text-align: left;
+      text-transform: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      cursor: pointer;
+    }
+
+    .sort-button:hover {
+      background: transparent;
+      color: var(--primary);
+    }
+
+    .sort-indicator {
+      color: var(--primary);
+      font-size: 12px;
+      min-width: 10px;
     }
 
     td.number {
@@ -548,9 +613,14 @@
 
       .config-grid,
       .filters,
+      .range-filters,
       .metrics,
       .content-grid {
         grid-template-columns: 1fr;
+      }
+
+      .search-field {
+        grid-column: auto;
       }
 
       .metric-value {
@@ -604,6 +674,7 @@
       </div>
       <div class="top-actions">
         <button type="button" class="primary" id="refreshBtn">Actualizar</button>
+        <button type="button" id="exportExcelBtn">Descargar Excel</button>
         <button type="button" id="configToggle">Configuracion</button>
       </div>
     </header>
@@ -629,8 +700,8 @@
       </form>
     </section>
 
-    <section class="filters" aria-label="Filtros">
-      <label class="field" for="searchInput">
+    <section class="filters primary-filters" aria-label="Filtros principales">
+      <label class="field search-field" for="searchInput">
         <span>Buscar</span>
         <input id="searchInput" type="search" autocomplete="off" placeholder="Producto o SKU">
       </label>
@@ -643,9 +714,49 @@
         <select id="dateFilter"></select>
       </label>
       <label class="field" for="statusFilter">
-        <span>Estado</span>
+        <span>Estado inventario</span>
         <select id="statusFilter"></select>
       </label>
+      <label class="field" for="saleStatusFilter">
+        <span>Estado venta</span>
+        <select id="saleStatusFilter"></select>
+      </label>
+      <label class="field" for="alertFilter">
+        <span>Alerta</span>
+        <select id="alertFilter"></select>
+      </label>
+    </section>
+
+    <section class="filters range-filters" aria-label="Filtros numericos">
+      <label class="range-field" for="stockMin">
+        <span>Stock</span>
+        <span class="range-inputs">
+          <input id="stockMin" type="number" inputmode="decimal" placeholder="Min">
+          <input id="stockMax" type="number" inputmode="decimal" placeholder="Max">
+        </span>
+      </label>
+      <label class="range-field" for="soldMin">
+        <span>Ventas 7d</span>
+        <span class="range-inputs">
+          <input id="soldMin" type="number" inputmode="decimal" placeholder="Min">
+          <input id="soldMax" type="number" inputmode="decimal" placeholder="Max">
+        </span>
+      </label>
+      <label class="range-field" for="avgMin">
+        <span>Prom/dia</span>
+        <span class="range-inputs">
+          <input id="avgMin" type="number" inputmode="decimal" step="0.01" placeholder="Min">
+          <input id="avgMax" type="number" inputmode="decimal" step="0.01" placeholder="Max">
+        </span>
+      </label>
+      <label class="range-field" for="daysMin">
+        <span>Dias</span>
+        <span class="range-inputs">
+          <input id="daysMin" type="number" inputmode="decimal" step="0.1" placeholder="Min">
+          <input id="daysMax" type="number" inputmode="decimal" step="0.1" placeholder="Max">
+        </span>
+      </label>
+      <button type="button" id="resetFiltersBtn">Limpiar filtros</button>
     </section>
 
     <section class="metrics" aria-label="Resumen">
@@ -691,27 +802,31 @@
     <section class="table-section" aria-labelledby="tableTitle">
       <div class="table-head">
         <h2 id="tableTitle">Snapshots</h2>
-        <span class="count-pill" id="resultCount">0 resultados</span>
+        <div class="table-actions">
+          <button type="button" id="tableExportBtn">Descargar Excel</button>
+          <span class="count-pill" id="resultCount">0 resultados</span>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Fecha</th>
-              <th>Tienda</th>
-              <th>Producto</th>
-              <th>SKU</th>
-              <th>Stock</th>
-              <th>Ventas 7d</th>
-              <th>Prom/dia</th>
-              <th>Dias</th>
-              <th>Estado</th>
-              <th>Alerta</th>
+              <th><button type="button" class="sort-button" data-sort-key="date">Fecha <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="storeName">Tienda <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="product">Producto <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="sku">SKU <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="stock">Stock <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="sold7">Ventas 7d <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="dailyAvg">Prom/dia <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="days">Dias <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="status">Estado inventario <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="saleStatus">Estado venta <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="alert">Alerta <span class="sort-indicator"></span></button></th>
             </tr>
           </thead>
           <tbody id="snapshotBody">
             <tr>
-              <td colspan="10" class="empty">Sin datos</td>
+              <td colspan="11" class="empty">Sin datos</td>
             </tr>
           </tbody>
         </table>
@@ -736,12 +851,33 @@
       "ALTO": { label: "ALTO", className: "high", color: "#2458c9" },
       "Sin ventas": { label: "Sin ventas", className: "none", color: "#52605b" },
     };
+    const SALE_STATUS_ORDER = ["ALTA", "MEDIA", "BAJA", "SIN VENTAS"];
+    const SALE_STATUS_META = {
+      "ALTA": { className: "ok", color: "#137333" },
+      "MEDIA": { className: "low", color: "#a15c07" },
+      "BAJA": { className: "critical", color: "#b42318" },
+      "SIN VENTAS": { className: "none", color: "#52605b" },
+    };
+    const TABLE_COLUMNS = [
+      { key: "date", label: "Fecha", type: "date" },
+      { key: "storeName", label: "Tienda", type: "text" },
+      { key: "product", label: "Producto", type: "text" },
+      { key: "sku", label: "SKU", type: "text" },
+      { key: "stock", label: "Stock", type: "number" },
+      { key: "sold7", label: "Ventas 7d", type: "number" },
+      { key: "dailyAvg", label: "Prom/dia", type: "number" },
+      { key: "days", label: "Dias", type: "number" },
+      { key: "status", label: "Estado de Inventario", type: "status" },
+      { key: "saleStatus", label: "Estado de Venta", type: "saleStatus" },
+      { key: "alert", label: "Alerta", type: "text" },
+    ];
 
     const state = {
       rows: [],
       filteredRows: [],
       loading: false,
       client: null,
+      sort: { key: "date", direction: "desc" },
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -759,6 +895,19 @@
       storeFilter: $("#storeFilter"),
       dateFilter: $("#dateFilter"),
       statusFilter: $("#statusFilter"),
+      saleStatusFilter: $("#saleStatusFilter"),
+      alertFilter: $("#alertFilter"),
+      stockMin: $("#stockMin"),
+      stockMax: $("#stockMax"),
+      soldMin: $("#soldMin"),
+      soldMax: $("#soldMax"),
+      avgMin: $("#avgMin"),
+      avgMax: $("#avgMax"),
+      daysMin: $("#daysMin"),
+      daysMax: $("#daysMax"),
+      resetFiltersBtn: $("#resetFiltersBtn"),
+      exportExcelBtn: $("#exportExcelBtn"),
+      tableExportBtn: $("#tableExportBtn"),
       lastUpdated: $("#lastUpdated"),
       resultCount: $("#resultCount"),
       stateTotal: $("#stateTotal"),
@@ -944,7 +1093,7 @@
         dailyAvg: Number(row.daily_avg || 0),
         days: row.days_of_stock === null || row.days_of_stock === undefined ? null : Number(row.days_of_stock),
         status,
-        saleStatus: row.estado_venta || "",
+        saleStatus: row.estado_venta || "SIN VENTAS",
         alert: row.alerta || "",
       };
     }
@@ -954,6 +1103,8 @@
         store: els.storeFilter.value,
         date: els.dateFilter.value,
         status: els.statusFilter.value,
+        saleStatus: els.saleStatusFilter.value,
+        alert: els.alertFilter.value,
       };
 
       const stores = Array.from(
@@ -965,10 +1116,26 @@
       ).sort((a, b) => a[1].localeCompare(b[1], "es"));
 
       const dates = Array.from(new Set(state.rows.map((row) => row.date).filter(Boolean))).sort().reverse();
+      const saleStatuses = uniqueOrdered(
+        state.rows.map((row) => row.saleStatus).filter(Boolean),
+        SALE_STATUS_ORDER
+      );
+      const alerts = Array.from(new Set(state.rows.map((row) => row.alert).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, "es"));
 
       fillSelect(els.storeFilter, [["", "Todas"], ...stores], current.store);
       fillSelect(els.dateFilter, [["", "Todas"], ...dates.map((date) => [date, formatDate(date)])], current.date);
       fillSelect(els.statusFilter, [["", "Todos"], ...STATUS_ORDER.map((status) => [status, status])], current.status);
+      fillSelect(els.saleStatusFilter, [["", "Todos"], ...saleStatuses.map((status) => [status, status])], current.saleStatus);
+      fillSelect(els.alertFilter, [["", "Todas"], ["__empty__", "Sin alerta"], ...alerts.map((alert) => [alert, alert])], current.alert);
+    }
+
+    function uniqueOrdered(values, preferredOrder) {
+      const set = new Set(values);
+      return [
+        ...preferredOrder.filter((value) => set.has(value)),
+        ...Array.from(set).filter((value) => !preferredOrder.includes(value)).sort((a, b) => a.localeCompare(b, "es")),
+      ];
     }
 
     function fillSelect(select, options, selectedValue) {
@@ -985,31 +1152,90 @@
     }
 
     function applyFilters() {
-      const search = els.searchInput.value.trim().toLowerCase();
-      const store = els.storeFilter.value;
-      const date = els.dateFilter.value;
-      const status = els.statusFilter.value;
+      const filters = getFilterValues();
 
       state.filteredRows = state.rows
-        .filter((row) => !search || `${row.product} ${row.sku}`.toLowerCase().includes(search))
-        .filter((row) => !store || row.storeKey === store || row.storeName === store)
-        .filter((row) => !date || row.date === date)
-        .filter((row) => !status || row.status === status)
+        .filter((row) => !filters.search || `${row.product} ${row.sku}`.toLowerCase().includes(filters.search))
+        .filter((row) => !filters.store || row.storeKey === filters.store || row.storeName === filters.store)
+        .filter((row) => !filters.date || row.date === filters.date)
+        .filter((row) => !filters.status || row.status === filters.status)
+        .filter((row) => !filters.saleStatus || row.saleStatus === filters.saleStatus)
+        .filter((row) => !filters.alert || (filters.alert === "__empty__" ? !row.alert : row.alert === filters.alert))
+        .filter((row) => inRange(row.stock, filters.stockMin, filters.stockMax))
+        .filter((row) => inRange(row.sold7, filters.soldMin, filters.soldMax))
+        .filter((row) => inRange(row.dailyAvg, filters.avgMin, filters.avgMax))
+        .filter((row) => inRange(row.days, filters.daysMin, filters.daysMax))
         .sort(compareRows);
 
       render();
     }
 
+    function getFilterValues() {
+      return {
+        search: els.searchInput.value.trim().toLowerCase(),
+        store: els.storeFilter.value,
+        date: els.dateFilter.value,
+        status: els.statusFilter.value,
+        saleStatus: els.saleStatusFilter.value,
+        alert: els.alertFilter.value,
+        stockMin: parseFilterNumber(els.stockMin.value),
+        stockMax: parseFilterNumber(els.stockMax.value),
+        soldMin: parseFilterNumber(els.soldMin.value),
+        soldMax: parseFilterNumber(els.soldMax.value),
+        avgMin: parseFilterNumber(els.avgMin.value),
+        avgMax: parseFilterNumber(els.avgMax.value),
+        daysMin: parseFilterNumber(els.daysMin.value),
+        daysMax: parseFilterNumber(els.daysMax.value),
+      };
+    }
+
+    function parseFilterNumber(value) {
+      if (value === "") return null;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function inRange(value, min, max) {
+      if (min === null && max === null) return true;
+      if (value === null || value === undefined || !Number.isFinite(Number(value))) return false;
+      const number = Number(value);
+      if (min !== null && number < min) return false;
+      if (max !== null && number > max) return false;
+      return true;
+    }
+
     function compareRows(a, b) {
+      const column = TABLE_COLUMNS.find((item) => item.key === state.sort.key) || TABLE_COLUMNS[0];
+      const primary = compareValues(a[column.key], b[column.key], column.type);
+      if (primary !== 0) {
+        return state.sort.direction === "asc" ? primary : -primary;
+      }
+
       const byDate = b.date.localeCompare(a.date);
       if (byDate !== 0) return byDate;
       const byStore = a.storeName.localeCompare(b.storeName, "es");
       if (byStore !== 0) return byStore;
-      const byStatus = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
-      if (byStatus !== 0) return byStatus;
-      const aDays = a.days === null ? Number.POSITIVE_INFINITY : a.days;
-      const bDays = b.days === null ? Number.POSITIVE_INFINITY : b.days;
-      return aDays - bDays;
+      return a.product.localeCompare(b.product, "es");
+    }
+
+    function compareValues(a, b, type) {
+      if (type === "number") {
+        const aNumber = Number.isFinite(Number(a)) ? Number(a) : Number.POSITIVE_INFINITY;
+        const bNumber = Number.isFinite(Number(b)) ? Number(b) : Number.POSITIVE_INFINITY;
+        return aNumber - bNumber;
+      }
+      if (type === "status") {
+        return getOrderIndex(STATUS_ORDER, a) - getOrderIndex(STATUS_ORDER, b);
+      }
+      if (type === "saleStatus") {
+        return getOrderIndex(SALE_STATUS_ORDER, a) - getOrderIndex(SALE_STATUS_ORDER, b);
+      }
+      return String(a || "").localeCompare(String(b || ""), "es", { numeric: true, sensitivity: "base" });
+    }
+
+    function getOrderIndex(order, value) {
+      const index = order.indexOf(value);
+      return index === -1 ? order.length : index;
     }
 
     function render() {
@@ -1025,8 +1251,8 @@
       const overstock = rows.filter((row) => row.alert.toLowerCase().includes("sobrestock")).length;
       const days = rows.map((row) => row.days).filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
       const median = days.length ? days[Math.floor(days.length / 2)] : 0;
-      const activeFilters = [els.searchInput.value, els.storeFilter.value, els.dateFilter.value, els.statusFilter.value]
-        .filter(Boolean).length;
+      const filters = getFilterValues();
+      const activeFilters = Object.values(filters).filter((value) => value !== "" && value !== null).length;
 
       els.metricProducts.textContent = formatNumber(rows.length);
       els.metricProductsNote.textContent = activeFilters ? `${activeFilters} filtro(s)` : "Sin filtros";
@@ -1035,6 +1261,8 @@
       els.metricMedian.textContent = formatDays(median);
       els.resultCount.textContent = `${formatNumber(rows.length)} resultado${rows.length === 1 ? "" : "s"}`;
       els.stateTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
+      els.exportExcelBtn.disabled = rows.length === 0;
+      els.tableExportBtn.disabled = rows.length === 0;
     }
 
     function renderStatusBars() {
@@ -1088,13 +1316,15 @@
 
     function renderTable() {
       const rows = state.filteredRows;
+      renderSortIndicators();
       if (!rows.length) {
-        els.body.innerHTML = `<tr><td colspan="10" class="empty">Sin datos para estos filtros</td></tr>`;
+        els.body.innerHTML = `<tr><td colspan="11" class="empty">Sin datos para estos filtros</td></tr>`;
         return;
       }
 
       els.body.innerHTML = rows.map((row) => {
         const meta = STATUS_META[row.status] || STATUS_META["Sin ventas"];
+        const saleMeta = SALE_STATUS_META[row.saleStatus] || SALE_STATUS_META["SIN VENTAS"];
         return `
           <tr>
             <td>${formatDate(row.date)}</td>
@@ -1106,10 +1336,97 @@
             <td class="number">${formatDecimal(row.dailyAvg)}</td>
             <td class="number">${formatDays(row.days)}</td>
             <td><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
+            <td><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
             <td class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
           </tr>
         `;
       }).join("");
+    }
+
+    function renderSortIndicators() {
+      document.querySelectorAll("[data-sort-key]").forEach((button) => {
+        const indicator = button.querySelector(".sort-indicator");
+        const isActive = button.dataset.sortKey === state.sort.key;
+        button.setAttribute("aria-sort", isActive ? (state.sort.direction === "asc" ? "ascending" : "descending") : "none");
+        indicator.textContent = isActive ? (state.sort.direction === "asc" ? "↑" : "↓") : "";
+      });
+    }
+
+    function setSort(key) {
+      if (state.sort.key === key) {
+        state.sort.direction = state.sort.direction === "asc" ? "desc" : "asc";
+      } else {
+        state.sort = { key, direction: getDefaultSortDirection(key) };
+      }
+      applyFilters();
+    }
+
+    function getDefaultSortDirection(key) {
+      if (key === "date" || key === "stock" || key === "sold7" || key === "dailyAvg") return "desc";
+      return "asc";
+    }
+
+    function resetFilters() {
+      [
+        els.searchInput,
+        els.storeFilter,
+        els.dateFilter,
+        els.statusFilter,
+        els.saleStatusFilter,
+        els.alertFilter,
+        els.stockMin,
+        els.stockMax,
+        els.soldMin,
+        els.soldMax,
+        els.avgMin,
+        els.avgMax,
+        els.daysMin,
+        els.daysMax,
+      ].forEach((control) => {
+        control.value = "";
+      });
+      applyFilters();
+    }
+
+    function exportExcel() {
+      if (!state.filteredRows.length) return;
+      if (!window.XLSX) {
+        alert("No se pudo cargar el exportador de Excel. Recarga la pagina e intenta de nuevo.");
+        return;
+      }
+
+      const rows = state.filteredRows.map((row) => ({
+        "Fecha": formatDate(row.date),
+        "Tienda": row.storeName,
+        "Producto": row.product,
+        "SKU": row.sku,
+        "Stock": row.stock,
+        "Ventas 7d": row.sold7,
+        "Prom/dia": row.dailyAvg,
+        "Dias": row.days === null ? "" : row.days,
+        "Estado de Inventario": row.status,
+        "Estado de Venta": row.saleStatus,
+        "Alerta": row.alert,
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      worksheet["!cols"] = [
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 48 },
+        { wch: 18 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 22 },
+        { wch: 18 },
+        { wch: 24 },
+      ];
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Snapshots");
+
+      const date = state.filteredRows[0]?.date || new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `dias_stock_dashboard_${date}.xlsx`);
     }
 
     function statusClass(status) {
@@ -1180,11 +1497,29 @@
     });
 
     els.refreshBtn.addEventListener("click", refreshData);
+    els.exportExcelBtn.addEventListener("click", exportExcel);
+    els.tableExportBtn.addEventListener("click", exportExcel);
+    els.resetFiltersBtn.addEventListener("click", resetFilters);
     els.loginForm.addEventListener("submit", handleLogin);
     els.searchInput.addEventListener("input", applyFilters);
     els.storeFilter.addEventListener("change", applyFilters);
     els.dateFilter.addEventListener("change", applyFilters);
     els.statusFilter.addEventListener("change", applyFilters);
+    els.saleStatusFilter.addEventListener("change", applyFilters);
+    els.alertFilter.addEventListener("change", applyFilters);
+    [
+      els.stockMin,
+      els.stockMax,
+      els.soldMin,
+      els.soldMax,
+      els.avgMin,
+      els.avgMax,
+      els.daysMin,
+      els.daysMax,
+    ].forEach((input) => input.addEventListener("input", applyFilters));
+    document.querySelectorAll("[data-sort-key]").forEach((button) => {
+      button.addEventListener("click", () => setSort(button.dataset.sortKey));
+    });
 
     buildFilters();
     render();
