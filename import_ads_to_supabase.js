@@ -111,7 +111,11 @@ async function loadSources(url, key, sourceId) {
     headers: supabaseHeaders(key),
   });
   if (!response.ok) throw new Error(`Supabase sources HTTP ${response.status}: ${await response.text()}`);
-  return response.json();
+  const rows = await response.json();
+  const ready = rows.filter((row) => String(row.store_key || "").trim());
+  const skipped = rows.length - ready.length;
+  if (skipped) console.log(`  ${skipped} fuente(s) Ads omitidas sin tienda asignada.`);
+  return ready;
 }
 
 async function loadMappings(url, key) {
@@ -150,11 +154,7 @@ async function fetchSheetValues(source) {
   if (!response.ok) throw new Error(`Google Sheets HTTP ${response.status} en ${sheetName}`);
   const text = (await response.text()).replace(/^\uFEFF/, "");
   const values = parseCsv(text).filter((row) => row.some((cell) => String(cell).trim()));
-  if (!values.length || !hasExpectedHeaders(values[0])) {
-    throw new Error(
-      `No pude leer headers Ads en '${sheetName}'. Comparte el Sheet por enlace o usa el conector Google Drive de Codex.`
-    );
-  }
+  if (!values.length) return [];
   return values;
 }
 
@@ -162,7 +162,10 @@ function parseValues(source, values, mappings) {
   if (!values.length) return [];
   const headers = buildHeaderMap(values[0]);
   const missing = ["date", "campaign_name", "spend"].filter((name) => !(name in headers));
-  if (missing.length) throw new Error(`${source.sheet_name}: faltan columnas ${missing.join(", ")}`);
+  if (missing.length) {
+    console.log(`  ${source.sheet_name}: omitida, faltan columnas ${missing.join(", ")}`);
+    return [];
+  }
 
   const rows = [];
   for (const valueRow of values.slice(1)) {
@@ -258,11 +261,6 @@ function buildHeaderMap(headers) {
     }
   }
   return result;
-}
-
-function hasExpectedHeaders(headers) {
-  const headerMap = buildHeaderMap(headers);
-  return ["date", "campaign_name", "spend"].every((name) => name in headerMap);
 }
 
 function parseCsv(text) {

@@ -354,7 +354,7 @@
 
     .ads-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
       align-items: end;
     }
@@ -394,6 +394,16 @@
       border-radius: 7px;
       background: white;
       padding: 7px 8px;
+    }
+
+    .ads-source-row {
+      grid-template-columns: minmax(0, 1fr) minmax(150px, 210px) auto;
+    }
+
+    .ads-source-row select {
+      min-height: 32px;
+      font-size: 12px;
+      padding: 0 8px;
     }
 
     .ads-row strong,
@@ -977,6 +987,7 @@
       .ads-grid,
       .ads-workspace,
       .ads-mapping-form,
+      .ads-source-row,
       .filters,
       .range-filters,
       .summary-strip,
@@ -1161,19 +1172,7 @@
             <span>Google Sheet URL</span>
             <input id="adsSheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
           </label>
-          <label class="field" for="adsSheetName">
-            <span>Pestaña</span>
-            <input id="adsSheetName" type="text" placeholder="HN| Tula tkqc 3">
-          </label>
-          <label class="field" for="adsAccountName">
-            <span>Cuenta publicitaria</span>
-            <input id="adsAccountName" type="text" placeholder="Tula tkqc 3">
-          </label>
-          <label class="field" for="adsStoreSelect">
-            <span>Tienda</span>
-            <select id="adsStoreSelect"></select>
-          </label>
-          <button type="submit" class="primary">Registrar</button>
+          <button type="submit" class="primary">Extraer pestañas</button>
         </form>
 
         <div class="ads-workspace">
@@ -1458,9 +1457,6 @@
       clearConfigBtn: $("#clearConfigBtn"),
       adsSourceForm: $("#adsSourceForm"),
       adsSheetUrl: $("#adsSheetUrl"),
-      adsSheetName: $("#adsSheetName"),
-      adsAccountName: $("#adsAccountName"),
-      adsStoreSelect: $("#adsStoreSelect"),
       adsSourcesList: $("#adsSourcesList"),
       adsMappingForm: $("#adsMappingForm"),
       adsMappingSource: $("#adsMappingSource"),
@@ -1724,7 +1720,7 @@
         sheetName: row.sheet_name || "",
         accountName: row.ad_account_name || "",
         storeKey: row.store_key || "",
-        storeName: row.store_name || row.store_key || "Sin tienda",
+        storeName: row.store_name || (row.store_key ? row.store_key : "Sin tienda"),
         active: row.active !== false,
       };
     }
@@ -1946,9 +1942,7 @@
     }
 
     function renderAdsConfig() {
-      const currentStore = els.adsStoreSelect.value;
       const currentSource = els.adsMappingSource.value;
-      fillSelect(els.adsStoreSelect, [["", "Selecciona"], ...getAvailableStores()], currentStore);
 
       const sourceOptions = state.adSources.map((source) => [String(source.id), `${source.sheetName} - ${source.storeName}`]);
       fillSelect(els.adsMappingSource, [["", "Selecciona"], ...sourceOptions], currentSource);
@@ -1968,13 +1962,18 @@
         return;
       }
 
+      const stores = [["", "Sin tienda"], ...getAvailableStores()];
       els.adsSourcesList.innerHTML = state.adSources.map((source) => `
-        <div class="ads-row">
+        <div class="ads-row ads-source-row">
           <div>
             <strong>${escapeHtml(source.sheetName)}</strong>
-            <span>${escapeHtml(source.accountName || "Cuenta sin nombre")} · ${escapeHtml(source.storeName)} · ${source.active ? "activa" : "pausada"}</span>
+            <span>${escapeHtml(source.accountName || source.sheetName)} · ${source.active ? "activa" : "pausada"}</span>
           </div>
+          <select data-ads-store-source="${source.id}" aria-label="Tienda para ${escapeHtml(source.sheetName)}">
+            ${stores.map(([value, label]) => `<option value="${escapeHtml(value)}" ${source.storeKey === value ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+          </select>
           <div class="ads-actions">
+            <button type="button" class="mini-button" data-ads-save-store="${source.id}">Guardar</button>
             <button type="button" class="mini-button" data-ads-toggle-source="${source.id}" data-next-active="${source.active ? "false" : "true"}">${source.active ? "Pausar" : "Activar"}</button>
           </div>
         </div>
@@ -1983,11 +1982,11 @@
 
     function renderAdsMappingChoices() {
       const source = selectedAdsSource();
-      const campaigns = source ? getCampaignOptions(source.id) : [];
-      const products = source ? getSkuOptions(source.storeKey) : [];
+      const campaigns = source && source.storeKey ? getCampaignOptions(source.id) : [];
+      const products = source && source.storeKey ? getSkuOptions(source.storeKey) : [];
 
-      fillSelect(els.adsCampaignSelect, [["", campaigns.length ? "Selecciona" : "Sin campañas importadas"], ...campaigns], els.adsCampaignSelect.value);
-      fillSelect(els.adsSkuSelect, [["", products.length ? "Selecciona" : "Sin SKUs visibles"], ...products], els.adsSkuSelect.value);
+      fillSelect(els.adsCampaignSelect, [["", source?.storeKey ? (campaigns.length ? "Selecciona" : "Sin campañas importadas") : "Asigna tienda primero"], ...campaigns], els.adsCampaignSelect.value);
+      fillSelect(els.adsSkuSelect, [["", source?.storeKey ? (products.length ? "Selecciona" : "Sin SKUs visibles") : "Asigna tienda primero"], ...products], els.adsSkuSelect.value);
       els.adsCampaignSelect.disabled = !campaigns.length;
       els.adsSkuSelect.disabled = !products.length;
     }
@@ -2035,6 +2034,7 @@
     }
 
     function getSkuOptions(storeKey) {
+      if (!storeKey) return [];
       const products = new Map();
       state.rows
         .filter((row) => (!storeKey || row.storeKey === storeKey) && row.sku)
@@ -2062,37 +2062,65 @@
 
       const spreadsheetUrl = els.adsSheetUrl.value.trim();
       const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
-      const sheetName = els.adsSheetName.value.trim();
-      const storeKey = els.adsStoreSelect.value;
-      const storeName = new Map(getAvailableStores()).get(storeKey) || storeKey;
 
-      if (!spreadsheetId || !sheetName || !storeKey) {
-        setAdsStatus("Completa URL, pestaña y tienda.", true);
+      if (!spreadsheetId) {
+        setAdsStatus("Pega una URL valida de Google Sheets.", true);
         return;
       }
 
-      setAdsStatus("Guardando fuente Ads...");
-      const { error } = await client.from("ad_sheet_sources").upsert({
-        spreadsheet_id: spreadsheetId,
-        spreadsheet_url: spreadsheetUrl,
-        sheet_name: sheetName,
-        ad_account_name: els.adsAccountName.value.trim(),
-        store_key: storeKey,
-        store_name: storeName,
-        active: true,
-      }, { onConflict: "spreadsheet_id,sheet_name" });
+      setAdsStatus("Extrayendo pestañas del Google Sheet...");
+      let sheetNames = [];
+      try {
+        sheetNames = await discoverSheetNames(spreadsheetId);
+      } catch (error) {
+        setAdsStatus(error.message || "No pude extraer las pestañas.", true);
+        return;
+      }
 
+      if (!sheetNames.length) {
+        setAdsStatus("No encontre pestañas en ese Google Sheet.", true);
+        return;
+      }
+
+      const currentSources = new Map(
+        state.adSources
+          .filter((source) => source.spreadsheetId === spreadsheetId)
+          .map((source) => [source.sheetName, source])
+      );
+      const rows = sheetNames.map((sheetName) => {
+        const current = currentSources.get(sheetName);
+        return {
+          spreadsheet_id: spreadsheetId,
+          spreadsheet_url: spreadsheetUrl,
+          sheet_name: sheetName,
+          ad_account_name: sheetName,
+          store_key: current?.storeKey || "",
+          store_name: current?.storeKey ? current.storeName : "",
+          active: current ? current.active : true,
+        };
+      });
+
+      setAdsStatus(`Guardando ${formatNumber(rows.length)} pestaña(s)...`);
+      const { error } = await client.from("ad_sheet_sources").upsert(rows, { onConflict: "spreadsheet_id,sheet_name" });
       if (error) {
-        setAdsStatus(error.message || "No se pudo guardar la fuente Ads.", true);
+        setAdsStatus(error.message || "No se pudieron guardar las pestañas Ads.", true);
         return;
       }
 
-      els.adsSheetName.value = "";
-      els.adsAccountName.value = "";
       await loadAdsTables(client);
       renderAdsConfig();
       applyFilters();
-      setAdsStatus("Fuente Ads guardada.");
+      setAdsStatus(`${formatNumber(rows.length)} pestaña(s) registradas. Asigna tienda a cada cuenta antes de importar.`);
+    }
+
+    async function discoverSheetNames(spreadsheetId) {
+      const response = await fetch(`/api/sheets-tabs?spreadsheetId=${encodeURIComponent(spreadsheetId)}`);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "No pude consultar las pestañas del Sheet.");
+      }
+      const data = await response.json();
+      return Array.from(new Set((data.tabs || []).map((tab) => String(tab.name || tab).trim()).filter(Boolean)));
     }
 
     async function saveCampaignMapping(event) {
@@ -2101,7 +2129,7 @@
       const source = selectedAdsSource();
       const campaignName = els.adsCampaignSelect.value;
       const sku = els.adsSkuSelect.value;
-      if (!client || !source || !campaignName || !sku) {
+      if (!client || !source || !source.storeKey || !campaignName || !sku) {
         setAdsStatus("Selecciona pestaña, campaña y SKU.", true);
         return;
       }
@@ -2126,6 +2154,28 @@
       renderAdsConfig();
       applyFilters();
       setAdsStatus("Mapeo guardado.");
+    }
+
+    async function updateAdsSourceStore(sourceId, storeKey) {
+      const client = state.client || createClient();
+      if (!client) return;
+      const storeName = new Map(getAvailableStores()).get(storeKey) || "";
+      const { error } = await client
+        .from("ad_sheet_sources")
+        .update({ store_key: storeKey, store_name: storeName })
+        .eq("id", sourceId);
+      if (error) {
+        setAdsStatus(error.message || "No se pudo asignar la tienda.", true);
+        return;
+      }
+      await client
+        .from("campaign_sku_mappings")
+        .update({ store_key: storeKey, store_name: storeName })
+        .eq("source_id", sourceId);
+      await loadAdsTables(client);
+      renderAdsConfig();
+      applyFilters();
+      setAdsStatus(storeKey ? "Tienda asignada a la cuenta." : "Cuenta marcada sin tienda.");
     }
 
     async function toggleAdsSource(sourceId, nextActive) {
@@ -2738,6 +2788,13 @@
       renderAdsMappingsList();
     });
     els.adsSourcesList.addEventListener("click", (event) => {
+      const saveButton = event.target.closest("[data-ads-save-store]");
+      if (saveButton) {
+        const sourceId = Number(saveButton.dataset.adsSaveStore);
+        const select = els.adsSourcesList.querySelector(`[data-ads-store-source="${sourceId}"]`);
+        updateAdsSourceStore(sourceId, select?.value || "");
+        return;
+      }
       const button = event.target.closest("[data-ads-toggle-source]");
       if (!button) return;
       toggleAdsSource(Number(button.dataset.adsToggleSource), button.dataset.nextActive === "true");

@@ -55,12 +55,13 @@ Por defecto importa solo el ultimo Excel de cada tienda por dia. Usa `--date YYY
 ## Ads Google Sheets
 
 1. Vuelve a ejecutar `dashboard/supabase-schema.sql` en Supabase para crear las tablas de Ads.
-2. En `Configuracion > Ads Google Sheets`, registra cada pestaña/cuenta y asignala a una tienda.
-3. Ejecuta el importador:
+2. En `Configuracion > Ads Google Sheets`, pega la URL del archivo. El dashboard extrae todas las pestañas y usa cada nombre de pestaña como cuenta publicitaria.
+3. Asigna una tienda a cada pestaña/cuenta registrada antes de importar.
+4. Ejecuta el importador:
 
 ```powershell
 node import_ads_to_supabase.js --dry-run
 node import_ads_to_supabase.js
 ```
 
-El importador lee solo las fuentes activas registradas, normaliza `FECHA`, `Campaign Name` y `Spend`, aplica los mapeos campaña -> SKU y sube `ad_campaign_daily`. El dashboard calcula `Gasto Ads 7d` y `CPA 7d` contra las ventas visibles.
+El importador lee solo las fuentes activas con tienda asignada, normaliza `FECHA`, `Campaign Name` y `Spend`, aplica los mapeos campaña -> SKU y sube `ad_campaign_daily`. El dashboard calcula `Gasto Ads 7d` y `CPA 7d` contra las ventas visibles.
