@@ -5,7 +5,25 @@ from pathlib import Path
 from openai import OpenAI
 from src.config import Store
 
-_MODEL = "google/gemini-2.0-flash-exp:free"
+_MODELS = [
+    "google/gemini-2.0-flash-exp:free",
+    "google/gemini-flash-1.5-8b:free",
+    "qwen/qwen2.5-vl-7b-instruct:free",
+    "moonshotai/kimi-vl-a3b-thinking:free",
+    "meta-llama/llama-3.2-11b-vision-instruct:free",
+]
+
+_PROMPT = (
+    "Esta imagen muestra una tabla de inventario. "
+    "Extrae TODOS los productos y devuelve un JSON con esta estructura exacta:\n"
+    '{"products": [{"name": "...", "barcode": "...", "stock": 123}, ...]}\n\n'
+    "Reglas:\n"
+    "- 'name' = columna ARTICULO\n"
+    "- 'barcode' = columna CODIGO DE BARRAS (puede estar vacío '')\n"
+    "- 'stock' = columna STOCK TOTAL (número entero)\n"
+    "- Incluye TODOS los productos visibles, sin omitir ninguno\n"
+    "- Devuelve SOLO el JSON, sin texto adicional"
+)
 
 
 def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
@@ -24,33 +42,29 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
         base_url="https://openrouter.ai/api/v1",
         api_key=os.environ["OPENROUTER_API_KEY"],
     )
-    response = client.chat.completions.create(
-        model=_MODEL,
-        max_tokens=4096,
-        messages=[{
-            "role": "user",
-            "content": [
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:{media_type};base64,{image_data}"},
-                },
-                {
-                    "type": "text",
-                    "text": (
-                        "Esta imagen muestra una tabla de inventario. "
-                        "Extrae TODOS los productos y devuelve un JSON con esta estructura exacta:\n"
-                        '{"products": [{"name": "...", "barcode": "...", "stock": 123}, ...]}\n\n'
-                        "Reglas:\n"
-                        "- 'name' = columna ARTICULO\n"
-                        "- 'barcode' = columna CODIGO DE BARRAS (puede estar vacío '')\n"
-                        "- 'stock' = columna STOCK TOTAL (número entero)\n"
-                        "- Incluye TODOS los productos visibles, sin omitir ninguno\n"
-                        "- Devuelve SOLO el JSON, sin texto adicional"
-                    ),
-                },
-            ],
-        }],
-    )
+
+    messages = [{
+        "role": "user",
+        "content": [
+            {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{image_data}"}},
+            {"type": "text", "text": _PROMPT},
+        ],
+    }]
+
+    response = None
+    for model in _MODELS:
+        try:
+            print(f"  Probando modelo: {model}")
+            response = client.chat.completions.create(model=model, max_tokens=4096, messages=messages)
+            print(f"  Modelo usado: {model}")
+            break
+        except Exception as e:
+            if "404" in str(e) or "No endpoints" in str(e) or "not found" in str(e).lower():
+                continue
+            raise
+
+    if response is None:
+        raise RuntimeError("Ningún modelo de visión gratuito está disponible en OpenRouter. Intentá más tarde.")
 
     raw = response.choices[0].message.content.strip()
     # Strip markdown code fences if present
