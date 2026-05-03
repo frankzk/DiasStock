@@ -27,4 +27,8 @@ Sube la carpeta `dashboard` a <https://app.netlify.com/drop>. Si prefieres dejar
 3. Agrega estas Environment Variables:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
+   - `DASHBOARD_USER`
+   - `DASHBOARD_PASSWORD`
 4. Deploy. Cada push a la rama conectada vuelve a publicar el dashboard.
+
+El login es basico y se aplica en el navegador. Para cambiar la clave, cambia `DASHBOARD_PASSWORD` en Vercel y redeploya.

@@ -90,6 +90,46 @@
       opacity: 0.55;
     }
 
+    .app-hidden {
+      display: none;
+    }
+
+    .login-screen {
+      display: grid;
+      min-height: 100dvh;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .login-screen.hidden {
+      display: none;
+    }
+
+    .login-card {
+      width: min(100%, 420px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .login-card .brand {
+      margin-bottom: 22px;
+    }
+
+    .login-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .login-error {
+      min-height: 22px;
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
     .app-shell {
       width: min(1280px, calc(100% - 32px));
       margin: 0 auto;
@@ -529,7 +569,31 @@
   </style>
 </head>
 <body>
-  <main class="app-shell">
+  <section class="login-screen hidden" id="loginScreen" aria-labelledby="loginTitle">
+    <div class="login-card">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">DS</span>
+        <div>
+          <h1 id="loginTitle">DiasStock</h1>
+          <p class="subtitle">Acceso privado</p>
+        </div>
+      </div>
+      <form class="login-form" id="loginForm">
+        <label class="field" for="loginUser">
+          <span>Usuario</span>
+          <input id="loginUser" name="user" type="text" autocomplete="username" required>
+        </label>
+        <label class="field" for="loginPassword">
+          <span>Contraseña</span>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit" class="primary">Ingresar</button>
+        <p class="login-error" id="loginError" role="alert"></p>
+      </form>
+    </div>
+  </section>
+
+  <main class="app-shell app-hidden" id="appShell">
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">DS</span>
@@ -660,6 +724,9 @@
     const SUPABASE_URL = DEPLOY_CONFIG.SUPABASE_URL || "";
     const SUPABASE_ANON = DEPLOY_CONFIG.SUPABASE_ANON_KEY || "";
     const STORAGE_KEY = "diasstock.supabase.config.v1";
+    const LOGIN_STORAGE_KEY = "diasstock.dashboard.auth.v1";
+    const DASHBOARD_USER = DEPLOY_CONFIG.DASHBOARD_USER || "";
+    const DASHBOARD_PASSWORD_HASH = DEPLOY_CONFIG.DASHBOARD_PASSWORD_HASH || "";
 
     const STATUS_ORDER = ["CRITICO", "BAJO", "OK", "ALTO", "Sin ventas"];
     const STATUS_META = {
@@ -703,7 +770,60 @@
       metricReorder: $("#metricReorder"),
       metricOverstock: $("#metricOverstock"),
       metricMedian: $("#metricMedian"),
+      appShell: $("#appShell"),
+      loginScreen: $("#loginScreen"),
+      loginForm: $("#loginForm"),
+      loginUser: $("#loginUser"),
+      loginPassword: $("#loginPassword"),
+      loginError: $("#loginError"),
     };
+
+    function isLoginEnabled() {
+      return Boolean(DASHBOARD_USER && DASHBOARD_PASSWORD_HASH);
+    }
+
+    function isLoggedIn() {
+      if (!isLoginEnabled()) return true;
+      return sessionStorage.getItem(LOGIN_STORAGE_KEY) === "ok";
+    }
+
+    function showApp() {
+      els.loginScreen.classList.add("hidden");
+      els.appShell.classList.remove("app-hidden");
+    }
+
+    function showLogin() {
+      els.appShell.classList.add("app-hidden");
+      els.loginScreen.classList.remove("hidden");
+      els.loginUser.focus();
+    }
+
+    async function sha256(value) {
+      const data = new TextEncoder().encode(value);
+      const digest = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      els.loginError.textContent = "";
+
+      const user = els.loginUser.value.trim();
+      const password = els.loginPassword.value;
+      const passwordHash = await sha256(password);
+
+      if (user === DASHBOARD_USER && passwordHash === DASHBOARD_PASSWORD_HASH) {
+        sessionStorage.setItem(LOGIN_STORAGE_KEY, "ok");
+        els.loginPassword.value = "";
+        showApp();
+        refreshData();
+      } else {
+        els.loginError.textContent = "Usuario o contraseña incorrectos.";
+        els.loginPassword.select();
+      }
+    }
 
     function getStoredConfig() {
       try {
@@ -1060,6 +1180,7 @@
     });
 
     els.refreshBtn.addEventListener("click", refreshData);
+    els.loginForm.addEventListener("submit", handleLogin);
     els.searchInput.addEventListener("input", applyFilters);
     els.storeFilter.addEventListener("change", applyFilters);
     els.dateFilter.addEventListener("change", applyFilters);
@@ -1067,7 +1188,12 @@
 
     buildFilters();
     render();
-    refreshData();
+    if (isLoggedIn()) {
+      showApp();
+      refreshData();
+    } else {
+      showLogin();
+    }
   </script>
 </body>
 </html>
