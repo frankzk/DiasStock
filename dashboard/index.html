@@ -1155,7 +1155,8 @@
           </label>
         </div>
         <div class="form-actions">
-          <button type="submit" class="primary">Guardar</button>
+          <button type="button" id="editConfigBtn">Editar</button>
+          <button type="submit" class="primary" id="saveConfigBtn">Guardar</button>
           <button type="button" id="clearConfigBtn">Olvidar</button>
         </div>
         <p class="form-message" id="configError" role="alert"></p>
@@ -1454,6 +1455,8 @@
       supabaseAnon: $("#supabaseAnon"),
       refreshBtn: $("#refreshBtn"),
       configToggle: $("#configToggle"),
+      editConfigBtn: $("#editConfigBtn"),
+      saveConfigBtn: $("#saveConfigBtn"),
       clearConfigBtn: $("#clearConfigBtn"),
       adsSourceForm: $("#adsSourceForm"),
       adsSheetUrl: $("#adsSheetUrl"),
@@ -1604,12 +1607,25 @@
       els.supabaseAnon.value = config.anon;
       els.configError.textContent = message || "";
       els.configPanel.classList.remove("hidden");
-      els.supabaseUrl.focus();
+      setConfigEditMode(Boolean(message) || Boolean(getConfigProblem(config)));
     }
 
     function closeConfig() {
       els.configPanel.classList.add("hidden");
       els.configError.textContent = "";
+    }
+
+    function setConfigEditMode(isEditing) {
+      els.supabaseUrl.readOnly = !isEditing;
+      els.supabaseAnon.readOnly = !isEditing;
+      els.editConfigBtn.hidden = isEditing;
+      els.saveConfigBtn.hidden = !isEditing;
+      els.clearConfigBtn.hidden = !isEditing;
+      if (isEditing) {
+        els.supabaseUrl.focus();
+      } else {
+        els.editConfigBtn.focus();
+      }
     }
 
     function setLoading(isLoading) {
@@ -2749,6 +2765,10 @@
       else closeConfig();
     });
 
+    els.editConfigBtn.addEventListener("click", () => {
+      setConfigEditMode(true);
+    });
+
     els.clearConfigBtn.addEventListener("click", () => {
       localStorage.removeItem(STORAGE_KEY);
       state.rows = [];
@@ -2779,6 +2799,7 @@
         return;
       }
       saveConfig(config.url, config.anon);
+      setConfigEditMode(false);
       refreshData();
     });
     els.adsSourceForm.addEventListener("submit", saveAdsSource);
