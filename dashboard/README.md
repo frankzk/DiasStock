@@ -36,3 +36,7 @@ El login es basico y se aplica en el navegador. Para cambiar la clave, cambia `D
 ## Exportacion
 
 El boton `Descargar Excel` genera un `.xlsx` con las filas visibles del dashboard, respetando filtros y orden aplicado.
+
+## Imagenes de producto
+
+El script `main.py` busca la imagen principal del producto en Shopify por SKU y la guarda en `product_image_url`. Si la tabla ya existia antes, vuelve a ejecutar `dashboard/supabase-schema.sql` para agregar esa columna.

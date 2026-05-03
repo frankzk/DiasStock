@@ -461,7 +461,7 @@
 
     table {
       width: 100%;
-      min-width: 1220px;
+      min-width: 1320px;
       border-collapse: collapse;
     }
 
@@ -525,6 +525,29 @@
       max-width: 360px;
       font-weight: 800;
       overflow-wrap: anywhere;
+    }
+
+    .product-thumb {
+      display: block;
+      width: 52px;
+      height: 52px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f3f5f4;
+      object-fit: cover;
+    }
+
+    .image-placeholder {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f3f5f4;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .sku {
@@ -813,6 +836,7 @@
             <tr>
               <th><button type="button" class="sort-button" data-sort-key="date">Fecha <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="storeName">Tienda <span class="sort-indicator"></span></button></th>
+              <th><button type="button" class="sort-button" data-sort-key="imageUrl">Imagen <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="product">Producto <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="sku">SKU <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="stock">Stock <span class="sort-indicator"></span></button></th>
@@ -826,7 +850,7 @@
           </thead>
           <tbody id="snapshotBody">
             <tr>
-              <td colspan="11" class="empty">Sin datos</td>
+              <td colspan="12" class="empty">Sin datos</td>
             </tr>
           </tbody>
         </table>
@@ -861,6 +885,7 @@
     const TABLE_COLUMNS = [
       { key: "date", label: "Fecha", type: "date" },
       { key: "storeName", label: "Tienda", type: "text" },
+      { key: "imageUrl", label: "Imagen", type: "text" },
       { key: "product", label: "Producto", type: "text" },
       { key: "sku", label: "SKU", type: "text" },
       { key: "stock", label: "Stock", type: "number" },
@@ -1087,6 +1112,7 @@
         storeKey: row.store_key || "",
         storeName: row.store_name || row.store_key || "Sin tienda",
         product: row.product_name || "",
+        imageUrl: row.product_image_url || "",
         sku: row.sku || "",
         stock: Number(row.stock || 0),
         sold7: Number(row.units_sold_7d || 0),
@@ -1318,7 +1344,7 @@
       const rows = state.filteredRows;
       renderSortIndicators();
       if (!rows.length) {
-        els.body.innerHTML = `<tr><td colspan="11" class="empty">Sin datos para estos filtros</td></tr>`;
+        els.body.innerHTML = `<tr><td colspan="12" class="empty">Sin datos para estos filtros</td></tr>`;
         return;
       }
 
@@ -1329,6 +1355,7 @@
           <tr>
             <td>${formatDate(row.date)}</td>
             <td>${escapeHtml(row.storeName)}</td>
+            <td>${renderImageCell(row)}</td>
             <td class="product-cell">${escapeHtml(row.product || "Sin nombre")}</td>
             <td class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
             <td class="number">${formatNumber(row.stock)}</td>
@@ -1341,6 +1368,13 @@
           </tr>
         `;
       }).join("");
+    }
+
+    function renderImageCell(row) {
+      if (!row.imageUrl) {
+        return `<span class="image-placeholder" aria-label="Sin imagen">--</span>`;
+      }
+      return `<img class="product-thumb" src="${escapeHtml(row.imageUrl)}" alt="${escapeHtml(row.product || "Producto")}" loading="lazy">`;
     }
 
     function renderSortIndicators() {
@@ -1398,6 +1432,7 @@
       const rows = state.filteredRows.map((row) => ({
         "Fecha": formatDate(row.date),
         "Tienda": row.storeName,
+        "Imagen": row.imageUrl,
         "Producto": row.product,
         "SKU": row.sku,
         "Stock": row.stock,
@@ -1412,6 +1447,7 @@
       worksheet["!cols"] = [
         { wch: 12 },
         { wch: 20 },
+        { wch: 42 },
         { wch: 48 },
         { wch: 18 },
         { wch: 10 },

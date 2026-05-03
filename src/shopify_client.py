@@ -44,6 +44,42 @@ def get_sales_last_7_days(store: Store) -> dict[str, dict]:
     return sales
 
 
+def get_product_images_by_sku(store: Store) -> dict[str, str]:
+    headers = {
+        "X-Shopify-Access-Token": store.shopify_token,
+        "Content-Type": "application/json",
+    }
+
+    images: dict[str, str] = {}
+    url = f"https://{store.shopify_url.rstrip('/')}/admin/api/2024-01/products.json"
+    params = {
+        "limit": 250,
+        "fields": "id,title,image,variants",
+    }
+
+    while url:
+        print(f"  Descargando productos Shopify: {url.split('?')[0]}...")
+        resp = requests.get(url, headers=headers, params=params, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+
+        for product in data.get("products", []):
+            cover = (product.get("image") or {}).get("src") or ""
+            if not cover:
+                continue
+            for variant in product.get("variants", []):
+                sku = (variant.get("sku") or "").strip()
+                if sku and sku not in images:
+                    images[sku] = cover
+
+        link_header = resp.headers.get("Link", "")
+        url = _parse_next_link(link_header)
+        params = {}
+
+    print(f"  Imagenes Shopify encontradas: {len(images)} SKUs")
+    return images
+
+
 def _parse_next_link(link_header: str) -> str | None:
     if not link_header:
         return None

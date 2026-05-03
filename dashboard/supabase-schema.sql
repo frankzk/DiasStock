@@ -7,6 +7,7 @@ create table if not exists inventory_snapshots (
     store_key     text not null default '',
     store_name    text,
     product_name  text,
+    product_image_url text,
     sku           text,
     stock         int,
     units_sold_7d int,
@@ -21,6 +22,7 @@ create table if not exists inventory_snapshots (
 
 alter table inventory_snapshots add column if not exists store_key text not null default '';
 alter table inventory_snapshots add column if not exists store_name text;
+alter table inventory_snapshots add column if not exists product_image_url text;
 alter table inventory_snapshots add column if not exists estado_venta text;
 alter table inventory_snapshots add column if not exists alerta text;
 

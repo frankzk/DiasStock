@@ -29,6 +29,7 @@ def save_snapshot(
             "store_key": store_key,
             "store_name": store_name,
             "product_name": r["Producto"],
+            "product_image_url": r.get("Imagen", ""),
             "sku": r["SKU"],
             "stock": r["Stock Actual"],
             "units_sold_7d": r["Ventas 7d"],
@@ -74,6 +75,7 @@ create table if not exists inventory_snapshots (
     store_key     text not null default '',
     store_name    text,
     product_name  text,
+    product_image_url text,
     sku           text,
     stock         int,
     units_sold_7d int,
@@ -88,6 +90,7 @@ create table if not exists inventory_snapshots (
 
 alter table inventory_snapshots add column if not exists store_key text not null default '';
 alter table inventory_snapshots add column if not exists store_name text;
+alter table inventory_snapshots add column if not exists product_image_url text;
 alter table inventory_snapshots add column if not exists estado_venta text;
 alter table inventory_snapshots add column if not exists alerta text;
 
