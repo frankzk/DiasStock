@@ -285,7 +285,7 @@
     }
 
     .config-panel {
-      padding: 18px;
+      padding: 12px 16px 14px;
       margin-bottom: 10px;
     }
 
@@ -296,8 +296,27 @@
     .config-grid {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-      gap: 14px;
-      margin: 14px 0;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .config-panel h2 {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .config-panel input,
+    .config-panel select {
+      min-height: 38px;
+      font-size: 13px;
+    }
+
+    .config-panel .form-actions {
+      margin-top: 4px;
+    }
+
+    .config-panel .form-actions button {
+      min-height: 38px;
     }
 
     .field {
@@ -324,18 +343,29 @@
     }
 
     .form-message {
-      min-height: 22px;
+      min-height: 0;
       color: var(--danger);
       font-size: 14px;
       font-weight: 700;
     }
 
+    .form-message:empty {
+      display: none;
+    }
+
     .ads-config {
       display: grid;
-      gap: 10px;
-      margin-top: 16px;
-      padding-top: 16px;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
       border-top: 1px solid var(--line);
+    }
+
+    .ads-config-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
     }
 
     .ads-config h3 {
@@ -349,7 +379,7 @@
 
     .ads-help {
       color: var(--muted);
-      font-size: 13px;
+      font-size: 12px;
     }
 
     .ads-grid {
@@ -357,6 +387,16 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
       align-items: end;
+    }
+
+    .ads-grid.compact-saved .field {
+      gap: 4px;
+    }
+
+    .ads-grid.compact-saved input {
+      min-height: 38px;
+      background: #f5f8f6;
+      color: var(--text);
     }
 
     .ads-workspace {
@@ -370,7 +410,7 @@
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: #fcfdfc;
-      padding: 10px;
+      padding: 8px;
     }
 
     .ads-card h4 {
@@ -381,7 +421,7 @@
     .ads-list {
       display: grid;
       gap: 6px;
-      max-height: 220px;
+      max-height: 280px;
       overflow: auto;
     }
 
@@ -448,7 +488,17 @@
       grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1fr) auto;
       gap: 8px;
       align-items: end;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+    }
+
+    .ads-mapping-form .field {
+      gap: 4px;
+    }
+
+    .ads-mapping-form select,
+    .ads-mapping-form button,
+    .ads-grid button {
+      min-height: 38px;
     }
 
     .ads-status {
@@ -1287,7 +1337,7 @@
       </form>
 
       <div class="ads-config" aria-label="Configuracion de Ads">
-        <div>
+        <div class="ads-config-header">
           <h3>Ads Google Sheets</h3>
           <p class="ads-help">Registra pestañas/cuentas, asigna tienda y mapea campañas a SKUs Shopify.</p>
         </div>
@@ -1297,7 +1347,7 @@
             <span>Google Sheet URL</span>
             <input id="adsSheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/...">
           </label>
-          <button type="submit" class="primary">Extraer pestañas</button>
+          <button type="submit" class="primary" id="adsSheetActionBtn">Extraer pestañas</button>
         </form>
 
         <div class="ads-workspace">
@@ -1569,6 +1619,7 @@
       sheetCampaigns: {},
       campaignLoadingSourceIds: new Set(),
       editingAdSourceIds: new Set(),
+      editingAdsSheetUrl: false,
       adsProblem: "",
       expandedProductKeys: new Set(),
       showAllPriority: false,
@@ -1592,6 +1643,7 @@
       clearConfigBtn: $("#clearConfigBtn"),
       adsSourceForm: $("#adsSourceForm"),
       adsSheetUrl: $("#adsSheetUrl"),
+      adsSheetActionBtn: $("#adsSheetActionBtn"),
       adsSourcesList: $("#adsSourcesList"),
       adsMappingForm: $("#adsMappingForm"),
       adsMappingSource: $("#adsMappingSource"),
@@ -2226,10 +2278,30 @@
         els.adsMappingSource.value = String(state.adSources[0].id);
       }
 
+      renderAdsSheetUrlState();
       renderAdsSourcesList();
       renderAdsMappingChoices();
       renderAdsMappingsList();
       setAdsStatus(state.adsProblem || adsCountsText());
+    }
+
+    function renderAdsSheetUrlState() {
+      const savedSheet = getSavedAdsSheet();
+      const hasSavedSheet = Boolean(savedSheet?.spreadsheetId);
+      const isLocked = hasSavedSheet && !state.editingAdsSheetUrl;
+
+      if (hasSavedSheet && !state.editingAdsSheetUrl) {
+        els.adsSheetUrl.value = savedSheet.spreadsheetUrl || `https://docs.google.com/spreadsheets/d/${savedSheet.spreadsheetId}`;
+      }
+
+      els.adsSourceForm.classList.toggle("compact-saved", isLocked);
+      els.adsSheetUrl.readOnly = isLocked;
+      els.adsSheetActionBtn.textContent = isLocked ? "Cambiar" : "Extraer pestañas";
+      els.adsSheetActionBtn.classList.toggle("primary", !isLocked);
+    }
+
+    function getSavedAdsSheet() {
+      return state.adSources.find((source) => source.spreadsheetId || source.spreadsheetUrl) || null;
     }
 
     function renderAdsSourcesList() {
@@ -2269,8 +2341,9 @@
       const campaigns = source && source.storeKey ? getCampaignOptions(source.id) : [];
       const products = source && source.storeKey ? getSkuOptions(source.storeKey) : [];
       const isLoadingCampaigns = source ? state.campaignLoadingSourceIds.has(source.id) : false;
+      const knownCampaigns = source ? getKnownCampaignNames(source.id) : [];
       const campaignPlaceholder = source?.storeKey
-        ? (isLoadingCampaigns ? "Cargando campanas..." : (campaigns.length ? "Selecciona" : "Sin campanas encontradas"))
+        ? (isLoadingCampaigns ? "Cargando campanas..." : (campaigns.length ? "Selecciona" : (knownCampaigns.length ? "Todas mapeadas" : "Sin campanas encontradas")))
         : "Asigna tienda primero";
 
       fillSelect(els.adsCampaignSelect, [["", campaignPlaceholder], ...campaigns], els.adsCampaignSelect.value);
@@ -2350,18 +2423,35 @@
     }
 
     function getCampaignOptions(sourceId) {
-      const campaigns = new Set();
-      (state.sheetCampaigns[String(sourceId)] || [])
-        .forEach((campaign) => campaigns.add(campaign));
-      state.adDaily
-        .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
-        .forEach((row) => campaigns.add(row.campaignName));
-      state.campaignMappings
-        .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
-        .forEach((row) => campaigns.add(row.campaignName));
-      return Array.from(campaigns)
+      const mappedCampaigns = new Set(
+        state.campaignMappings
+          .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
+          .map((row) => normalizeKey(row.campaignName))
+      );
+      return getKnownCampaignNames(sourceId)
+        .filter((campaign) => !mappedCampaigns.has(normalizeKey(campaign)))
         .sort((a, b) => a.localeCompare(b, "es", { numeric: true, sensitivity: "base" }))
         .map((campaign) => [campaign, campaign]);
+    }
+
+    function getKnownCampaignNames(sourceId) {
+      const campaigns = new Map();
+      const addCampaign = (campaign) => {
+        const value = String(campaign || "").trim();
+        if (!value) return;
+        const key = normalizeKey(value);
+        if (!campaigns.has(key)) campaigns.set(key, value);
+      };
+
+      (state.sheetCampaigns[String(sourceId)] || []).forEach(addCampaign);
+      state.adDaily
+        .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
+        .forEach((row) => addCampaign(row.campaignName));
+      state.campaignMappings
+        .filter((row) => row.sourceId === Number(sourceId) && row.campaignName)
+        .forEach((row) => addCampaign(row.campaignName));
+
+      return Array.from(campaigns.values());
     }
 
     function getSkuOptions(storeKey) {
@@ -2392,6 +2482,16 @@
       if (!client) return;
       if (state.adsProblem) {
         setAdsStatus(state.adsProblem, true);
+        return;
+      }
+
+      const savedSheet = getSavedAdsSheet();
+      if (savedSheet && !state.editingAdsSheetUrl) {
+        state.editingAdsSheetUrl = true;
+        renderAdsSheetUrlState();
+        els.adsSheetUrl.focus();
+        els.adsSheetUrl.select();
+        setAdsStatus("Edita la URL y vuelve a extraer pestanas solo si quieres cambiar el Sheet.");
         return;
       }
 
@@ -2443,6 +2543,7 @@
       }
 
       await loadAdsTables(client);
+      state.editingAdsSheetUrl = false;
       renderAdsConfig();
       applyFilters();
       setAdsStatus(`${formatNumber(rows.length)} pestaña(s) registradas. Asigna tienda a cada cuenta antes de importar.`);
@@ -3144,6 +3245,7 @@
       state.sheetCampaigns = {};
       state.campaignLoadingSourceIds.clear();
       state.editingAdSourceIds.clear();
+      state.editingAdsSheetUrl = false;
       state.adsProblem = "";
       state.expandedProductKeys.clear();
       state.showAllPriority = false;
