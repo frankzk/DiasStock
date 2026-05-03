@@ -14,12 +14,13 @@ def save_snapshot(
     results: list[dict],
     store_key: str = "",
     store_name: str = "",
+    run_date: str | None = None,
 ) -> None:
     """
     Saves a daily snapshot of dias_stock per product to Supabase.
     Table: inventory_snapshots
     """
-    run_date = datetime.now(timezone.utc).date().isoformat()
+    run_date = run_date or datetime.now(timezone.utc).date().isoformat()
     store_key = store_key.strip()
     store_name = store_name.strip()
 

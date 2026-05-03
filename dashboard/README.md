@@ -40,3 +40,14 @@ El boton `Descargar Excel` genera un `.xlsx` con las filas visibles del dashboar
 ## Imagenes de producto
 
 El script `main.py` busca la imagen principal del producto en Shopify por SKU y la guarda en `product_image_url`. Si la tabla ya existia antes, vuelve a ejecutar `dashboard/supabase-schema.sql` para agregar esa columna.
+
+## Historial desde Excels
+
+Para cargar fechas anteriores desde los Excels guardados en `outputs/`:
+
+```powershell
+py import_outputs_to_supabase.py --dry-run
+py import_outputs_to_supabase.py
+```
+
+Por defecto importa solo el ultimo Excel de cada tienda por dia. Usa `--date YYYY-MM-DD` o `--store CR` para acotar.
