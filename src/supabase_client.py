@@ -49,7 +49,25 @@ def save_snapshot(
 
     # Upsert by date + store + SKU so repeated runs replace the same snapshot.
     url, key = _get_supabase_config()
-    response = requests.post(
+    response = _post_rows(url, key, rows)
+    if response.status_code == 400 and "product_image_url" in response.text:
+        rows = [
+            {k: v for k, v in row.items() if k != "product_image_url"}
+            for row in rows
+        ]
+        response = _post_rows(url, key, rows)
+
+    if response.status_code >= 400:
+        raise RuntimeError(
+            f"Supabase HTTP {response.status_code}: {response.text}"
+        )
+
+    store_label = f" ({store_key})" if store_key else ""
+    print(f"  Supabase: {len(rows)} filas guardadas para {run_date}{store_label}")
+
+
+def _post_rows(url: str, key: str, rows: list[dict]) -> requests.Response:
+    return requests.post(
         f"{url}/rest/v1/inventory_snapshots",
         params={"on_conflict": "run_date,store_key,sku"},
         headers={
@@ -61,10 +79,6 @@ def save_snapshot(
         json=rows,
         timeout=30,
     )
-    response.raise_for_status()
-
-    store_label = f" ({store_key})" if store_key else ""
-    print(f"  Supabase: {len(rows)} filas guardadas para {run_date}{store_label}")
 
 
 SUPABASE_SCHEMA = """
