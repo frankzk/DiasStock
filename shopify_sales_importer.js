@@ -113,7 +113,7 @@ async function fetchStoreSales(store, options) {
     created_at_min: startUtc,
     created_at_max: endUtc,
     limit: "250",
-    fields: "id,name,created_at,processed_at,cancelled_at,line_items",
+    fields: "id,name,created_at,processed_at,line_items",
   };
 
   const byDateSku = new Map();
@@ -133,7 +133,6 @@ async function fetchStoreSales(store, options) {
 
     const data = await response.json();
     for (const order of data.orders || []) {
-      if (order.cancelled_at) continue;
       const saleDate = formatDateInTimeZone(order.processed_at || order.created_at, options.timezone);
       if (!dateInRange(saleDate, options.startDate, options.endDate)) continue;
       orders += 1;
