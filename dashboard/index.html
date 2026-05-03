@@ -306,7 +306,6 @@
 
     .summary-strip {
       display: grid;
-      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr) minmax(0, 0.72fr);
       gap: 8px;
       margin-bottom: 10px;
       border: 1px solid var(--line);
@@ -318,8 +317,15 @@
 
     .summary-metrics {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 6px;
+      min-width: 0;
+    }
+
+    .summary-details {
+      display: grid;
+      grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+      gap: 8px;
       min-width: 0;
     }
 
@@ -336,12 +342,12 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
-        "label value"
+        "label label"
         "note value";
       align-items: center;
       gap: 0 8px;
-      min-height: 38px;
-      padding: 5px 8px;
+      min-height: 58px;
+      padding: 7px 10px;
     }
 
     .metric-label {
@@ -354,7 +360,7 @@
 
     .metric-value {
       grid-area: value;
-      font-size: 18px;
+      font-size: 22px;
       line-height: 1;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
@@ -372,7 +378,7 @@
 
     .summary-status {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 6px;
       min-width: 0;
     }
@@ -436,6 +442,28 @@
       gap: 5px;
     }
 
+    .priority-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .priority-column {
+      min-width: 0;
+    }
+
+    .priority-column-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 22px;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
     .priority-item {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -477,6 +505,11 @@
 
     .priority-more.hidden {
       display: none;
+    }
+
+    .compact-empty {
+      padding: 6px;
+      font-size: 11px;
     }
 
     .table-section {
@@ -759,7 +792,10 @@
       .filters,
       .range-filters,
       .summary-strip,
-      .summary-status {
+      .summary-metrics,
+      .summary-details,
+      .summary-status,
+      .priority-columns {
         grid-template-columns: 1fr;
       }
 
@@ -768,7 +804,7 @@
       }
 
       .metric-value {
-        font-size: 20px;
+        font-size: 22px;
       }
     }
 
@@ -936,30 +972,47 @@
           <p class="metric-note">Con venta</p>
         </article>
       </div>
-      <div class="summary-status" aria-label="Estados">
-        <article class="summary-group">
-          <div class="summary-group-header">
-            <h2>Inventario</h2>
-            <span class="count-pill" id="stateTotal">0 filas</span>
+      <div class="summary-details">
+        <div class="summary-status" aria-label="Estados">
+          <article class="summary-group">
+            <div class="summary-group-header">
+              <h2>Inventario</h2>
+              <span class="count-pill" id="stateTotal">0 filas</span>
+            </div>
+            <div class="status-chip-list" id="inventoryStatusList"></div>
+          </article>
+          <article class="summary-group">
+            <div class="summary-group-header">
+              <h2>Venta</h2>
+              <span class="count-pill" id="saleTotal">0 filas</span>
+            </div>
+            <div class="status-chip-list" id="saleStatusList"></div>
+          </article>
+        </div>
+        <article class="summary-priority">
+          <div class="priority-header">
+            <h2>Prioridad</h2>
+            <span class="count-pill" id="priorityTotal">0</span>
           </div>
-          <div class="status-chip-list" id="inventoryStatusList"></div>
-        </article>
-        <article class="summary-group">
-          <div class="summary-group-header">
-            <h2>Venta</h2>
-            <span class="count-pill" id="saleTotal">0 filas</span>
+          <div class="priority-columns">
+            <section class="priority-column" aria-label="Reordenar urgente">
+              <div class="priority-column-title">
+                <span>Reordenar urgente</span>
+                <span class="count-pill" id="reorderPriorityTotal">0</span>
+              </div>
+              <div class="priority-list" id="reorderPriorityList"></div>
+            </section>
+            <section class="priority-column" aria-label="Riesgo de sobrestock">
+              <div class="priority-column-title">
+                <span>Riesgo sobrestock</span>
+                <span class="count-pill" id="overstockPriorityTotal">0</span>
+              </div>
+              <div class="priority-list" id="overstockPriorityList"></div>
+            </section>
           </div>
-          <div class="status-chip-list" id="saleStatusList"></div>
+          <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
         </article>
       </div>
-      <article class="summary-priority">
-        <div class="priority-header">
-          <h2>Prioridad</h2>
-          <span class="count-pill" id="priorityTotal">0</span>
-        </div>
-        <div class="priority-list" id="priorityList"></div>
-        <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
-      </article>
     </section>
 
     <section class="filters primary-filters" aria-label="Filtros principales">
@@ -1153,9 +1206,12 @@
       stateTotal: $("#stateTotal"),
       saleTotal: $("#saleTotal"),
       priorityTotal: $("#priorityTotal"),
+      reorderPriorityTotal: $("#reorderPriorityTotal"),
+      overstockPriorityTotal: $("#overstockPriorityTotal"),
       inventoryStatusList: $("#inventoryStatusList"),
       saleStatusList: $("#saleStatusList"),
-      priorityList: $("#priorityList"),
+      reorderPriorityList: $("#reorderPriorityList"),
+      overstockPriorityList: $("#overstockPriorityList"),
       priorityMoreBtn: $("#priorityMoreBtn"),
       metricProducts: $("#metricProducts"),
       metricProductsNote: $("#metricProductsNote"),
@@ -1565,8 +1621,12 @@
       const saleCounts = Object.fromEntries(SALE_STATUS_ORDER.map((status) => [status, 0]));
 
       for (const row of rows) {
-        inventoryCounts[row.status] = (inventoryCounts[row.status] || 0) + 1;
-        saleCounts[row.saleStatus] = (saleCounts[row.saleStatus] || 0) + 1;
+        if (row.status !== "Sin ventas" || row.stock >= 1) {
+          inventoryCounts[row.status] = (inventoryCounts[row.status] || 0) + 1;
+        }
+        if (row.saleStatus !== "SIN VENTAS" || row.stock >= 1) {
+          saleCounts[row.saleStatus] = (saleCounts[row.saleStatus] || 0) + 1;
+        }
       }
 
       els.inventoryStatusList.innerHTML = renderStatusCountChips(STATUS_ORDER, inventoryCounts, STATUS_META);
@@ -1586,7 +1646,7 @@
       }).join("");
     }
 
-    function renderPriorityList() {
+    function renderPriorityListLegacy() {
       const allPriorities = state.filteredRows
         .filter((row) => row.alert)
         .sort((a, b) => {
@@ -1624,6 +1684,59 @@
         els.priorityMoreBtn.classList.add("hidden");
         els.priorityMoreBtn.setAttribute("aria-expanded", "false");
       }
+    }
+
+    function renderPriorityList() {
+      const reorderRows = priorityRows("reordenar");
+      const overstockRows = priorityRows("sobrestock");
+      const visibleReorder = state.showAllPriority ? reorderRows : reorderRows.slice(0, 3);
+      const visibleOverstock = state.showAllPriority ? overstockRows : overstockRows.slice(0, 3);
+      const hiddenCount = Math.max(0, reorderRows.length - 3) + Math.max(0, overstockRows.length - 3);
+
+      els.priorityTotal.textContent = formatNumber(reorderRows.length + overstockRows.length);
+      els.reorderPriorityTotal.textContent = formatNumber(reorderRows.length);
+      els.overstockPriorityTotal.textContent = formatNumber(overstockRows.length);
+      els.reorderPriorityList.innerHTML = renderPriorityColumn(visibleReorder, "Sin reordenar");
+      els.overstockPriorityList.innerHTML = renderPriorityColumn(visibleOverstock, "Sin sobrestock");
+
+      if (hiddenCount > 0) {
+        els.priorityMoreBtn.classList.remove("hidden");
+        els.priorityMoreBtn.textContent = state.showAllPriority ? "Ver menos" : `Ver ${formatNumber(hiddenCount)} mas`;
+        els.priorityMoreBtn.setAttribute("aria-expanded", state.showAllPriority ? "true" : "false");
+      } else {
+        els.priorityMoreBtn.classList.add("hidden");
+        els.priorityMoreBtn.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    function priorityRows(pattern) {
+      return state.filteredRows
+        .filter((row) => row.alert.toLowerCase().includes(pattern))
+        .sort((a, b) => {
+          const rankA = a.alert.includes("urgente") ? 0 : a.alert.includes("pronto") ? 1 : 2;
+          const rankB = b.alert.includes("urgente") ? 0 : b.alert.includes("pronto") ? 1 : 2;
+          if (rankA !== rankB) return rankA - rankB;
+          return compareRows(a, b);
+        });
+    }
+
+    function renderPriorityColumn(rows, emptyText) {
+      if (!rows.length) return `<p class="empty compact-empty">${emptyText}</p>`;
+      return rows.map((row) => `
+        <div class="priority-item">
+          <div>
+            <div class="priority-title">${escapeHtml(shortProductName(row.product || row.sku || "Producto sin nombre"))}</div>
+            <div class="priority-meta">${escapeHtml(row.storeName)} · ${formatDate(row.date)} · ${escapeHtml(row.sku || "sin SKU")}</div>
+          </div>
+          <span class="badge ${statusClass(row.status)}">${escapeHtml(row.alert)}</span>
+        </div>
+      `).join("");
+    }
+
+    function shortProductName(value) {
+      const words = String(value || "").trim().split(/\s+/).filter(Boolean);
+      if (words.length <= 4) return words.join(" ");
+      return `${words.slice(0, 4).join(" ")}...`;
     }
 
     function renderTable() {
