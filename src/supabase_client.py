@@ -9,17 +9,14 @@ def get_client() -> Client:
     return create_client(url, key)
 
 
-def save_snapshot(results: list[dict]) -> None:
-    """
-    Saves a daily snapshot of dias_stock per product to Supabase.
-    Table: inventory_snapshots
-    """
+def save_snapshot(results: list[dict], store_key: str = "") -> None:
     client = get_client()
     run_date = datetime.now(timezone.utc).date().isoformat()
 
     rows = [
         {
             "run_date": run_date,
+            "store_key": store_key,
             "product_name": r["Producto"],
             "sku": r["SKU"],
             "stock": r["Stock Actual"],
@@ -33,20 +30,22 @@ def save_snapshot(results: list[dict]) -> None:
         for r in results
     ]
 
-    # Upsert por fecha + SKU para evitar duplicados si se corre 2 veces al día
     client.table("inventory_snapshots").upsert(
-        rows, on_conflict="run_date,sku"
+        rows, on_conflict="run_date,store_key,sku"
     ).execute()
 
-    print(f"  Supabase: {len(rows)} filas guardadas para {run_date}")
+    print(f"  Supabase: {len(rows)} filas guardadas para {run_date} ({store_key})")
 
 
 SUPABASE_SCHEMA = """
--- Correr esto una sola vez en el SQL Editor de Supabase:
+-- Correr esto en el SQL Editor de Supabase (reemplaza la tabla anterior):
 
-create table if not exists inventory_snapshots (
+drop table if exists inventory_snapshots;
+
+create table inventory_snapshots (
     id            bigserial primary key,
     run_date      date not null,
+    store_key     text not null default '',
     product_name  text,
     sku           text,
     stock         int,
@@ -54,10 +53,16 @@ create table if not exists inventory_snapshots (
     daily_avg     numeric(10,2),
     days_of_stock numeric(10,1),
     status        text,
+    estado_venta  text,
+    alerta        text,
     created_at    timestamptz default now(),
-    unique(run_date, sku)
+    unique(run_date, store_key, sku)
 );
 
-create index if not exists idx_snapshots_date on inventory_snapshots(run_date);
-create index if not exists idx_snapshots_sku  on inventory_snapshots(sku);
+create index if not exists idx_snapshots_date      on inventory_snapshots(run_date);
+create index if not exists idx_snapshots_store_key on inventory_snapshots(store_key);
+
+-- Permitir lectura pública (el dashboard usa la anon key)
+alter table inventory_snapshots enable row level security;
+create policy "read_all" on inventory_snapshots for select using (true);
 """

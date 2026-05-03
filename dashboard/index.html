@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiasStock Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; }
+
+    /* LOGIN */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; background: #1a1a2e;
+    }
+    .login-box {
+      background: #fff; border-radius: 12px; padding: 40px 48px;
+      width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+    .login-box h1 { font-size: 1.6rem; margin-bottom: 6px; color: #1a1a2e; }
+    .login-box p  { color: #888; font-size: 0.85rem; margin-bottom: 28px; }
+    .login-box input {
+      width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 1rem; margin-bottom: 14px; outline: none;
+    }
+    .login-box input:focus { border-color: #4f6ef7; }
+    .login-box button {
+      width: 100%; padding: 11px; background: #4f6ef7; color: #fff;
+      border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;
+      font-weight: 600;
+    }
+    .login-box button:hover { background: #3a57d4; }
+    #login-error { color: #e53e3e; font-size: 0.85rem; margin-top: 10px; display: none; }
+
+    /* DASHBOARD */
+    #dashboard { display: none; }
+    header {
+      background: #1a1a2e; color: #fff; padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 1.2rem; letter-spacing: 0.5px; }
+    header .right { display: flex; align-items: center; gap: 16px; }
+    #last-update { font-size: 0.78rem; color: #aab; }
+    #logout-btn {
+      background: transparent; border: 1px solid #555; color: #ccc;
+      padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+    }
+    #logout-btn:hover { background: #333; }
+
+    .controls {
+      padding: 16px 28px; background: #fff; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .controls label { font-size: 0.85rem; color: #555; font-weight: 500; }
+    .controls select, .controls input[type=text] {
+      padding: 7px 12px; border: 1px solid #d1d5db; border-radius: 7px;
+      font-size: 0.9rem; outline: none;
+    }
+    .controls select:focus, .controls input:focus { border-color: #4f6ef7; }
+    #refresh-btn {
+      margin-left: auto; padding: 7px 18px; background: #4f6ef7; color: #fff;
+      border: none; border-radius: 7px; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+    }
+    #refresh-btn:hover { background: #3a57d4; }
+
+    .summary-bar {
+      padding: 12px 28px; display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .stat-card {
+      background: #fff; border-radius: 9px; padding: 12px 20px;
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 110px; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+    .stat-card .num { font-size: 1.6rem; font-weight: 700; }
+    .stat-card .lbl { font-size: 0.72rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-critico { color: #e53e3e; }
+    .stat-bajo    { color: #dd6b20; }
+    .stat-ok      { color: #38a169; }
+    .stat-alto    { color: #3182ce; }
+
+    .table-wrap {
+      padding: 0 28px 28px; overflow-x: auto;
+    }
+    table {
+      width: 100%; border-collapse: collapse; background: #fff;
+      border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      font-size: 0.875rem;
+    }
+    th {
+      background: #1a1a2e; color: #e2e8f0; font-weight: 600;
+      padding: 11px 14px; text-align: left; white-space: nowrap;
+      cursor: pointer; user-select: none;
+    }
+    th:hover { background: #2d3561; }
+    th.sort-asc::after  { content: ' ↑'; opacity: 0.7; }
+    th.sort-desc::after { content: ' ↓'; opacity: 0.7; }
+    td { padding: 9px 14px; border-bottom: 1px solid #f0f2f5; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f7f8ff; }
+
+    .badge {
+      display: inline-block; padding: 2px 10px; border-radius: 12px;
+      font-size: 0.76rem; font-weight: 700; letter-spacing: 0.3px;
+    }
+    .badge-CRITICO   { background: #fed7d7; color: #c53030; }
+    .badge-BAJO      { background: #feebc8; color: #c05621; }
+    .badge-OK        { background: #c6f6d5; color: #276749; }
+    .badge-ALTO      { background: #bee3f8; color: #2b6cb0; }
+    .badge-SIN-ventas{ background: #e2e8f0; color: #718096; }
+
+    .alerta-urgente { color: #c53030; font-weight: 600; }
+    .alerta-pronto  { color: #c05621; font-weight: 600; }
+    .alerta-sobre   { color: #2b6cb0; }
+    .alerta-vigilar { color: #276749; }
+
+    #loading { text-align: center; padding: 48px; color: #888; font-size: 0.95rem; }
+    #no-data  { text-align: center; padding: 48px; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>DiasStock</h1>
+    <p>Panel de inventario</p>
+    <input type="text" id="usr" placeholder="Usuario" autocomplete="username" />
+    <input type="password" id="pwd" placeholder="Contraseña" autocomplete="current-password" />
+    <button onclick="doLogin()">Ingresar</button>
+    <div id="login-error">Usuario o contraseña incorrectos</div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashboard">
+  <header>
+    <h1>DiasStock &mdash; Inventario</h1>
+    <div class="right">
+      <span id="last-update"></span>
+      <button id="logout-btn" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+
+  <div class="controls">
+    <label>Tienda:</label>
+    <select id="store-filter" onchange="loadData()">
+      <option value="">Todas</option>
+    </select>
+    <label>Buscar:</label>
+    <input type="text" id="search" placeholder="Producto o SKU…" oninput="renderTable()" />
+    <label>Estado:</label>
+    <select id="status-filter" onchange="renderTable()">
+      <option value="">Todos</option>
+      <option value="CRITICO">Crítico</option>
+      <option value="BAJO">Bajo</option>
+      <option value="OK">OK</option>
+      <option value="ALTO">Alto</option>
+    </select>
+    <button id="refresh-btn" onclick="loadData()">↻ Actualizar</button>
+  </div>
+
+  <div class="summary-bar" id="summary-bar"></div>
+
+  <div class="table-wrap">
+    <div id="loading">Cargando datos…</div>
+    <div id="no-data" style="display:none">Sin datos para esta tienda.</div>
+    <table id="main-table" style="display:none">
+      <thead>
+        <tr>
+          <th onclick="sortBy('store_key')">Tienda</th>
+          <th onclick="sortBy('product_name')">Producto</th>
+          <th onclick="sortBy('stock')" style="text-align:right">Stock</th>
+          <th onclick="sortBy('units_sold_7d')" style="text-align:right">Ventas 7d</th>
+          <th onclick="sortBy('daily_avg')" style="text-align:right">Venta/día</th>
+          <th onclick="sortBy('days_of_stock')" style="text-align:right">Días stock</th>
+          <th onclick="sortBy('status')">Estado inv.</th>
+          <th onclick="sortBy('estado_venta')">Estado venta</th>
+          <th>Alerta</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // ── CONFIG ─────────────────────────────────────────────────────────────────
+  // Reemplazá estos dos valores con los de tu proyecto Supabase
+  const SUPABASE_URL  = 'REEMPLAZAR_CON_TU_SUPABASE_URL';
+  const SUPABASE_ANON = 'REEMPLAZAR_CON_TU_SUPABASE_ANON_KEY';
+
+  // Credenciales (hash SHA-256 de la contraseña)
+  const CREDENTIALS = {
+    admin: '49bf6fb87e7b4a37511114e79e11b50bc93d5fd99f0a38dc507b48699ad415c5',
+  };
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  let allRows = [], sortCol = 'days_of_stock', sortDir = 1;
+
+  // ── AUTH ────────────────────────────────────────────────────────────────────
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function doLogin() {
+    const usr = document.getElementById('usr').value.trim().toLowerCase();
+    const pwd = document.getElementById('pwd').value;
+    const hash = await sha256(pwd);
+    if (CREDENTIALS[usr] && CREDENTIALS[usr] === hash) {
+      sessionStorage.setItem('ds_auth', '1');
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      await initDashboard();
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  }
+
+  document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('usr').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  function doLogout() {
+    sessionStorage.removeItem('ds_auth');
+    location.reload();
+  }
+
+  if (sessionStorage.getItem('ds_auth') === '1') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    initDashboard();
+  }
+
+  // ── DATA ────────────────────────────────────────────────────────────────────
+  async function initDashboard() {
+    await populateStores();
+    await loadData();
+  }
+
+  async function populateStores() {
+    const { data } = await sb.from('inventory_snapshots')
+      .select('store_key')
+      .order('store_key');
+    const keys = [...new Set((data || []).map(r => r.store_key).filter(Boolean))];
+    const sel = document.getElementById('store-filter');
+    keys.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = k;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function loadData() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('main-table').style.display = 'none';
+    document.getElementById('no-data').style.display = 'none';
+
+    const store = document.getElementById('store-filter').value;
+
+    // Get latest run_date per store (or overall)
+    let dateQuery = sb.from('inventory_snapshots').select('run_date').order('run_date', { ascending: false }).limit(1);
+    if (store) dateQuery = dateQuery.eq('store_key', store);
+    const { data: dateData } = await dateQuery;
+    if (!dateData || !dateData.length) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('no-data').style.display = 'block';
+      return;
+    }
+
+    // Get all rows for the latest date
+    const latestDate = dateData[0].run_date;
+    document.getElementById('last-update').textContent = `Última actualización: ${latestDate}`;
+
+    let q = sb.from('inventory_snapshots')
+      .select('*')
+      .eq('run_date', latestDate)
+      .order('days_of_stock', { ascending: true, nullsFirst: false });
+    if (store) q = q.eq('store_key', store);
+
+    const { data, error } = await q;
+    if (error) { alert('Error: ' + error.message); return; }
+
+    allRows = data || [];
+    document.getElementById('loading').style.display = 'none';
+    renderTable();
+  }
+
+  // ── RENDER ──────────────────────────────────────────────────────────────────
+  function renderTable() {
+    const search = document.getElementById('search').value.toLowerCase();
+    const statusF = document.getElementById('status-filter').value;
+
+    let rows = allRows.filter(r => {
+      const matchSearch = !search ||
+        (r.product_name || '').toLowerCase().includes(search) ||
+        (r.sku || '').toLowerCase().includes(search);
+      const matchStatus = !statusF || r.status === statusF;
+      return matchSearch && matchStatus;
+    });
+
+    rows = rows.slice().sort((a, b) => {
+      let av = a[sortCol], bv = b[sortCol];
+      if (av === null || av === undefined) av = sortDir > 0 ? Infinity : -Infinity;
+      if (bv === null || bv === undefined) bv = sortDir > 0 ? Infinity : -Infinity;
+      if (typeof av === 'string') return av.localeCompare(bv) * sortDir;
+      return (av - bv) * sortDir;
+    });
+
+    renderSummary(rows);
+
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+    if (!rows.length) {
+      document.getElementById('main-table').style.display = 'none';
+      document.getElementById('no-data').style.display = 'block';
+      return;
+    }
+    document.getElementById('main-table').style.display = 'table';
+    document.getElementById('no-data').style.display = 'none';
+
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${esc(r.store_key)}</strong></td>
+        <td>${esc(r.product_name)}</td>
+        <td style="text-align:right">${r.stock ?? '—'}</td>
+        <td style="text-align:right">${r.units_sold_7d ?? '—'}</td>
+        <td style="text-align:right">${r.daily_avg !== null ? Number(r.daily_avg).toFixed(1) : '—'}</td>
+        <td style="text-align:right"><strong>${r.days_of_stock !== null ? Number(r.days_of_stock).toFixed(0) + 'd' : '—'}</strong></td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${esc(r.estado_venta || '')}</td>
+        <td>${alertaHtml(r.alerta)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // update sort indicators
+    document.querySelectorAll('th').forEach(th => {
+      th.classList.remove('sort-asc', 'sort-desc');
+    });
+  }
+
+  function renderSummary(rows) {
+    const counts = { CRITICO: 0, BAJO: 0, OK: 0, ALTO: 0 };
+    rows.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+    document.getElementById('summary-bar').innerHTML = `
+      <div class="stat-card"><span class="num stat-critico">${counts.CRITICO}</span><span class="lbl">Crítico</span></div>
+      <div class="stat-card"><span class="num stat-bajo">${counts.BAJO}</span><span class="lbl">Bajo</span></div>
+      <div class="stat-card"><span class="num stat-ok">${counts.OK}</span><span class="lbl">OK</span></div>
+      <div class="stat-card"><span class="num stat-alto">${counts.ALTO}</span><span class="lbl">Alto</span></div>
+      <div class="stat-card"><span class="num">${rows.length}</span><span class="lbl">Total</span></div>
+    `;
+  }
+
+  function sortBy(col) {
+    if (sortCol === col) sortDir = -sortDir;
+    else { sortCol = col; sortDir = 1; }
+    renderTable();
+  }
+
+  function statusBadge(s) {
+    const cls = s === 'Sin ventas' ? 'badge-SIN-ventas' : `badge-${s}`;
+    return `<span class="badge ${cls}">${esc(s || '')}</span>`;
+  }
+
+  function alertaHtml(a) {
+    if (!a) return '';
+    if (a.includes('urgente')) return `<span class="alerta-urgente">⚠ ${esc(a)}</span>`;
+    if (a.includes('pronto'))  return `<span class="alerta-pronto">↑ ${esc(a)}</span>`;
+    if (a.includes('sobrestock')) return `<span class="alerta-sobre">↓ ${esc(a)}</span>`;
+    if (a.includes('Vigilar')) return `<span class="alerta-vigilar">${esc(a)}</span>`;
+    return esc(a);
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>
