@@ -77,6 +77,9 @@ async function importShopifySales(options = {}) {
     const { url, key } = getSupabaseConfig();
     for (const runRow of runRows) {
       await deleteSalesWindow(url, key, runRow.store_key, startDate, endDate);
+      if (runDate > endDate) {
+        await deleteSalesWindow(url, key, runRow.store_key, runDate, runDate);
+      }
     }
     if (allRows.length) await upsertSalesRows(url, key, allRows);
     if (runRows.length) await upsertRunRows(url, key, runRows);
