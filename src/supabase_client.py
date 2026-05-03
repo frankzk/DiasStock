@@ -1,13 +1,13 @@
 import os
 from datetime import datetime, timezone
 
-from supabase import Client, create_client
+import requests
 
 
-def get_client() -> Client:
-    url = os.environ["SUPABASE_URL"]
+def _get_supabase_config() -> tuple[str, str]:
+    url = os.environ["SUPABASE_URL"].rstrip("/")
     key = os.environ["SUPABASE_KEY"]
-    return create_client(url, key)
+    return url, key
 
 
 def save_snapshot(
@@ -19,7 +19,6 @@ def save_snapshot(
     Saves a daily snapshot of dias_stock per product to Supabase.
     Table: inventory_snapshots
     """
-    client = get_client()
     run_date = datetime.now(timezone.utc).date().isoformat()
     store_key = store_key.strip()
     store_name = store_name.strip()
@@ -47,9 +46,20 @@ def save_snapshot(
         return
 
     # Upsert by date + store + SKU so repeated runs replace the same snapshot.
-    client.table("inventory_snapshots").upsert(
-        rows, on_conflict="run_date,store_key,sku"
-    ).execute()
+    url, key = _get_supabase_config()
+    response = requests.post(
+        f"{url}/rest/v1/inventory_snapshots",
+        params={"on_conflict": "run_date,store_key,sku"},
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=minimal",
+        },
+        json=rows,
+        timeout=30,
+    )
+    response.raise_for_status()
 
     store_label = f" ({store_key})" if store_key else ""
     print(f"  Supabase: {len(rows)} filas guardadas para {run_date}{store_label}")
