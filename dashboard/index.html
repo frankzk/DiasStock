@@ -2025,6 +2025,7 @@
     function normalizeShopifySaleRun(row) {
       return {
         id: Number(row.id),
+        runDate: row.run_date || row.window_end || "",
         date: row.window_end || row.run_date || "",
         startDate: row.window_start || "",
         storeKey: row.store_key || "",
@@ -2098,13 +2099,17 @@
       const latestRows = getLatestRowsByProduct(state.rows);
       const latestIds = new Set(latestRows.map((row) => row.id));
       const latestDateByStore = new Map();
+      const latestRunByStore = new Map();
       const salesByStoreSku = new Map();
 
       for (const run of state.shopifySalesRuns) {
         const storeKey = normalizeKey(run.storeKey);
-        if (!storeKey || !run.date) continue;
-        const currentDate = latestDateByStore.get(storeKey);
-        if (!currentDate || run.date > currentDate) latestDateByStore.set(storeKey, run.date);
+        if (!storeKey || !run.date || !run.runDate) continue;
+        const currentRun = latestRunByStore.get(storeKey);
+        if (!currentRun || run.runDate > currentRun.runDate) {
+          latestRunByStore.set(storeKey, run);
+          latestDateByStore.set(storeKey, run.date);
+        }
       }
 
       for (const sale of state.shopifySalesDaily) {

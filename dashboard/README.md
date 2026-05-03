@@ -45,7 +45,7 @@ El script `main.py` busca la imagen principal del producto en Shopify por SKU y 
 
 Para que `Ventas 7d` no dependa del Excel local, vuelve a ejecutar `dashboard/supabase-schema.sql` y agrega en Vercel las mismas variables `STORE_XX_SHOPIFY_URL` y `STORE_XX_SHOPIFY_TOKEN` que tienes en `.env`.
 
-`vercel.json` agenda `/api/import-shopify-sales` todos los dias a las `11:30am America/Lima`. El endpoint guarda ventas por `store_key + sku + fecha` en `shopify_sales_daily`; el dashboard suma los ultimos 7 dias disponibles. Si la tabla aun no existe o no hay ventas importadas para una tienda, usa el valor antiguo de `inventory_snapshots.units_sold_7d`.
+`vercel.json` agenda `/api/import-shopify-sales` todos los dias a las `11:30am America/Lima`. El endpoint guarda ventas por `store_key + sku + fecha` en `shopify_sales_daily`; el dashboard suma los ultimos 7 dias cerrados, sin contar el dia de hoy. Si corre el `2026-05-03`, usa `2026-04-26..2026-05-02`. Si la tabla aun no existe o no hay ventas importadas para una tienda, usa el valor antiguo de `inventory_snapshots.units_sold_7d`.
 
 Para probar localmente:
 

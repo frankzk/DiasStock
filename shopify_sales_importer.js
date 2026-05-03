@@ -10,7 +10,8 @@ const DEFAULT_DAYS = 7;
 async function importShopifySales(options = {}) {
   const days = normalizePositiveInt(options.days, DEFAULT_DAYS);
   const timezone = options.timezone || process.env.SHOPIFY_SALES_TIMEZONE || DEFAULT_TIMEZONE;
-  const endDate = options.endDate || todayInTimeZone(timezone);
+  const runDate = options.runDate || todayInTimeZone(timezone);
+  const endDate = options.endDate || addDaysIso(runDate, -1);
   const startDate = addDaysIso(endDate, -(days - 1));
   const storeKeyFilter = normalizeKey(options.storeKey || "");
   const stores = discoverStores()
@@ -44,7 +45,7 @@ async function importShopifySales(options = {}) {
       const result = await fetchStoreSales(store, { days, startDate, endDate, timezone });
       allRows.push(...result.rows);
       runRows.push({
-        run_date: endDate,
+        run_date: runDate,
         store_key: store.key,
         store_name: store.name,
         shop_domain: result.shopDomain,
@@ -87,6 +88,7 @@ async function importShopifySales(options = {}) {
     table: SALES_TABLE,
     runsTable: RUNS_TABLE,
     days,
+    runDate,
     startDate,
     endDate,
     stores: stores.length,
@@ -100,8 +102,8 @@ async function importShopifySales(options = {}) {
 async function fetchStoreSales(store, options) {
   const apiVersion = process.env.SHOPIFY_API_VERSION || DEFAULT_API_VERSION;
   const domain = normalizeShopifyDomain(store.shopifyUrl);
-  const startUtc = `${options.startDate}T00:00:00Z`;
-  const endUtc = `${addDaysIso(options.endDate, 1)}T00:00:00Z`;
+  const startUtc = zonedDateTimeToUtcIso(options.startDate, options.timezone);
+  const endUtc = zonedDateTimeToUtcIso(addDaysIso(options.endDate, 1), options.timezone);
   let url = `https://${domain}/admin/api/${apiVersion}/orders.json`;
   let params = {
     status: "any",
@@ -136,7 +138,7 @@ async function fetchStoreSales(store, options) {
       for (const item of order.line_items || []) {
         const sku = String(item.sku || "").trim();
         const productName = String(item.name || "").trim();
-        const quantity = Number(item.current_quantity ?? item.quantity ?? 0);
+        const quantity = Number(item.quantity ?? item.current_quantity ?? 0);
         if (!sku || !quantity) {
           skippedLineItems += 1;
           continue;
@@ -277,7 +279,7 @@ function loadEnv(envPath = path.join(process.cwd(), ".env")) {
 }
 
 function parseCliArgs(argv) {
-  const args = { dryRun: false, days: DEFAULT_DAYS, storeKey: "", endDate: "", help: false };
+  const args = { dryRun: false, days: DEFAULT_DAYS, storeKey: "", endDate: "", runDate: "", help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--dry-run") args.dryRun = true;
@@ -287,6 +289,8 @@ function parseCliArgs(argv) {
     else if (arg.startsWith("--store=")) args.storeKey = arg.split("=", 2)[1] || "";
     else if (arg === "--end-date") args.endDate = argv[++index] || "";
     else if (arg.startsWith("--end-date=")) args.endDate = arg.split("=", 2)[1] || "";
+    else if (arg === "--run-date") args.runDate = argv[++index] || "";
+    else if (arg.startsWith("--run-date=")) args.runDate = arg.split("=", 2)[1] || "";
     else if (arg === "--help" || arg === "-h") args.help = true;
   }
   return args;
@@ -297,7 +301,8 @@ function printHelp() {
   node import_shopify_sales_to_supabase.js [--dry-run] [--days 7] [--store KA] [--end-date YYYY-MM-DD]
 
 Importa ventas diarias Shopify por SKU a Supabase (${SALES_TABLE}).
-El dashboard suma los ultimos 7 dias por store_key + sku.
+Por defecto excluye hoy: si corre el 2026-05-03, importa 2026-04-26..2026-05-02.
+El dashboard suma los ultimos 7 dias cerrados por store_key + sku.
 `);
 }
 
@@ -334,6 +339,37 @@ function formatDateInTimeZone(value, timezone) {
   }).formatToParts(date);
   const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${map.year}-${map.month}-${map.day}`;
+}
+
+function zonedDateTimeToUtcIso(dateValue, timezone) {
+  const [year, month, day] = String(dateValue || "").split("-").map(Number);
+  const utcGuess = Date.UTC(year, month - 1, day, 0, 0, 0);
+  const zoned = getZonedParts(new Date(utcGuess), timezone);
+  const zonedAsUtc = Date.UTC(zoned.year, zoned.month - 1, zoned.day, zoned.hour, zoned.minute, zoned.second);
+  const offsetMs = zonedAsUtc - utcGuess;
+  return new Date(utcGuess - offsetMs).toISOString();
+}
+
+function getZonedParts(date, timezone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+    hour: Number(map.hour),
+    minute: Number(map.minute),
+    second: Number(map.second),
+  };
 }
 
 function addDaysIso(dateValue, delta) {

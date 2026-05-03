@@ -21,6 +21,7 @@ async function handler(req, res) {
       days: req.query.days,
       storeKey: req.query.store || req.query.storeKey || "",
       endDate: req.query.endDate || "",
+      runDate: req.query.runDate || "",
       dryRun: req.query.dryRun === "1" || req.query.dryRun === "true",
     });
     res.setHeader("Cache-Control", "no-store");
