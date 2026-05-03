@@ -317,15 +317,8 @@
 
     .summary-metrics {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 0.85fr)) repeat(2, minmax(0, 1.15fr));
       gap: 6px;
-      min-width: 0;
-    }
-
-    .summary-details {
-      display: grid;
-      grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
-      gap: 8px;
       min-width: 0;
     }
 
@@ -439,17 +432,19 @@
 
     .priority-list {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 5px;
     }
 
     .priority-columns {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 6px;
     }
 
     .priority-column {
       min-width: 0;
+      grid-column: span 2;
     }
 
     .priority-column-title {
@@ -793,9 +788,16 @@
       .range-filters,
       .summary-strip,
       .summary-metrics,
-      .summary-details,
       .summary-status,
       .priority-columns {
+        grid-template-columns: 1fr;
+      }
+
+      .priority-column {
+        grid-column: auto;
+      }
+
+      .priority-list {
         grid-template-columns: 1fr;
       }
 
@@ -967,52 +969,48 @@
           <p class="metric-note">Riesgo activo</p>
         </article>
         <article class="summary-chip">
-          <p class="metric-label">Dias Stock medianos</p>
+          <p class="metric-label">Dias Stock promedio</p>
           <p class="metric-value" id="metricMedian">0</p>
-          <p class="metric-note">Con venta</p>
+          <p class="metric-note">Promedio</p>
+        </article>
+        <article class="summary-group">
+          <div class="summary-group-header">
+            <h2>Inventario</h2>
+            <span class="count-pill" id="stateTotal">0 filas</span>
+          </div>
+          <div class="status-chip-list" id="inventoryStatusList"></div>
+        </article>
+        <article class="summary-group">
+          <div class="summary-group-header">
+            <h2>Venta</h2>
+            <span class="count-pill" id="saleTotal">0 filas</span>
+          </div>
+          <div class="status-chip-list" id="saleStatusList"></div>
         </article>
       </div>
-      <div class="summary-details">
-        <div class="summary-status" aria-label="Estados">
-          <article class="summary-group">
-            <div class="summary-group-header">
-              <h2>Inventario</h2>
-              <span class="count-pill" id="stateTotal">0 filas</span>
-            </div>
-            <div class="status-chip-list" id="inventoryStatusList"></div>
-          </article>
-          <article class="summary-group">
-            <div class="summary-group-header">
-              <h2>Venta</h2>
-              <span class="count-pill" id="saleTotal">0 filas</span>
-            </div>
-            <div class="status-chip-list" id="saleStatusList"></div>
-          </article>
+      <article class="summary-priority">
+        <div class="priority-header">
+          <h2>Prioridad</h2>
+          <span class="count-pill" id="priorityTotal">0</span>
         </div>
-        <article class="summary-priority">
-          <div class="priority-header">
-            <h2>Prioridad</h2>
-            <span class="count-pill" id="priorityTotal">0</span>
-          </div>
-          <div class="priority-columns">
-            <section class="priority-column" aria-label="Reordenar urgente">
-              <div class="priority-column-title">
-                <span>Reordenar urgente</span>
-                <span class="count-pill" id="reorderPriorityTotal">0</span>
-              </div>
-              <div class="priority-list" id="reorderPriorityList"></div>
-            </section>
-            <section class="priority-column" aria-label="Riesgo de sobrestock">
-              <div class="priority-column-title">
-                <span>Riesgo sobrestock</span>
-                <span class="count-pill" id="overstockPriorityTotal">0</span>
-              </div>
-              <div class="priority-list" id="overstockPriorityList"></div>
-            </section>
-          </div>
-          <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
-        </article>
-      </div>
+        <div class="priority-columns">
+          <section class="priority-column" aria-label="Reordenar urgente">
+            <div class="priority-column-title">
+              <span>Reordenar urgente</span>
+              <span class="count-pill" id="reorderPriorityTotal">0</span>
+            </div>
+            <div class="priority-list" id="reorderPriorityList"></div>
+          </section>
+          <section class="priority-column" aria-label="Riesgo de sobrestock">
+            <div class="priority-column-title">
+              <span>Riesgo sobrestock</span>
+              <span class="count-pill" id="overstockPriorityTotal">0</span>
+            </div>
+            <div class="priority-list" id="overstockPriorityList"></div>
+          </section>
+        </div>
+        <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
+      </article>
     </section>
 
     <section class="filters primary-filters" aria-label="Filtros principales">
@@ -1596,8 +1594,8 @@
       const rows = state.filteredRows;
       const reorder = rows.filter((row) => row.alert.toLowerCase().includes("reordenar")).length;
       const overstock = rows.filter((row) => row.alert.toLowerCase().includes("sobrestock")).length;
-      const days = rows.map((row) => row.days).filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
-      const median = days.length ? days[Math.floor(days.length / 2)] : 0;
+      const days = rows.map((row) => row.days).filter((value) => Number.isFinite(value));
+      const averageDays = days.length ? days.reduce((sum, value) => sum + value, 0) / days.length : 0;
       const filters = getFilterValues();
       const activeFilters = Object.entries(filters)
         .filter(([key, value]) => value !== "" && value !== null && !(key === "stockMin" && value === Number(DEFAULT_STOCK_MIN)))
@@ -1607,7 +1605,7 @@
       els.metricProductsNote.textContent = activeFilters ? `${activeFilters} filtro(s)` : "Sin filtros";
       els.metricReorder.textContent = formatNumber(reorder);
       els.metricOverstock.textContent = formatNumber(overstock);
-      els.metricMedian.textContent = formatDays(median);
+      els.metricMedian.textContent = formatDays(averageDays);
       els.resultCount.textContent = `${formatNumber(rows.length)} resultado${rows.length === 1 ? "" : "s"}`;
       els.stateTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
       els.saleTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
@@ -1689,9 +1687,9 @@
     function renderPriorityList() {
       const reorderRows = priorityRows("reordenar");
       const overstockRows = priorityRows("sobrestock");
-      const visibleReorder = state.showAllPriority ? reorderRows : reorderRows.slice(0, 3);
-      const visibleOverstock = state.showAllPriority ? overstockRows : overstockRows.slice(0, 3);
-      const hiddenCount = Math.max(0, reorderRows.length - 3) + Math.max(0, overstockRows.length - 3);
+      const visibleReorder = state.showAllPriority ? reorderRows : reorderRows.slice(0, 4);
+      const visibleOverstock = state.showAllPriority ? overstockRows : overstockRows.slice(0, 4);
+      const hiddenCount = Math.max(0, reorderRows.length - 4) + Math.max(0, overstockRows.length - 4);
 
       els.priorityTotal.textContent = formatNumber(reorderRows.length + overstockRows.length);
       els.reorderPriorityTotal.textContent = formatNumber(reorderRows.length);
