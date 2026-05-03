@@ -472,23 +472,38 @@
     }
 
     .table-wrap {
-      overflow-x: auto;
+      overflow-x: hidden;
     }
 
     table {
       width: 100%;
-      min-width: 1160px;
+      min-width: 0;
+      table-layout: fixed;
       border-collapse: collapse;
     }
+
+    .col-date { width: 7%; }
+    .col-store { width: 7%; }
+    .col-image { width: 5%; }
+    .col-product { width: 20%; }
+    .col-sku { width: 8%; }
+    .col-stock { width: 5%; }
+    .col-sold { width: 5.5%; }
+    .col-average { width: 6%; }
+    .col-days { width: 6%; }
+    .col-inventory { width: 10%; }
+    .col-sale { width: 9%; }
+    .col-alert { width: 11.5%; }
 
     th,
     td {
       border-bottom: 1px solid var(--line);
-      padding: 6px 9px;
+      padding: 5px 6px;
       text-align: left;
       vertical-align: middle;
-      font-size: 12px;
+      font-size: 11px;
       line-height: 1.25;
+      overflow-wrap: anywhere;
     }
 
     th {
@@ -506,7 +521,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: flex-start;
-      gap: 6px;
+      gap: 3px;
       width: 100%;
       min-height: 24px;
       border: 0;
@@ -518,6 +533,8 @@
       text-transform: inherit;
       font-size: inherit;
       font-weight: inherit;
+      line-height: 1.15;
+      white-space: normal;
       cursor: pointer;
     }
 
@@ -529,25 +546,25 @@
     .sort-indicator {
       color: var(--primary);
       font-size: 12px;
-      min-width: 10px;
+      min-width: 6px;
     }
 
     td.number {
       text-align: right;
       font-variant-numeric: tabular-nums;
       font-family: var(--mono);
+      white-space: nowrap;
     }
 
     .product-cell {
-      max-width: 320px;
       font-weight: 800;
       overflow-wrap: anywhere;
     }
 
     .product-thumb {
       display: block;
-      width: 34px;
-      height: 34px;
+      width: 28px;
+      height: 28px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: #f3f5f4;
@@ -556,8 +573,8 @@
 
     .image-placeholder {
       display: grid;
-      width: 34px;
-      height: 34px;
+      width: 28px;
+      height: 28px;
       place-items: center;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -585,6 +602,7 @@
       font-size: 11px;
       font-weight: 800;
       white-space: nowrap;
+      max-width: 100%;
     }
 
     .badge.critical {
@@ -669,6 +687,71 @@
 
       .metric-value {
         font-size: 26px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      table,
+      thead,
+      tbody,
+      tr,
+      td {
+        display: block;
+        width: 100%;
+      }
+
+      table {
+        table-layout: auto;
+      }
+
+      thead,
+      colgroup {
+        display: none;
+      }
+
+      tbody {
+        display: grid;
+        gap: 8px;
+        padding: 8px;
+      }
+
+      tr {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 8px;
+      }
+
+      td {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        border-bottom: 0;
+        padding: 4px 0;
+        font-size: 12px;
+      }
+
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      td.number {
+        text-align: left;
+      }
+
+      td.empty {
+        display: block;
+        padding: 18px 8px;
+        text-align: center;
+      }
+
+      td.empty::before {
+        content: none;
       }
     }
 
@@ -853,6 +936,20 @@
       </div>
       <div class="table-wrap">
         <table>
+          <colgroup>
+            <col class="col-date">
+            <col class="col-store">
+            <col class="col-image">
+            <col class="col-product">
+            <col class="col-sku">
+            <col class="col-stock">
+            <col class="col-sold">
+            <col class="col-average">
+            <col class="col-days">
+            <col class="col-inventory">
+            <col class="col-sale">
+            <col class="col-alert">
+          </colgroup>
           <thead>
             <tr>
               <th><button type="button" class="sort-button" data-sort-key="date">Fecha <span class="sort-indicator"></span></button></th>
@@ -1377,18 +1474,18 @@
         const saleMeta = SALE_STATUS_META[row.saleStatus] || SALE_STATUS_META["SIN VENTAS"];
         return `
           <tr>
-            <td>${formatDate(row.date)}</td>
-            <td>${escapeHtml(row.storeName)}</td>
-            <td>${renderImageCell(row)}</td>
-            <td class="product-cell">${escapeHtml(row.product || "Sin nombre")}</td>
-            <td class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
-            <td class="number">${formatNumber(row.stock)}</td>
-            <td class="number">${formatNumber(row.sold7)}</td>
-            <td class="number">${formatDecimal(row.dailyAvg)}</td>
-            <td class="number">${formatDays(row.days)}</td>
-            <td><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
-            <td><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
-            <td class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
+            <td data-label="Fecha">${formatDate(row.date)}</td>
+            <td data-label="Tienda">${escapeHtml(row.storeName)}</td>
+            <td data-label="Imagen">${renderImageCell(row)}</td>
+            <td data-label="Producto" class="product-cell">${escapeHtml(row.product || "Sin nombre")}</td>
+            <td data-label="SKU" class="sku">${escapeHtml(row.sku || "sin SKU")}</td>
+            <td data-label="Stock" class="number">${formatNumber(row.stock)}</td>
+            <td data-label="Ventas 7d" class="number">${formatNumber(row.sold7)}</td>
+            <td data-label="Prom/dia" class="number">${formatDecimal(row.dailyAvg)}</td>
+            <td data-label="Dias Stock" class="number">${formatDays(row.days)}</td>
+            <td data-label="Estado inventario"><span class="badge ${meta.className}"><span class="dot" style="background:${meta.color}"></span>${escapeHtml(meta.label)}</span></td>
+            <td data-label="Estado venta"><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
+            <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${escapeHtml(row.alert || "")}</td>
           </tr>
         `;
       }).join("");
