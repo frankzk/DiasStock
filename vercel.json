@@ -1,5 +1,11 @@
 {
   "buildCommand": "node dashboard/build.js",
   "outputDirectory": "dashboard/dist",
-  "installCommand": "npm install --prefix dashboard"
+  "installCommand": "npm install --prefix dashboard",
+  "crons": [
+    {
+      "path": "/api/import-shopify-sales",
+      "schedule": "30 16 * * *"
+    }
+  ]
 }

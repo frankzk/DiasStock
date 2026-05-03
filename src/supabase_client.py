@@ -133,6 +133,44 @@ create index if not exists idx_snapshots_date on inventory_snapshots(run_date);
 create index if not exists idx_snapshots_sku on inventory_snapshots(sku);
 create index if not exists idx_snapshots_store_date on inventory_snapshots(store_key, run_date desc);
 
+create table if not exists shopify_sales_daily (
+    id               bigserial primary key,
+    sale_date        date not null,
+    store_key        text not null,
+    store_name       text,
+    shop_domain      text,
+    sku              text not null,
+    product_name     text,
+    units_sold       int not null default 0,
+    orders_count     int not null default 0,
+    line_items_count int not null default 0,
+    created_at       timestamptz default now(),
+    updated_at       timestamptz default now(),
+    unique(sale_date, store_key, sku)
+);
+
+create index if not exists idx_shopify_sales_store_sku_date
+on shopify_sales_daily(store_key, sku, sale_date desc);
+
+create table if not exists shopify_sales_import_runs (
+    id            bigserial primary key,
+    run_date      date not null,
+    store_key     text not null,
+    store_name    text,
+    shop_domain   text,
+    window_start  date not null,
+    window_end    date not null,
+    rows_imported int not null default 0,
+    units_sold    int not null default 0,
+    orders_count  int not null default 0,
+    created_at    timestamptz default now(),
+    updated_at    timestamptz default now(),
+    unique(run_date, store_key)
+);
+
+create index if not exists idx_shopify_sales_runs_store_date
+on shopify_sales_import_runs(store_key, run_date desc);
+
 create table if not exists ad_sheet_sources (
     id              bigserial primary key,
     spreadsheet_id  text not null,
@@ -189,9 +227,25 @@ create index if not exists idx_campaign_mappings_source on campaign_sku_mappings
 create index if not exists idx_ad_daily_store_sku_date on ad_campaign_daily(store_key, sku, spend_date desc);
 create index if not exists idx_ad_daily_source_campaign on ad_campaign_daily(source_id, campaign_name);
 
+alter table shopify_sales_daily enable row level security;
+alter table shopify_sales_import_runs enable row level security;
 alter table ad_sheet_sources enable row level security;
 alter table campaign_sku_mappings enable row level security;
 alter table ad_campaign_daily enable row level security;
+
+drop policy if exists "Public read shopify sales daily" on shopify_sales_daily;
+create policy "Public read shopify sales daily"
+on shopify_sales_daily
+for select
+to anon
+using (true);
+
+drop policy if exists "Public read shopify sales import runs" on shopify_sales_import_runs;
+create policy "Public read shopify sales import runs"
+on shopify_sales_import_runs
+for select
+to anon
+using (true);
 
 drop policy if exists "Public manage ad sheet sources" on ad_sheet_sources;
 create policy "Public manage ad sheet sources"

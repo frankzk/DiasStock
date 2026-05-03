@@ -1655,6 +1655,9 @@
       adSources: [],
       campaignMappings: [],
       adDaily: [],
+      shopifySalesDaily: [],
+      shopifySalesRuns: [],
+      salesProblem: "",
       sheetCampaigns: {},
       campaignLoadingSourceIds: new Set(),
       editingAdSourceIds: new Set(),
@@ -1664,7 +1667,7 @@
       showAllPriority: false,
       loading: false,
       client: null,
-      sort: { key: "date", direction: "desc" },
+      sort: { key: "sold7", direction: "desc" },
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -1894,6 +1897,7 @@
         if (error) throw error;
 
         state.rows = (data || []).map(normalizeRow);
+        await loadShopifySalesTable(client);
         await loadAdsTables(client);
         state.expandedProductKeys.clear();
         state.showAllPriority = false;
@@ -1924,6 +1928,28 @@
       state.adDaily = adDaily.map(normalizeAdDaily);
       pruneAdsUiState();
       enrichRowsWithAdMetrics();
+    }
+
+    async function loadShopifySalesTable(client) {
+      state.salesProblem = "";
+      const [salesRows, runRows] = await Promise.all([
+        fetchOptionalShopifySalesTable(
+          client.from("shopify_sales_daily").select("*").order("sale_date", { ascending: false }).limit(20000)
+        ),
+        fetchOptionalShopifySalesTable(
+          client.from("shopify_sales_import_runs").select("*").order("run_date", { ascending: false }).limit(1000)
+        ),
+      ]);
+      state.shopifySalesDaily = salesRows.map(normalizeShopifySaleDaily);
+      state.shopifySalesRuns = runRows.map(normalizeShopifySaleRun);
+      enrichRowsWithShopifySales();
+    }
+
+    async function fetchOptionalShopifySalesTable(query) {
+      const { data, error } = await query;
+      if (!error) return data || [];
+      state.salesProblem = error?.message || "No se pudo cargar shopify_sales_daily.";
+      return [];
     }
 
     function pruneAdsUiState() {
@@ -1978,6 +2004,33 @@
         adCpa7: 0,
         adCpaClass: "",
         adCurrency: "USD",
+        salesSource: "snapshot",
+        salesWindowStart: addDays(row.run_date || "", -6),
+        salesWindowEnd: row.run_date || "",
+      };
+    }
+
+    function normalizeShopifySaleDaily(row) {
+      return {
+        id: Number(row.id),
+        date: row.sale_date || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "",
+        sku: row.sku || "",
+        productName: row.product_name || "",
+        unitsSold: Number(row.units_sold || 0),
+      };
+    }
+
+    function normalizeShopifySaleRun(row) {
+      return {
+        id: Number(row.id),
+        date: row.window_end || row.run_date || "",
+        startDate: row.window_start || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "",
+        rowsImported: Number(row.rows_imported || 0),
+        unitsSold: Number(row.units_sold || 0),
       };
     }
 
@@ -2039,15 +2092,82 @@
       ));
     }
 
+    function enrichRowsWithShopifySales() {
+      if ((!state.shopifySalesDaily.length && !state.shopifySalesRuns.length) || !state.rows.length) return;
+
+      const latestRows = getLatestRowsByProduct(state.rows);
+      const latestIds = new Set(latestRows.map((row) => row.id));
+      const latestDateByStore = new Map();
+      const salesByStoreSku = new Map();
+
+      for (const run of state.shopifySalesRuns) {
+        const storeKey = normalizeKey(run.storeKey);
+        if (!storeKey || !run.date) continue;
+        const currentDate = latestDateByStore.get(storeKey);
+        if (!currentDate || run.date > currentDate) latestDateByStore.set(storeKey, run.date);
+      }
+
+      for (const sale of state.shopifySalesDaily) {
+        const storeKey = normalizeKey(sale.storeKey);
+        const skuKey = normalizeKey(sale.sku);
+        if (!storeKey || !skuKey || !sale.date) continue;
+        const currentDate = latestDateByStore.get(storeKey);
+        if (!currentDate || sale.date > currentDate) latestDateByStore.set(storeKey, sale.date);
+        const key = `${storeKey}::${skuKey}`;
+        if (!salesByStoreSku.has(key)) salesByStoreSku.set(key, []);
+        salesByStoreSku.get(key).push(sale);
+      }
+
+      for (const row of state.rows) {
+        if (!latestIds.has(row.id)) continue;
+        const storeKey = normalizeKey(row.storeKey);
+        const skuKey = normalizeKey(row.sku);
+        const endDate = latestDateByStore.get(storeKey);
+        if (!storeKey || !skuKey || !endDate) continue;
+
+        const startDate = addDays(endDate, -6);
+        const sales = salesByStoreSku.get(`${storeKey}::${skuKey}`) || [];
+        const sold7 = sales
+          .filter((sale) => sale.date >= startDate && sale.date <= endDate)
+          .reduce((sum, sale) => sum + Number(sale.unitsSold || 0), 0);
+
+        row.sold7 = sold7;
+        row.dailyAvg = roundNumber(sold7 / 7, 2);
+        row.days = row.dailyAvg > 0 ? roundNumber(row.stock / row.dailyAvg, 1) : null;
+        row.status = inventoryStatusFor(row.stock, row.dailyAvg, row.days);
+        row.salesSource = "shopify";
+        row.salesWindowStart = startDate;
+        row.salesWindowEnd = endDate;
+      }
+
+      const maxDailyByStore = new Map();
+      for (const row of latestRows) {
+        if (row.salesSource !== "shopify") continue;
+        const storeKey = normalizeKey(row.storeKey);
+        const current = maxDailyByStore.get(storeKey) || 1;
+        if (row.dailyAvg > current) maxDailyByStore.set(storeKey, row.dailyAvg);
+      }
+
+      for (const row of latestRows) {
+        if (row.salesSource !== "shopify") continue;
+        const maxDaily = maxDailyByStore.get(normalizeKey(row.storeKey)) || 1;
+        row.saleStatus = saleStatusFor(row.dailyAvg, maxDaily);
+        row.baseAlert = baseAlertFor(row.status, row.saleStatus, row.days);
+        row.alertParts = splitAlerts(row.baseAlert);
+        row.alert = row.baseAlert;
+      }
+    }
+
     function enrichRowsWithAdMetrics() {
       for (const row of state.rows) {
-        const startDate = addDays(row.date, -6);
+        const endDate = row.salesWindowEnd || row.date;
+        const startDate = row.salesWindowStart || addDays(endDate, -6);
         const matchingSpend = state.adDaily.filter((adRow) => (
           adRow.sku &&
           normalizeKey(adRow.storeKey) === normalizeKey(row.storeKey) &&
           normalizeKey(adRow.sku) === normalizeKey(row.sku) &&
           adRow.date >= startDate &&
-          adRow.date <= row.date
+          adRow.date <= endDate
         ));
         const spend = matchingSpend.reduce((sum, adRow) => sum + adRow.spend, 0);
         row.adSpend7 = spend;
@@ -2070,6 +2190,36 @@
         return { className: "cpa-watch", alert: "" };
       }
       return { className: "cpa-danger", alert: "Pausar Ads" };
+    }
+
+    function inventoryStatusFor(stock, dailyAvg, days) {
+      if (dailyAvg <= 0) return stock > 0 ? "ALTO" : "Sin ventas";
+      if (days <= 20) return "CRITICO";
+      if (days <= 30) return "BAJO";
+      if (days <= 45) return "OK";
+      return "ALTO";
+    }
+
+    function saleStatusFor(dailyAvg, maxDaily) {
+      if (dailyAvg === 0) return "SIN VENTAS";
+      const ratio = maxDaily > 0 ? dailyAvg / maxDaily : 0;
+      if (ratio >= 0.4) return "ALTA";
+      if (ratio >= 0.1) return "MEDIA";
+      return "BAJA";
+    }
+
+    function baseAlertFor(status, saleStatus, days) {
+      if (status === "CRITICO" && ["ALTA", "MEDIA"].includes(saleStatus)) return "Reordenar urgente";
+      if (status === "BAJO" && saleStatus === "ALTA") return "Reordenar pronto";
+      if (status === "OK" && saleStatus === "ALTA") return "Vigilar stock";
+      if (days !== null && Number.isFinite(days) && days > 120) return "Riesgo sobrestock";
+      if (status === "ALTO" && ["BAJA", "SIN VENTAS"].includes(saleStatus)) return "Riesgo sobrestock";
+      return "";
+    }
+
+    function roundNumber(value, decimals) {
+      const factor = 10 ** decimals;
+      return Math.round((Number(value) || 0) * factor) / factor;
     }
 
     function splitAlerts(value) {

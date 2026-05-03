@@ -41,6 +41,19 @@ El boton `Descargar Excel` genera un `.xlsx` con las filas visibles del dashboar
 
 El script `main.py` busca la imagen principal del producto en Shopify por SKU y la guarda en `product_image_url`. Si la tabla ya existia antes, vuelve a ejecutar `dashboard/supabase-schema.sql` para agregar esa columna.
 
+## Ventas Shopify diarias
+
+Para que `Ventas 7d` no dependa del Excel local, vuelve a ejecutar `dashboard/supabase-schema.sql` y agrega en Vercel las mismas variables `STORE_XX_SHOPIFY_URL` y `STORE_XX_SHOPIFY_TOKEN` que tienes en `.env`.
+
+`vercel.json` agenda `/api/import-shopify-sales` todos los dias a las `11:30am America/Lima`. El endpoint guarda ventas por `store_key + sku + fecha` en `shopify_sales_daily`; el dashboard suma los ultimos 7 dias disponibles. Si la tabla aun no existe o no hay ventas importadas para una tienda, usa el valor antiguo de `inventory_snapshots.units_sold_7d`.
+
+Para probar localmente:
+
+```powershell
+node import_shopify_sales_to_supabase.js --dry-run
+node import_shopify_sales_to_supabase.js
+```
+
 ## Historial desde Excels
 
 Para cargar fechas anteriores desde los Excels guardados en `outputs/`:
