@@ -46,6 +46,27 @@ create index if not exists idx_snapshots_date on inventory_snapshots(run_date);
 create index if not exists idx_snapshots_sku on inventory_snapshots(sku);
 create index if not exists idx_snapshots_store_date on inventory_snapshots(store_key, run_date desc);
 
+create table if not exists dashboard_user_profiles (
+    user_id    uuid primary key references auth.users(id) on delete cascade,
+    email      text not null,
+    role       text not null default 'viewer' check (role in ('admin', 'viewer')),
+    active     boolean not null default true,
+    created_at timestamptz default now(),
+    updated_at timestamptz default now()
+);
+
+create unique index if not exists idx_dashboard_profiles_email
+on dashboard_user_profiles(lower(email));
+
+create table if not exists user_store_access (
+    user_id    uuid not null references auth.users(id) on delete cascade,
+    store_key  text not null,
+    created_at timestamptz default now(),
+    primary key(user_id, store_key)
+);
+
+create index if not exists idx_user_store_access_store on user_store_access(store_key);
+
 create table if not exists shopify_sales_daily (
     id               bigserial primary key,
     sale_date        date not null,
@@ -140,9 +161,45 @@ create index if not exists idx_campaign_mappings_source on campaign_sku_mappings
 create index if not exists idx_ad_daily_store_sku_date on ad_campaign_daily(store_key, sku, spend_date desc);
 create index if not exists idx_ad_daily_source_campaign on ad_campaign_daily(source_id, campaign_name);
 
--- Recommended for a public dashboard with the anon key:
--- Enable Row Level Security and add read-only access for anon users.
+create schema if not exists private;
+
+create or replace function private.is_dashboard_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select exists (
+    select 1
+    from public.dashboard_user_profiles profile
+    where profile.user_id = auth.uid()
+      and profile.active is true
+      and profile.role = 'admin'
+  );
+$$;
+
+create or replace function private.can_access_store(target_store_key text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select private.is_dashboard_admin()
+    or exists (
+      select 1
+      from public.dashboard_user_profiles profile
+      join public.user_store_access access on access.user_id = profile.user_id
+      where profile.user_id = auth.uid()
+        and profile.active is true
+        and access.store_key = coalesce(target_store_key, '')
+    );
+$$;
+
 alter table inventory_snapshots enable row level security;
+alter table dashboard_user_profiles enable row level security;
+alter table user_store_access enable row level security;
 alter table shopify_sales_daily enable row level security;
 alter table shopify_sales_import_runs enable row level security;
 alter table ad_sheet_sources enable row level security;
@@ -150,46 +207,145 @@ alter table campaign_sku_mappings enable row level security;
 alter table ad_campaign_daily enable row level security;
 
 drop policy if exists "Public read inventory snapshots" on inventory_snapshots;
-create policy "Public read inventory snapshots"
+drop policy if exists "Authenticated read inventory snapshots by store" on inventory_snapshots;
+create policy "Authenticated read inventory snapshots by store"
 on inventory_snapshots
 for select
-to anon
-using (true);
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Dashboard profiles read own or admin" on dashboard_user_profiles;
+create policy "Dashboard profiles read own or admin"
+on dashboard_user_profiles
+for select
+to authenticated
+using (user_id = auth.uid() or private.is_dashboard_admin());
+
+drop policy if exists "Dashboard profiles admin insert" on dashboard_user_profiles;
+create policy "Dashboard profiles admin insert"
+on dashboard_user_profiles
+for insert
+to authenticated
+with check (private.is_dashboard_admin());
+
+drop policy if exists "Dashboard profiles admin update" on dashboard_user_profiles;
+create policy "Dashboard profiles admin update"
+on dashboard_user_profiles
+for update
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
+
+drop policy if exists "Dashboard profiles admin delete" on dashboard_user_profiles;
+create policy "Dashboard profiles admin delete"
+on dashboard_user_profiles
+for delete
+to authenticated
+using (private.is_dashboard_admin());
+
+drop policy if exists "User store access read own or admin" on user_store_access;
+create policy "User store access read own or admin"
+on user_store_access
+for select
+to authenticated
+using (user_id = auth.uid() or private.is_dashboard_admin());
+
+drop policy if exists "User store access admin insert" on user_store_access;
+create policy "User store access admin insert"
+on user_store_access
+for insert
+to authenticated
+with check (private.is_dashboard_admin());
+
+drop policy if exists "User store access admin update" on user_store_access;
+create policy "User store access admin update"
+on user_store_access
+for update
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
+
+drop policy if exists "User store access admin delete" on user_store_access;
+create policy "User store access admin delete"
+on user_store_access
+for delete
+to authenticated
+using (private.is_dashboard_admin());
 
 drop policy if exists "Public read shopify sales daily" on shopify_sales_daily;
-create policy "Public read shopify sales daily"
+drop policy if exists "Authenticated read shopify sales daily by store" on shopify_sales_daily;
+create policy "Authenticated read shopify sales daily by store"
 on shopify_sales_daily
 for select
-to anon
-using (true);
+to authenticated
+using (private.can_access_store(store_key));
 
 drop policy if exists "Public read shopify sales import runs" on shopify_sales_import_runs;
-create policy "Public read shopify sales import runs"
+drop policy if exists "Authenticated read shopify sales import runs by store" on shopify_sales_import_runs;
+create policy "Authenticated read shopify sales import runs by store"
 on shopify_sales_import_runs
 for select
-to anon
-using (true);
+to authenticated
+using (private.can_access_store(store_key));
 
 drop policy if exists "Public manage ad sheet sources" on ad_sheet_sources;
-create policy "Public manage ad sheet sources"
+drop policy if exists "Authenticated read ad sheet sources by store" on ad_sheet_sources;
+create policy "Authenticated read ad sheet sources by store"
+on ad_sheet_sources
+for select
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Admin manage ad sheet sources" on ad_sheet_sources;
+create policy "Admin manage ad sheet sources"
 on ad_sheet_sources
 for all
-to anon
-using (true)
-with check (true);
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
 
 drop policy if exists "Public manage campaign sku mappings" on campaign_sku_mappings;
-create policy "Public manage campaign sku mappings"
+drop policy if exists "Authenticated read campaign sku mappings by store" on campaign_sku_mappings;
+create policy "Authenticated read campaign sku mappings by store"
+on campaign_sku_mappings
+for select
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Admin manage campaign sku mappings" on campaign_sku_mappings;
+create policy "Admin manage campaign sku mappings"
 on campaign_sku_mappings
 for all
-to anon
-using (true)
-with check (true);
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
 
 drop policy if exists "Public manage ad campaign daily" on ad_campaign_daily;
-create policy "Public manage ad campaign daily"
+drop policy if exists "Authenticated read ad campaign daily by store" on ad_campaign_daily;
+create policy "Authenticated read ad campaign daily by store"
+on ad_campaign_daily
+for select
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Admin manage ad campaign daily" on ad_campaign_daily;
+create policy "Admin manage ad campaign daily"
 on ad_campaign_daily
 for all
-to anon
-using (true)
-with check (true);
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
+
+-- Bootstrap del primer admin:
+-- 1) Crea el usuario en Authentication > Users.
+-- 2) Cambia el email y ejecuta:
+--
+-- insert into dashboard_user_profiles (user_id, email, role, active)
+-- select id, email, 'admin', true
+-- from auth.users
+-- where email = 'admin@tuempresa.com'
+-- on conflict (user_id) do update
+-- set role = 'admin',
+--     active = true,
+--     email = excluded.email,
+--     updated_at = now();

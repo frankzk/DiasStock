@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
 
 const root = __dirname;
 const dist = path.join(root, "dist");
@@ -18,10 +17,6 @@ const config = {
     process.env.SUPABASE_ANON_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     "",
-  DASHBOARD_USER: process.env.DASHBOARD_USER || "",
-  DASHBOARD_PASSWORD_HASH:
-    process.env.DASHBOARD_PASSWORD_HASH ||
-    hashPassword(process.env.DASHBOARD_PASSWORD || ""),
 };
 
 fs.writeFileSync(
@@ -31,8 +26,3 @@ fs.writeFileSync(
 );
 
 console.log("Dashboard built to dashboard/dist");
-
-function hashPassword(password) {
-  if (!password) return "";
-  return crypto.createHash("sha256").update(password).digest("hex");
-}

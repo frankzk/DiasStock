@@ -512,6 +512,66 @@
       color: var(--danger);
     }
 
+    .user-form {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(120px, 0.5fr) auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .checkbox-field {
+      align-content: end;
+    }
+
+    .checkbox-field input {
+      width: 22px;
+      min-height: 22px;
+      justify-self: start;
+    }
+
+    .user-store-field {
+      grid-column: 1 / -1;
+    }
+
+    .user-store-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-height: 34px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+      padding: 7px;
+    }
+
+    .user-store-list label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 24px;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .user-store-list input {
+      width: 16px;
+      min-height: 16px;
+    }
+
+    .user-form-actions {
+      grid-column: 1 / -1;
+    }
+
+    .user-list {
+      max-height: 220px;
+    }
+
+    .user-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
     .filters {
       display: grid;
       gap: 6px;
@@ -1197,6 +1257,7 @@
       .ads-workspace,
       .ads-mapping-form,
       .ads-source-row,
+      .user-form,
       .filters,
       .range-filters,
       .summary-strip,
@@ -1310,8 +1371,8 @@
       </div>
       <form class="login-form" id="loginForm">
         <label class="field" for="loginUser">
-          <span>Usuario</span>
-          <input id="loginUser" name="user" type="text" autocomplete="username" required>
+          <span>Email</span>
+          <input id="loginUser" name="user" type="email" autocomplete="username" required>
         </label>
         <label class="field" for="loginPassword">
           <span>Contraseña</span>
@@ -1347,6 +1408,7 @@
         <button type="button" class="primary" id="refreshBtn">Actualizar</button>
         <button type="button" id="exportExcelBtn">Descargar Excel</button>
         <button type="button" id="configToggle">Configuracion</button>
+        <button type="button" id="logoutBtn">Salir</button>
       </div>
     </header>
 
@@ -1411,6 +1473,47 @@
           </section>
         </div>
         <p class="ads-status" id="adsStatus"></p>
+      </div>
+
+      <div class="ads-config" id="usersConfig" aria-label="Usuarios y accesos">
+        <div class="ads-config-header">
+          <h3>Usuarios y accesos</h3>
+          <p class="ads-help">Crea usuarios y limita las tiendas que pueden ver.</p>
+        </div>
+
+        <form class="user-form" id="userAccessForm">
+          <input id="userEditId" type="hidden">
+          <label class="field" for="userEmail">
+            <span>Email</span>
+            <input id="userEmail" type="email" autocomplete="off" placeholder="usuario@empresa.com">
+          </label>
+          <label class="field" for="userPassword">
+            <span>Contraseña</span>
+            <input id="userPassword" type="password" autocomplete="new-password" placeholder="Minimo 8 caracteres">
+          </label>
+          <label class="field" for="userRole">
+            <span>Rol</span>
+            <select id="userRole">
+              <option value="viewer">Viewer</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <label class="field checkbox-field" for="userActive">
+            <span>Activo</span>
+            <input id="userActive" type="checkbox" checked>
+          </label>
+          <div class="field user-store-field">
+            <span>Tiendas permitidas</span>
+            <div class="user-store-list" id="userStoreList"></div>
+          </div>
+          <div class="form-actions user-form-actions">
+            <button type="submit" class="primary" id="saveUserBtn">Guardar usuario</button>
+            <button type="button" id="cancelUserEditBtn">Nuevo</button>
+          </div>
+        </form>
+
+        <div class="ads-list user-list" id="userAccessList"></div>
+        <p class="ads-status" id="userAccessStatus"></p>
       </div>
     </section>
 
@@ -1607,9 +1710,6 @@
     const SUPABASE_URL = DEPLOY_CONFIG.SUPABASE_URL || "";
     const SUPABASE_ANON = DEPLOY_CONFIG.SUPABASE_ANON_KEY || "";
     const STORAGE_KEY = "diasstock.supabase.config.v1";
-    const LOGIN_STORAGE_KEY = "diasstock.dashboard.auth.v1";
-    const DASHBOARD_USER = DEPLOY_CONFIG.DASHBOARD_USER || "";
-    const DASHBOARD_PASSWORD_HASH = DEPLOY_CONFIG.DASHBOARD_PASSWORD_HASH || "";
     const DEFAULT_STOCK_MIN = "1";
 
     const STATUS_ORDER = ["CRITICO", "BAJO", "OK", "ALTO", "Sin ventas"];
@@ -1658,6 +1758,10 @@
       shopifySalesDaily: [],
       shopifySalesRuns: [],
       salesProblem: "",
+      currentUser: null,
+      currentProfile: null,
+      currentAccess: [],
+      dashboardUsers: [],
       sheetCampaigns: {},
       campaignLoadingSourceIds: new Set(),
       editingAdSourceIds: new Set(),
@@ -1683,6 +1787,7 @@
       editConfigBtn: $("#editConfigBtn"),
       saveConfigBtn: $("#saveConfigBtn"),
       clearConfigBtn: $("#clearConfigBtn"),
+      logoutBtn: $("#logoutBtn"),
       adsSourceForm: $("#adsSourceForm"),
       adsSheetUrl: $("#adsSheetUrl"),
       adsSheetActionBtn: $("#adsSheetActionBtn"),
@@ -1693,6 +1798,18 @@
       adsSkuSelect: $("#adsSkuSelect"),
       adsMappingsList: $("#adsMappingsList"),
       adsStatus: $("#adsStatus"),
+      usersConfig: $("#usersConfig"),
+      userAccessForm: $("#userAccessForm"),
+      userEditId: $("#userEditId"),
+      userEmail: $("#userEmail"),
+      userPassword: $("#userPassword"),
+      userRole: $("#userRole"),
+      userActive: $("#userActive"),
+      userStoreList: $("#userStoreList"),
+      saveUserBtn: $("#saveUserBtn"),
+      cancelUserEditBtn: $("#cancelUserEditBtn"),
+      userAccessList: $("#userAccessList"),
+      userAccessStatus: $("#userAccessStatus"),
       searchInput: $("#searchInput"),
       productPicker: $("#productPicker"),
       productMenuButton: $("#productMenuButton"),
@@ -1744,51 +1861,139 @@
       loginError: $("#loginError"),
     };
 
-    function isLoginEnabled() {
-      return Boolean(DASHBOARD_USER && DASHBOARD_PASSWORD_HASH);
-    }
-
-    function isLoggedIn() {
-      if (!isLoginEnabled()) return true;
-      return sessionStorage.getItem(LOGIN_STORAGE_KEY) === "ok";
-    }
-
     function showApp() {
       els.loginScreen.classList.add("hidden");
       els.appShell.classList.remove("app-hidden");
+      applyRoleUi();
     }
 
-    function showLogin() {
+    function showLogin(message = "") {
       els.appShell.classList.add("app-hidden");
       els.loginScreen.classList.remove("hidden");
-      els.loginUser.focus();
+      els.loginError.textContent = message;
+      setTimeout(() => els.loginUser.focus(), 0);
     }
 
-    async function sha256(value) {
-      const data = new TextEncoder().encode(value);
-      const digest = await crypto.subtle.digest("SHA-256", data);
-      return Array.from(new Uint8Array(digest))
-        .map((byte) => byte.toString(16).padStart(2, "0"))
-        .join("");
+    function isAdmin() {
+      return Boolean(state.currentProfile?.active !== false && state.currentProfile?.role === "admin");
+    }
+
+    function applyRoleUi() {
+      const admin = isAdmin();
+      els.configToggle.hidden = !admin;
+      els.usersConfig.hidden = !admin;
+      if (!admin) closeConfig();
+    }
+
+    function clearDataState() {
+      state.rows = [];
+      state.filteredRows = [];
+      state.historyRows = [];
+      state.adSources = [];
+      state.campaignMappings = [];
+      state.adDaily = [];
+      state.shopifySalesDaily = [];
+      state.shopifySalesRuns = [];
+      state.dashboardUsers = [];
+      state.sheetCampaigns = {};
+      state.campaignLoadingSourceIds.clear();
+      state.editingAdSourceIds.clear();
+      state.editingAdsSheetUrl = false;
+      state.adsProblem = "";
+      state.salesProblem = "";
+      state.expandedProductKeys.clear();
+      state.showAllPriority = false;
+      buildFilters();
+      renderAdsConfig();
+      renderUserAdmin();
+      render();
+    }
+
+    async function loadCurrentUser(client) {
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      const session = sessionData?.session;
+      if (!session?.user) {
+        state.currentUser = null;
+        state.currentProfile = null;
+        state.currentAccess = [];
+        applyRoleUi();
+        return false;
+      }
+
+      const { data: profile, error: profileError } = await client
+        .from("dashboard_user_profiles")
+        .select("user_id,email,role,active")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+      if (!profile || profile.active === false) {
+        throw new Error("Usuario sin perfil activo. Pide acceso al administrador.");
+      }
+
+      const { data: accessRows, error: accessError } = await client
+        .from("user_store_access")
+        .select("store_key")
+        .eq("user_id", session.user.id);
+      if (accessError) throw accessError;
+
+      state.currentUser = session.user;
+      state.currentProfile = profile;
+      state.currentAccess = (accessRows || []).map((row) => row.store_key).filter(Boolean);
+      applyRoleUi();
+      return true;
     }
 
     async function handleLogin(event) {
       event.preventDefault();
       els.loginError.textContent = "";
 
-      const user = els.loginUser.value.trim();
+      const email = els.loginUser.value.trim().toLowerCase();
       const password = els.loginPassword.value;
-      const passwordHash = await sha256(password);
+      const client = createClient({ openConfigOnError: false });
+      if (!client) {
+        els.loginError.textContent = "Falta configurar Supabase para iniciar sesion.";
+        return;
+      }
 
-      if (user === DASHBOARD_USER && passwordHash === DASHBOARD_PASSWORD_HASH) {
-        sessionStorage.setItem(LOGIN_STORAGE_KEY, "ok");
+      const submitButton = els.loginForm.querySelector("button[type='submit']");
+      submitButton.disabled = true;
+      submitButton.textContent = "Ingresando";
+      try {
+        const { error } = await client.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        await loadCurrentUser(client);
+        state.client = client;
         els.loginPassword.value = "";
         showApp();
-        refreshData();
-      } else {
-        els.loginError.textContent = "Usuario o contraseña incorrectos.";
+        await refreshData();
+      } catch (error) {
+        await client.auth.signOut();
+        els.loginError.textContent = error.message || "Usuario o contrasena incorrectos.";
         els.loginPassword.select();
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Ingresar";
       }
+    }
+
+    async function handleLogout() {
+      const client = state.client || createClient({ openConfigOnError: false });
+      if (client) {
+        try {
+          await client.auth.signOut();
+        } catch {
+          // No bloquea el cierre local de sesion.
+        }
+      }
+      state.currentUser = null;
+      state.currentProfile = null;
+      state.currentAccess = [];
+      clearDataState();
+      closeConfig();
+      els.lastUpdated.textContent = "Sesion cerrada";
+      showLogin();
     }
 
     function getStoredConfig() {
@@ -1864,18 +2069,24 @@
       els.refreshBtn.textContent = isLoading ? "Cargando" : "Actualizar";
     }
 
-    function createClient() {
+    function createClient(options = {}) {
       const config = getConfig();
       const problem = getConfigProblem(config);
+      const openOnError = options.openConfigOnError !== false;
       if (problem) {
-        openConfig(problem);
+        if (openOnError) openConfig(problem);
         return null;
       }
       if (!window.supabase || !window.supabase.createClient) {
-        openConfig("No se pudo cargar Supabase JS. Revisa la conexion.");
+        if (openOnError) openConfig("No se pudo cargar Supabase JS. Revisa la conexion.");
         return null;
       }
-      return window.supabase.createClient(config.url, config.anon);
+      return window.supabase.createClient(config.url, config.anon, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+        },
+      });
     }
 
     async function refreshData() {
@@ -1888,6 +2099,12 @@
       els.lastUpdated.textContent = "Cargando snapshots";
 
       try {
+        const hasSession = await loadCurrentUser(client);
+        if (!hasSession) {
+          showLogin();
+          return;
+        }
+
         const { data, error } = await client
           .from("inventory_snapshots")
           .select("*")
@@ -1904,11 +2121,17 @@
         buildFilters();
         renderAdsConfig();
         applyFilters();
+        await loadDashboardUsers();
+        renderUserAdmin();
         closeConfig();
         const now = new Date();
         els.lastUpdated.textContent = `Actualizado ${now.toLocaleString("es-PE")}`;
       } catch (error) {
-        openConfig(error.message || "No se pudieron cargar los snapshots.");
+        if (isAdmin()) {
+          openConfig(error.message || "No se pudieron cargar los snapshots.");
+        } else {
+          closeConfig();
+        }
         els.lastUpdated.textContent = "Error al cargar";
       } finally {
         setLoading(false);
@@ -2711,6 +2934,171 @@
       els.adsStatus.classList.toggle("error", Boolean(isError));
     }
 
+    async function loadDashboardUsers() {
+      if (!isAdmin()) {
+        state.dashboardUsers = [];
+        return;
+      }
+
+      try {
+        const data = await dashboardUsersRequest("GET");
+        state.dashboardUsers = data.users || [];
+      } catch (error) {
+        state.dashboardUsers = [];
+        setUserAccessStatus(error.message || "No se pudieron cargar usuarios.", true);
+      }
+    }
+
+    async function dashboardUsersRequest(method, payload) {
+      const client = state.client || createClient({ openConfigOnError: false });
+      if (!client) throw new Error("No hay sesion activa.");
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("No hay token de sesion.");
+
+      const response = await fetch("/api/dashboard-users", {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: payload ? JSON.stringify(payload) : undefined,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Usuarios HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function renderUserAdmin() {
+      const admin = isAdmin();
+      els.usersConfig.hidden = !admin;
+      if (!admin) return;
+      renderUserStoreChecklist(getSelectedUserStores());
+      renderUserAccessList();
+    }
+
+    function renderUserStoreChecklist(selectedStores = []) {
+      const selected = new Set(selectedStores);
+      const stores = getAvailableStores();
+      if (!stores.length) {
+        els.userStoreList.innerHTML = `<p class="empty compact-empty">Carga snapshots para ver tiendas.</p>`;
+        return;
+      }
+      els.userStoreList.innerHTML = stores.map(([storeKey, storeName]) => `
+        <label class="check-option">
+          <input type="checkbox" value="${escapeHtml(storeKey)}" ${selected.has(storeKey) ? "checked" : ""}>
+          <span>${escapeHtml(storeName)}</span>
+        </label>
+      `).join("");
+    }
+
+    function renderUserAccessList() {
+      if (!state.dashboardUsers.length) {
+        els.userAccessList.innerHTML = `<p class="empty compact-empty">Sin usuarios registrados</p>`;
+        return;
+      }
+
+      const storeNames = new Map(getAvailableStores());
+      els.userAccessList.innerHTML = state.dashboardUsers.map((user) => {
+        const role = user.role === "admin" ? "Admin" : "Viewer";
+        const status = user.active === false ? "pausado" : "activo";
+        const stores = user.role === "admin"
+          ? "Todas las tiendas"
+          : (user.store_keys || []).map((key) => storeNames.get(key) || key).join(", ") || "Sin tiendas";
+        return `
+          <div class="user-row">
+            <div>
+              <strong>${escapeHtml(user.email)}</strong>
+              <span>${escapeHtml(role)} · ${escapeHtml(status)} · ${escapeHtml(stores)}</span>
+            </div>
+            <button type="button" class="mini-button" data-user-edit="${escapeHtml(user.user_id)}">Editar</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function getSelectedUserStores() {
+      return Array.from(els.userStoreList.querySelectorAll("input[type='checkbox']:checked"))
+        .map((input) => input.value)
+        .filter(Boolean);
+    }
+
+    function resetUserForm() {
+      els.userEditId.value = "";
+      els.userEmail.value = "";
+      els.userPassword.value = "";
+      els.userPassword.placeholder = "Minimo 8 caracteres";
+      els.userRole.value = "viewer";
+      els.userActive.checked = true;
+      els.saveUserBtn.textContent = "Guardar usuario";
+      renderUserStoreChecklist([]);
+      setUserAccessStatus("");
+    }
+
+    function editDashboardUser(userId) {
+      const user = state.dashboardUsers.find((item) => item.user_id === userId);
+      if (!user) return;
+      els.userEditId.value = user.user_id;
+      els.userEmail.value = user.email || "";
+      els.userPassword.value = "";
+      els.userPassword.placeholder = "Deja en blanco para mantener";
+      els.userRole.value = user.role || "viewer";
+      els.userActive.checked = user.active !== false;
+      els.saveUserBtn.textContent = "Guardar cambios";
+      renderUserStoreChecklist(user.store_keys || []);
+      setUserAccessStatus("Editando usuario.");
+    }
+
+    async function saveDashboardUser(event) {
+      event.preventDefault();
+      if (!isAdmin()) return;
+
+      const userId = els.userEditId.value.trim();
+      const email = els.userEmail.value.trim().toLowerCase();
+      const password = els.userPassword.value;
+      const role = els.userRole.value === "admin" ? "admin" : "viewer";
+      const active = els.userActive.checked;
+      const storeKeys = role === "admin" ? [] : getSelectedUserStores();
+
+      if (!email) {
+        setUserAccessStatus("Email requerido.", true);
+        return;
+      }
+      if (!userId && password.length < 8) {
+        setUserAccessStatus("La contrasena inicial debe tener al menos 8 caracteres.", true);
+        return;
+      }
+
+      els.saveUserBtn.disabled = true;
+      setUserAccessStatus("Guardando usuario...");
+      try {
+        await dashboardUsersRequest("POST", {
+          user_id: userId,
+          email,
+          password,
+          role,
+          active,
+          store_keys: storeKeys,
+        });
+        await loadDashboardUsers();
+        resetUserForm();
+        renderUserAdmin();
+        setUserAccessStatus("Usuario guardado.");
+      } catch (error) {
+        setUserAccessStatus(error.message || "No se pudo guardar el usuario.", true);
+      } finally {
+        els.saveUserBtn.disabled = false;
+      }
+    }
+
+    function setUserAccessStatus(message, isError = false) {
+      els.userAccessStatus.textContent = message || "";
+      els.userAccessStatus.classList.toggle("error", Boolean(isError));
+    }
+
     async function saveAdsSource(event) {
       event.preventDefault();
       const client = state.client || createClient();
@@ -3489,6 +3877,7 @@
     }
 
     els.configToggle.addEventListener("click", () => {
+      if (!isAdmin()) return;
       if (els.configPanel.classList.contains("hidden")) openConfig();
       else closeConfig();
     });
@@ -3563,6 +3952,13 @@
       if (!button) return;
       deleteCampaignMapping(Number(button.dataset.adsDeleteMapping));
     });
+    els.userAccessForm.addEventListener("submit", saveDashboardUser);
+    els.cancelUserEditBtn.addEventListener("click", resetUserForm);
+    els.userAccessList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-user-edit]");
+      if (!button) return;
+      editDashboardUser(button.dataset.userEdit);
+    });
 
     els.refreshBtn.addEventListener("click", refreshData);
     els.exportExcelBtn.addEventListener("click", exportExcel);
@@ -3573,6 +3969,7 @@
       renderPriorityList();
     });
     els.loginForm.addEventListener("submit", handleLogin);
+    els.logoutBtn.addEventListener("click", handleLogout);
     els.searchInput.addEventListener("input", applyFilters);
     els.productMenuButton.addEventListener("click", () => {
       setProductMenuOpen(els.productMenu.classList.contains("hidden"));
@@ -3610,15 +4007,35 @@
       }
     });
 
-    buildFilters();
-    renderAdsConfig();
-    render();
-    if (isLoggedIn()) {
-      showApp();
-      refreshData();
-    } else {
-      showLogin();
+    async function initApp() {
+      buildFilters();
+      renderAdsConfig();
+      renderUserAdmin();
+      render();
+
+      const client = createClient({ openConfigOnError: false });
+      if (!client) {
+        applyRoleUi();
+        showLogin("Falta configurar Supabase para iniciar sesion.");
+        return;
+      }
+
+      state.client = client;
+      try {
+        const hasSession = await loadCurrentUser(client);
+        if (!hasSession) {
+          showLogin();
+          return;
+        }
+        showApp();
+        await refreshData();
+      } catch (error) {
+        await client.auth.signOut();
+        showLogin(error.message || "No se pudo validar la sesion.");
+      }
     }
+
+    initApp();
   </script>
 </body>
 </html>

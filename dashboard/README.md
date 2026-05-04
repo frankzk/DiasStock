@@ -27,11 +27,31 @@ Sube la carpeta `dashboard` a <https://app.netlify.com/drop>. Si prefieres dejar
 3. Agrega estas Environment Variables:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
-   - `DASHBOARD_USER`
-   - `DASHBOARD_PASSWORD`
+   - `SUPABASE_SERVICE_ROLE_KEY` para crear/editar usuarios desde `Configuracion > Usuarios y accesos`
 4. Deploy. Cada push a la rama conectada vuelve a publicar el dashboard.
 
-El login es basico y se aplica en el navegador. Para cambiar la clave, cambia `DASHBOARD_PASSWORD` en Vercel y redeploya.
+## Usuarios y accesos
+
+El login usa Supabase Auth y RLS por tienda. Un usuario `admin` ve todas las tiendas y puede crear usuarios; un `viewer` solo lee las tiendas asignadas en `Configuracion > Usuarios y accesos`.
+
+Para crear el primer admin:
+
+1. En Supabase, crea el usuario en `Authentication > Users`.
+2. En `SQL Editor`, ejecuta esto cambiando el email:
+
+```sql
+insert into dashboard_user_profiles (user_id, email, role, active)
+select id, email, 'admin', true
+from auth.users
+where email = 'admin@tuempresa.com'
+on conflict (user_id) do update
+set role = 'admin',
+    active = true,
+    email = excluded.email,
+    updated_at = now();
+```
+
+Luego entra al dashboard con ese email y contraseña. Desde ahi puedes crear usuarios `viewer` y asignar una o varias tiendas.
 
 ## Exportacion
 
