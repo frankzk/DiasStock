@@ -1406,7 +1406,6 @@
           </div>
         </div>
         <button type="button" class="primary" id="refreshBtn">Actualizar</button>
-        <button type="button" id="exportExcelBtn">Descargar Excel</button>
         <button type="button" id="configToggle">Configuracion</button>
         <button type="button" id="logoutBtn">Salir</button>
       </div>
@@ -1832,7 +1831,6 @@
       daysMin: $("#daysMin"),
       daysMax: $("#daysMax"),
       resetFiltersBtn: $("#resetFiltersBtn"),
-      exportExcelBtn: $("#exportExcelBtn"),
       tableExportBtn: $("#tableExportBtn"),
       lastUpdated: $("#lastUpdated"),
       resultCount: $("#resultCount"),
@@ -3504,7 +3502,6 @@
       els.resultCount.textContent = `${formatNumber(rows.length)} resultado${rows.length === 1 ? "" : "s"}`;
       els.stateTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
       els.saleTotal.textContent = `${formatNumber(rows.length)} fila${rows.length === 1 ? "" : "s"}`;
-      els.exportExcelBtn.disabled = rows.length === 0;
       els.tableExportBtn.disabled = rows.length === 0;
     }
 
@@ -3973,7 +3970,6 @@
     });
 
     els.refreshBtn.addEventListener("click", refreshData);
-    els.exportExcelBtn.addEventListener("click", exportExcel);
     els.tableExportBtn.addEventListener("click", exportExcel);
     els.resetFiltersBtn.addEventListener("click", resetFilters);
     els.priorityMoreBtn.addEventListener("click", () => {
