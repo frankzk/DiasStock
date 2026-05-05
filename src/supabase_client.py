@@ -6,7 +6,13 @@ import requests
 
 def _get_supabase_config() -> tuple[str, str]:
     url = os.environ["SUPABASE_URL"].rstrip("/")
-    key = os.environ["SUPABASE_KEY"]
+    key = (
+        os.environ.get("SUPABASE_KEY")
+        or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_ANON_KEY")
+    )
+    if not key:
+        raise KeyError("SUPABASE_KEY o SUPABASE_SERVICE_ROLE_KEY")
     return url, key
 
 

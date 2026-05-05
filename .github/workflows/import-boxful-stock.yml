@@ -1,0 +1,88 @@
+name: Import Boxful Stock
+
+on:
+  schedule:
+    # 11:45am America/Lima. GitHub Actions cron usa UTC.
+    - cron: "45 16 * * *"
+  workflow_dispatch:
+    inputs:
+      run_date:
+        description: "Fecha del snapshot YYYY-MM-DD. Vacio = ayer en America/Lima."
+        required: false
+        type: string
+      stores:
+        description: "Tiendas a procesar separadas por coma."
+        required: false
+        default: "CR,HN"
+        type: string
+
+concurrency:
+  group: import-boxful-stock
+  cancel-in-progress: false
+
+jobs:
+  import-boxful-stock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BOXFUL_HEADLESS: "true"
+      SHOPIFY_API_VERSION: "2026-04"
+      SHOPIFY_SALES_TIMEZONE: "America/Lima"
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      STORE_CR_NAME: "Mireva Costa Rica"
+      STORE_CR_BOXFUL_EMAIL: ${{ secrets.STORE_CR_BOXFUL_EMAIL }}
+      STORE_CR_BOXFUL_PASSWORD: ${{ secrets.STORE_CR_BOXFUL_PASSWORD }}
+      STORE_CR_SHOPIFY_URL: ${{ secrets.STORE_CR_SHOPIFY_URL }}
+      STORE_CR_SHOPIFY_TOKEN: ${{ secrets.STORE_CR_SHOPIFY_TOKEN }}
+      STORE_HN_NAME: "Mireva Honduras"
+      STORE_HN_BOXFUL_EMAIL: ${{ secrets.STORE_HN_BOXFUL_EMAIL }}
+      STORE_HN_BOXFUL_PASSWORD: ${{ secrets.STORE_HN_BOXFUL_PASSWORD }}
+      STORE_HN_SHOPIFY_URL: ${{ secrets.STORE_HN_SHOPIFY_URL }}
+      STORE_HN_SHOPIFY_TOKEN: ${{ secrets.STORE_HN_SHOPIFY_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Determine run date and stores
+        id: vars
+        env:
+          INPUT_RUN_DATE: ${{ github.event.inputs.run_date }}
+          INPUT_STORES: ${{ github.event.inputs.stores }}
+        run: |
+          RUN_DATE="${INPUT_RUN_DATE}"
+          if [ -z "$RUN_DATE" ]; then
+            RUN_DATE="$(TZ=America/Lima date -d 'yesterday' +%F)"
+          fi
+
+          STORES="${INPUT_STORES:-CR,HN}"
+          echo "run_date=$RUN_DATE" >> "$GITHUB_OUTPUT"
+          echo "stores=$STORES" >> "$GITHUB_OUTPUT"
+          echo "Snapshot date: $RUN_DATE"
+          echo "Stores: $STORES"
+
+      - name: Import Boxful stock
+        run: |
+          IFS=',' read -ra STORE_LIST <<< "${{ steps.vars.outputs.stores }}"
+          for raw_store in "${STORE_LIST[@]}"; do
+            store="$(echo "$raw_store" | xargs | tr '[:lower:]' '[:upper:]')"
+            if [ -z "$store" ]; then
+              continue
+            fi
+
+            echo "::group::Import $store"
+            python main.py --store "$store" --run-date "${{ steps.vars.outputs.run_date }}" --headless
+            echo "::endgroup::"
+          done

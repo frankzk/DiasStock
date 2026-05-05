@@ -1,3 +1,4 @@
+import os
 import time
 from playwright.sync_api import sync_playwright
 from src.config import Store
@@ -7,11 +8,15 @@ PRODUCTS_URL = f"{BOXFUL_URL}/fulfillment-products"
 TIMEOUT = 60000
 
 
-def scrape_inventory(store: Store) -> list[dict]:
+def scrape_inventory(store: Store, headless: bool | None = None) -> list[dict]:
     products = []
+    resolved_headless = _resolve_headless(headless)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(
+            headless=resolved_headless,
+            args=["--no-sandbox"] if resolved_headless else [],
+        )
         context = browser.new_context()
         page = context.new_page()
         page.set_default_timeout(TIMEOUT)
@@ -64,6 +69,17 @@ def scrape_inventory(store: Store) -> list[dict]:
 
     print(f"  Total productos extraídos: {len(products)}")
     return products
+
+
+def _resolve_headless(value: bool | None) -> bool:
+    if value is not None:
+        return value
+
+    raw = os.environ.get("BOXFUL_HEADLESS")
+    if raw:
+        return raw.strip().lower() in {"1", "true", "yes", "si", "on"}
+
+    return os.environ.get("CI", "").strip().lower() == "true"
 
 
 def _extract_page_rows(page) -> list[dict]:

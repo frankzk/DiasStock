@@ -74,6 +74,31 @@ node import_shopify_sales_to_supabase.js --dry-run
 node import_shopify_sales_to_supabase.js
 ```
 
+## Stock Boxful diario
+
+El stock de Boxful se automatiza con GitHub Actions en `.github/workflows/import-boxful-stock.yml`, no en Vercel. GitHub levanta un servidor temporal, instala Playwright/Chromium, entra a Boxful en modo headless y guarda el snapshot en Supabase.
+
+El cron corre todos los dias a las `11:45am America/Lima` y guarda el snapshot con la fecha de ayer, para alinearlo con ventas cerradas. Tambien se puede ejecutar manualmente desde `GitHub > Actions > Import Boxful Stock > Run workflow`.
+
+Agrega estos `Repository secrets` en GitHub:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `STORE_CR_BOXFUL_EMAIL`
+- `STORE_CR_BOXFUL_PASSWORD`
+- `STORE_CR_SHOPIFY_URL`
+- `STORE_CR_SHOPIFY_TOKEN`
+- `STORE_HN_BOXFUL_EMAIL`
+- `STORE_HN_BOXFUL_PASSWORD`
+- `STORE_HN_SHOPIFY_URL`
+- `STORE_HN_SHOPIFY_TOKEN`
+
+Para probar localmente:
+
+```powershell
+py main.py --store CR --run-date 2026-05-04 --headless
+```
+
 ## Historial desde Excels
 
 Para cargar fechas anteriores desde los Excels guardados en `outputs/`:
