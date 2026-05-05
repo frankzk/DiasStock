@@ -2113,7 +2113,7 @@
 
         if (error) throw error;
 
-        state.rows = (data || []).map(normalizeRow);
+        state.rows = filterRowsForCurrentUser((data || []).map(normalizeRow));
         await loadShopifySalesTable(client);
         await loadAdsTables(client);
         state.expandedProductKeys.clear();
@@ -2146,9 +2146,9 @@
         fetchOptionalAdsTable(client.from("ad_campaign_daily").select("*").order("spend_date", { ascending: false }).limit(20000)),
       ]);
 
-      state.adSources = sources.map(normalizeAdSource);
-      state.campaignMappings = mappings.map(normalizeCampaignMapping);
-      state.adDaily = adDaily.map(normalizeAdDaily);
+      state.adSources = filterRowsForCurrentUser(sources.map(normalizeAdSource));
+      state.campaignMappings = filterRowsForCurrentUser(mappings.map(normalizeCampaignMapping));
+      state.adDaily = filterRowsForCurrentUser(adDaily.map(normalizeAdDaily));
       pruneAdsUiState();
       enrichRowsWithAdMetrics();
     }
@@ -2163,8 +2163,8 @@
           client.from("shopify_sales_import_runs").select("*").order("run_date", { ascending: false }).limit(1000)
         ),
       ]);
-      state.shopifySalesDaily = salesRows.map(normalizeShopifySaleDaily);
-      state.shopifySalesRuns = runRows.map(normalizeShopifySaleRun);
+      state.shopifySalesDaily = filterRowsForCurrentUser(salesRows.map(normalizeShopifySaleDaily));
+      state.shopifySalesRuns = filterRowsForCurrentUser(runRows.map(normalizeShopifySaleRun));
       enrichRowsWithShopifySales();
     }
 
@@ -2481,6 +2481,18 @@
 
     function normalizeKey(value) {
       return String(value || "").trim().toLowerCase();
+    }
+
+    function canAccessStore(storeKey) {
+      if (isAdmin()) return true;
+      const normalizedStore = normalizeKey(storeKey);
+      if (!normalizedStore) return false;
+      return state.currentAccess.some((allowedStore) => normalizeKey(allowedStore) === normalizedStore);
+    }
+
+    function filterRowsForCurrentUser(rows) {
+      if (isAdmin()) return rows;
+      return rows.filter((row) => canAccessStore(row.storeKey));
     }
 
     function buildFilters() {
