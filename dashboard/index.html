@@ -1037,6 +1037,24 @@
       flex-wrap: wrap;
     }
 
+    .portfolio-expand-btn {
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--primary);
+      background: var(--surface-soft);
+      border-color: #c9d8d1;
+      white-space: nowrap;
+    }
+
+    .portfolio-expand-btn:hover {
+      color: white;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
     .portfolio-size-note {
       min-height: 24px;
       border: 1px solid var(--line);
@@ -1144,6 +1162,144 @@
       font-size: 11px;
       line-height: 1.15;
       margin-bottom: 2px;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    .portfolio-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(9, 18, 16, 0.42);
+    }
+
+    .portfolio-modal-backdrop.hidden {
+      display: none;
+    }
+
+    .portfolio-modal {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      width: min(92vw, 1440px);
+      height: min(86vh, 920px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 30px 90px rgba(23, 33, 31, 0.28);
+      overflow: hidden;
+    }
+
+    .portfolio-modal-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fcfdfc;
+    }
+
+    .portfolio-modal-title {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .portfolio-modal-title h2 {
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .portfolio-modal-title p {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .portfolio-modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .portfolio-modal-close {
+      width: 32px;
+      min-height: 32px;
+      padding: 0;
+      border-radius: 999px;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .portfolio-modal-chart {
+      min-height: 0;
+      padding: 10px;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .portfolio-modal-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 150px;
+      gap: 10px;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .portfolio-modal-plot-shell {
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: white;
+      overflow: hidden;
+    }
+
+    .portfolio-modal-svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 480px;
+    }
+
+    .portfolio-image-frame {
+      fill: white;
+      stroke-width: 5;
+      vector-effect: non-scaling-stroke;
+      filter: drop-shadow(0 6px 10px rgba(23, 33, 31, 0.18));
+    }
+
+    .portfolio-image-frame.good { stroke: var(--good); }
+    .portfolio-image-frame.watch { stroke: var(--warn); }
+    .portfolio-image-frame.danger { stroke: var(--danger); }
+    .portfolio-image-frame.overstock { stroke: var(--info); }
+    .portfolio-image-frame.neutral { stroke: #52605b; }
+
+    .portfolio-image-placeholder {
+      fill: #f5f8f6;
+      stroke: none;
+    }
+
+    .portfolio-image-initials {
+      fill: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .portfolio-modal .portfolio-legend {
+      height: 100%;
+      min-height: 0;
+      align-content: start;
+      padding: 12px;
     }
 
     .table-section {
@@ -1589,6 +1745,7 @@
       .summary-status,
       .insight-row,
       .portfolio-chart-layout,
+      .portfolio-modal-layout,
       .priority-columns {
         grid-template-columns: 1fr;
       }
@@ -1604,6 +1761,31 @@
       .portfolio-legend {
         display: flex;
         flex-wrap: wrap;
+      }
+
+      .portfolio-modal-backdrop {
+        padding: 8px;
+      }
+
+      .portfolio-modal {
+        width: calc(100vw - 16px);
+        height: calc(100dvh - 16px);
+      }
+
+      .portfolio-modal-header {
+        grid-template-columns: 1fr;
+      }
+
+      .portfolio-modal-actions {
+        justify-content: flex-start;
+      }
+
+      .portfolio-modal-chart {
+        overflow: auto;
+      }
+
+      .portfolio-modal-svg {
+        min-height: 420px;
       }
 
       .priority-column {
@@ -1964,6 +2146,7 @@
               <p>Prom/dia vs CPA 7d</p>
             </div>
             <div class="portfolio-badges">
+              <button type="button" class="portfolio-expand-btn" id="portfolioExpandBtn">Ampliar</button>
               <span class="count-pill" id="portfolioAdsCount">0 con ads</span>
               <span class="count-pill" id="portfolioNoAdsCount">0 sin ads</span>
               <span class="portfolio-size-note">Tamaño de burbuja = stock</span>
@@ -2091,6 +2274,26 @@
         </table>
       </div>
     </section>
+
+    <div class="portfolio-modal-backdrop hidden" id="portfolioModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="portfolioModalTitle">
+      <section class="portfolio-modal" aria-label="Mapa de cartera ampliado">
+        <div class="portfolio-modal-header">
+          <div class="portfolio-modal-title">
+            <h2 id="portfolioModalTitle">Mapa de cartera ampliado</h2>
+            <p>Prom/dia vs CPA 7d con imagenes de producto</p>
+          </div>
+          <div class="portfolio-modal-actions">
+            <span class="count-pill" id="portfolioModalAdsCount">0 con ads</span>
+            <span class="count-pill" id="portfolioModalNoAdsCount">0 sin ads</span>
+            <span class="portfolio-size-note">Tama&ntilde;o de burbuja = stock</span>
+            <button type="button" class="portfolio-modal-close" id="portfolioModalClose" aria-label="Cerrar mapa ampliado">&times;</button>
+          </div>
+        </div>
+        <div class="portfolio-modal-chart" id="portfolioModalChart">
+          <p class="empty compact-empty">Sin gasto ads para graficar</p>
+        </div>
+      </section>
+    </div>
   </main>
 
   <script>
@@ -2161,6 +2364,7 @@
       adsProblem: "",
       expandedProductKeys: new Set(),
       showAllPriority: false,
+      portfolioModalOpen: false,
       loading: false,
       client: null,
       sort: { key: "sold7", direction: "desc" },
@@ -2245,9 +2449,15 @@
       reorderPriorityList: $("#reorderPriorityList"),
       overstockPriorityList: $("#overstockPriorityList"),
       priorityMoreBtn: $("#priorityMoreBtn"),
+      portfolioExpandBtn: $("#portfolioExpandBtn"),
       portfolioMapChart: $("#portfolioMapChart"),
       portfolioAdsCount: $("#portfolioAdsCount"),
       portfolioNoAdsCount: $("#portfolioNoAdsCount"),
+      portfolioModalBackdrop: $("#portfolioModalBackdrop"),
+      portfolioModalClose: $("#portfolioModalClose"),
+      portfolioModalChart: $("#portfolioModalChart"),
+      portfolioModalAdsCount: $("#portfolioModalAdsCount"),
+      portfolioModalNoAdsCount: $("#portfolioModalNoAdsCount"),
       metricProducts: $("#metricProducts"),
       metricProductsNote: $("#metricProductsNote"),
       metricReorder: $("#metricReorder"),
@@ -4085,6 +4295,7 @@
       renderStatusBars();
       renderPriorityList();
       renderPortfolioMap();
+      if (state.portfolioModalOpen) renderPortfolioModalChart();
       renderTable();
     }
 
@@ -4243,26 +4454,27 @@
       return `${words.slice(0, 4).join(" ")}...`;
     }
 
-    function renderPortfolioMap() {
+    function getPortfolioRows() {
       const rows = state.filteredRows;
       const adRows = rows.filter((row) => (
         Number(row.adSpend7 || 0) > 0 &&
         Number.isFinite(Number(row.adCpa7)) &&
         Number.isFinite(Number(row.dailyAvg))
       ));
-      const noAdsCount = rows.length - adRows.length;
+      return {
+        adRows,
+        noAdsCount: Math.max(0, rows.length - adRows.length),
+      };
+    }
 
-      els.portfolioAdsCount.textContent = `${formatNumber(adRows.length)} con ads`;
+    function updatePortfolioCounts(adCount, noAdsCount) {
+      els.portfolioAdsCount.textContent = `${formatNumber(adCount)} con ads`;
       els.portfolioNoAdsCount.textContent = `${formatNumber(noAdsCount)} sin ads`;
+      els.portfolioModalAdsCount.textContent = `${formatNumber(adCount)} con ads`;
+      els.portfolioModalNoAdsCount.textContent = `${formatNumber(noAdsCount)} sin ads`;
+    }
 
-      if (!adRows.length) {
-        els.portfolioMapChart.innerHTML = `<p class="empty compact-empty">Sin gasto ads para graficar</p>`;
-        return;
-      }
-
-      const width = 640;
-      const height = 180;
-      const margin = { top: 18, right: 18, bottom: 34, left: 44 };
+    function buildPortfolioModel(adRows, width, height, margin) {
       const plotWidth = width - margin.left - margin.right;
       const plotHeight = height - margin.top - margin.bottom;
       const xValues = adRows.map((row) => Number(row.dailyAvg || 0));
@@ -4286,17 +4498,66 @@
       };
       const scaleX = (value) => margin.left + Math.sqrt(normalizeRange(value, xMin, xMax)) * plotWidth;
       const scaleY = (value) => margin.top + (1 - normalizeRange(value, yMin, yMax)) * plotHeight;
-      const xCutPx = scaleX(xCut);
-      const yCutPx = scaleY(yCut);
+      return {
+        width,
+        height,
+        margin,
+        plotWidth,
+        plotHeight,
+        maxStock,
+        scaleX,
+        scaleY,
+        xCutPx: scaleX(xCut),
+        yCutPx: scaleY(yCut),
+      };
+    }
 
+    function renderPortfolioLegend() {
+      return `
+        <div class="portfolio-legend" aria-hidden="true">
+          <strong>Lectura</strong>
+          <span class="legend-item"><span class="dot" style="background:var(--good)"></span>CPA &lt; ${CPA_THRESHOLDS.scaleBelow}</span>
+          <span class="legend-item"><span class="dot" style="background:var(--warn)"></span>Revisar</span>
+          <span class="legend-item"><span class="dot" style="background:var(--danger)"></span>Pausar</span>
+          <span class="legend-item"><span class="dot" style="background:var(--info)"></span>Sobrestock</span>
+        </div>
+      `;
+    }
+
+    function renderPortfolioAxis(model) {
+      const { width, height, margin, plotWidth, plotHeight, scaleY, xCutPx, yCutPx } = model;
+      return `
+        <rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" rx="6" fill="white"></rect>
+        <line class="portfolio-grid" x1="${margin.left}" y1="${scaleY(CPA_THRESHOLDS.scaleBelow)}" x2="${width - margin.right}" y2="${scaleY(CPA_THRESHOLDS.scaleBelow)}"></line>
+        <line class="portfolio-cutline" x1="${xCutPx}" y1="${margin.top}" x2="${xCutPx}" y2="${height - margin.bottom}"></line>
+        <line class="portfolio-cutline" x1="${margin.left}" y1="${yCutPx}" x2="${width - margin.right}" y2="${yCutPx}"></line>
+        <line class="portfolio-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>
+        <line class="portfolio-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>
+        <text class="portfolio-label" x="${margin.left}" y="${margin.top - 6}">CPA alto</text>
+        <text class="portfolio-label" x="${margin.left}" y="${scaleY(CPA_THRESHOLDS.pauseFrom) - 5}">CPA ${CPA_THRESHOLDS.pauseFrom}</text>
+        <text class="portfolio-label" x="${xCutPx + 5}" y="${height - margin.bottom - 5}">mediana</text>
+        <text class="portfolio-label" x="${width - margin.right - 92}" y="${height - 12}">Mas velocidad</text>
+        <text class="portfolio-label" x="${margin.left}" y="${height - 12}">Menos velocidad</text>
+      `;
+    }
+
+    function renderPortfolioMap() {
+      const { adRows, noAdsCount } = getPortfolioRows();
+      updatePortfolioCounts(adRows.length, noAdsCount);
+
+      if (!adRows.length) {
+        els.portfolioMapChart.innerHTML = `<p class="empty compact-empty">Sin gasto ads para graficar</p>`;
+        return;
+      }
+
+      const model = buildPortfolioModel(adRows, 640, 180, { top: 18, right: 18, bottom: 34, left: 44 });
       const points = adRows.map((row) => {
-        const x = scaleX(Number(row.dailyAvg || 0));
-        const y = scaleY(Number(row.adCpa7 || 0));
-        const radius = 3 + Math.sqrt(Number(row.stock || 0) / maxStock) * 7;
-        const title = `${row.product || row.sku || "Producto"} | ${formatDecimal(row.dailyAvg)} prom/dia | ${formatMoney(row.adCpa7, row.adCurrency)} CPA | Stock ${formatNumber(row.stock)}`;
+        const x = model.scaleX(Number(row.dailyAvg || 0));
+        const y = model.scaleY(Number(row.adCpa7 || 0));
+        const radius = 3 + Math.sqrt(Number(row.stock || 0) / model.maxStock) * 7;
         return `
           <circle class="portfolio-point ${portfolioPointClass(row)}" cx="${roundNumber(x, 2)}" cy="${roundNumber(y, 2)}" r="${roundNumber(radius, 2)}">
-            <title>${escapeHtml(title)}</title>
+            <title>${escapeHtml(portfolioTooltip(row))}</title>
           </circle>
         `;
       }).join("");
@@ -4304,30 +4565,87 @@
       els.portfolioMapChart.innerHTML = `
         <div class="portfolio-chart-layout">
           <div class="portfolio-plot-shell">
-            <svg class="portfolio-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mapa de cartera por Prom/dia y CPA 7d">
-              <rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" rx="6" fill="white"></rect>
-              <line class="portfolio-grid" x1="${margin.left}" y1="${scaleY(CPA_THRESHOLDS.scaleBelow)}" x2="${width - margin.right}" y2="${scaleY(CPA_THRESHOLDS.scaleBelow)}"></line>
-              <line class="portfolio-cutline" x1="${xCutPx}" y1="${margin.top}" x2="${xCutPx}" y2="${height - margin.bottom}"></line>
-              <line class="portfolio-cutline" x1="${margin.left}" y1="${yCutPx}" x2="${width - margin.right}" y2="${yCutPx}"></line>
-              <line class="portfolio-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>
-              <line class="portfolio-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>
-              <text class="portfolio-label" x="${margin.left}" y="14">CPA alto</text>
-              <text class="portfolio-label" x="${margin.left}" y="${scaleY(CPA_THRESHOLDS.pauseFrom) - 5}">CPA ${CPA_THRESHOLDS.pauseFrom}</text>
-              <text class="portfolio-label" x="${xCutPx + 5}" y="${height - margin.bottom - 5}">mediana</text>
-              <text class="portfolio-label" x="${width - margin.right - 92}" y="${height - 12}">Mas velocidad</text>
-              <text class="portfolio-label" x="${margin.left}" y="${height - 12}">Menos velocidad</text>
+            <svg class="portfolio-svg" viewBox="0 0 ${model.width} ${model.height}" role="img" aria-label="Mapa de cartera por Prom/dia y CPA 7d">
+              ${renderPortfolioAxis(model)}
               ${points}
             </svg>
           </div>
-          <div class="portfolio-legend" aria-hidden="true">
-            <strong>Lectura</strong>
-            <span class="legend-item"><span class="dot" style="background:var(--good)"></span>CPA &lt; ${CPA_THRESHOLDS.scaleBelow}</span>
-            <span class="legend-item"><span class="dot" style="background:var(--warn)"></span>Revisar</span>
-            <span class="legend-item"><span class="dot" style="background:var(--danger)"></span>Pausar</span>
-            <span class="legend-item"><span class="dot" style="background:var(--info)"></span>Sobrestock</span>
-          </div>
+          ${renderPortfolioLegend()}
         </div>
       `;
+    }
+
+    function renderPortfolioModalChart() {
+      const { adRows, noAdsCount } = getPortfolioRows();
+      updatePortfolioCounts(adRows.length, noAdsCount);
+
+      if (!adRows.length) {
+        els.portfolioModalChart.innerHTML = `<p class="empty compact-empty">Sin gasto ads para graficar</p>`;
+        return;
+      }
+
+      const model = buildPortfolioModel(adRows, 1180, 620, { top: 46, right: 36, bottom: 58, left: 74 });
+      const nodes = [...adRows]
+        .sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0))
+        .map((row, index) => renderPortfolioImageNode(row, index, model))
+        .join("");
+
+      els.portfolioModalChart.innerHTML = `
+        <div class="portfolio-modal-layout">
+          <div class="portfolio-modal-plot-shell">
+            <svg class="portfolio-modal-svg" viewBox="0 0 ${model.width} ${model.height}" role="img" aria-label="Mapa de cartera ampliado por Prom/dia y CPA 7d">
+              ${renderPortfolioAxis(model)}
+              ${nodes}
+            </svg>
+          </div>
+          ${renderPortfolioLegend()}
+        </div>
+      `;
+    }
+
+    function renderPortfolioImageNode(row, index, model) {
+      const imageClass = portfolioPointClass(row);
+      const stockRatio = Math.sqrt(Number(row.stock || 0) / model.maxStock);
+      const size = 34 + stockRatio * 56;
+      const rawX = model.scaleX(Number(row.dailyAvg || 0)) - size / 2;
+      const rawY = model.scaleY(Number(row.adCpa7 || 0)) - size / 2;
+      const x = clampNumber(rawX, model.margin.left + 4, model.width - model.margin.right - size - 4);
+      const y = clampNumber(rawY, model.margin.top + 4, model.height - model.margin.bottom - size - 4);
+      const inner = 6;
+      const imageUrl = String(row.imageUrl || "").trim();
+      const label = portfolioPlaceholderLabel(row);
+      const title = portfolioTooltip(row);
+      const media = imageUrl
+        ? `<image href="${escapeHtml(imageUrl)}" x="${roundNumber(x + inner / 2, 2)}" y="${roundNumber(y + inner / 2, 2)}" width="${roundNumber(size - inner, 2)}" height="${roundNumber(size - inner, 2)}" preserveAspectRatio="xMidYMid slice"></image>`
+        : `
+          <rect class="portfolio-image-placeholder" x="${roundNumber(x + inner / 2, 2)}" y="${roundNumber(y + inner / 2, 2)}" width="${roundNumber(size - inner, 2)}" height="${roundNumber(size - inner, 2)}" rx="8"></rect>
+          <text class="portfolio-image-initials" x="${roundNumber(x + size / 2, 2)}" y="${roundNumber(y + size / 2, 2)}">${escapeHtml(label)}</text>
+        `;
+
+      return `
+        <g class="portfolio-image-node" role="img" tabindex="0" aria-label="${escapeHtml(title)}" data-index="${index}">
+          <title>${escapeHtml(title)}</title>
+          <rect class="portfolio-image-frame ${imageClass}" x="${roundNumber(x, 2)}" y="${roundNumber(y, 2)}" width="${roundNumber(size, 2)}" height="${roundNumber(size, 2)}" rx="10"></rect>
+          ${media}
+        </g>
+      `;
+    }
+
+    function portfolioTooltip(row) {
+      return [
+        row.product || row.sku || "Producto",
+        `SKU ${row.sku || "sin SKU"}`,
+        `Stock ${formatNumber(row.stock)}`,
+        `CPA ${formatMoney(row.adCpa7, row.adCurrency)}`,
+        `Gasto ${formatMoney(row.adSpend7, row.adCurrency)}`,
+        `Prom/dia ${formatDecimal(row.dailyAvg)}`,
+      ].join(" | ");
+    }
+
+    function portfolioPlaceholderLabel(row) {
+      const value = String(row.sku || row.product || "SKU").trim();
+      const compact = value.replace(/[^A-Za-z0-9]/g, "");
+      return (compact || "SKU").slice(0, 4).toUpperCase();
     }
 
     function portfolioPointClass(row) {
@@ -4337,6 +4655,21 @@
       if (alert.includes("reordenar")) return "watch";
       if (Number(row.adCpa7 || 0) < CPA_THRESHOLDS.scaleBelow) return "good";
       return "watch";
+    }
+
+    function openPortfolioModal() {
+      state.portfolioModalOpen = true;
+      renderPortfolioModalChart();
+      els.portfolioModalBackdrop.classList.remove("hidden");
+      document.body.classList.add("modal-open");
+      setTimeout(() => els.portfolioModalClose.focus(), 0);
+    }
+
+    function closePortfolioModal() {
+      state.portfolioModalOpen = false;
+      els.portfolioModalBackdrop.classList.add("hidden");
+      document.body.classList.remove("modal-open");
+      els.portfolioExpandBtn.focus();
     }
 
     function renderTable() {
@@ -4764,6 +5097,11 @@
       state.showAllPriority = !state.showAllPriority;
       renderPriorityList();
     });
+    els.portfolioExpandBtn.addEventListener("click", openPortfolioModal);
+    els.portfolioModalClose.addEventListener("click", closePortfolioModal);
+    els.portfolioModalBackdrop.addEventListener("click", (event) => {
+      if (event.target === els.portfolioModalBackdrop) closePortfolioModal();
+    });
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutBtn.addEventListener("click", handleLogout);
     els.searchInput.addEventListener("input", applyFilters);
@@ -4798,6 +5136,7 @@
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
+        if (state.portfolioModalOpen) closePortfolioModal();
         setProductMenuOpen(false);
         setStoreMenuOpen(false);
       }
