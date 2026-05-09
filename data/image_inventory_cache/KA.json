@@ -1,61 +1,61 @@
 {
   "store_key": "KA",
   "store_name": "Kenku Argentina",
-  "source_path": "data/kenku_argentina.jpeg",
-  "source_sha256": "67c267b83d8798ba51b92a0d85dbae86cecc992a8f6a81e40a4f375e351bf64d",
-  "source_size": 88647,
-  "source_mtime": "2026-05-03T01:50:40+00:00",
-  "cached_at": "2026-05-08T00:00:00+00:00",
+  "source_path": "data\\image_inventory_downloads\\KA\\2026-05-07__20260509-042303__WhatsApp-Image-2026-05-07-at-9.29.18-AM.jpeg",
+  "source_sha256": "2daae004d2e2d09ef8205516c3844dc0495e17f9d441555ac1d36b4ce0bf515d",
+  "source_size": 77594,
+  "source_mtime": "2026-05-09T04:37:01.100554+00:00",
+  "cached_at": "2026-05-09T04:37:05.422732+00:00",
   "products": [
     {
       "name": "ACONROM",
       "barcode": "1381FACONROM",
-      "stock": 921
+      "stock": 898
     },
     {
-      "name": "Capsulas de D3 + K2",
+      "name": "Cápsulas de D3 + K2",
       "barcode": "1381FD3K2",
-      "stock": 170
+      "stock": 148
     },
     {
       "name": "crecimiento de cabello",
       "barcode": "1381FSERUM",
-      "stock": 944
+      "stock": 916
     },
     {
       "name": "HGH - Crecimiento óptimo y desarrollo físico",
       "barcode": "1381FHGH",
-      "stock": 175
+      "stock": 157
     },
     {
       "name": "NAD + Resveratrol - Cápsulas de Reparación Celular Antienvejecimiento",
       "barcode": "1381FNADRES",
-      "stock": 68
+      "stock": 3
     },
     {
-      "name": "Óxido Nítrico - Cápsulas de Óxido Nítrico con Huanarpo",
+      "name": "Óxido Nítrico – Cápsulas de Óxido Nítrico con Huanarpo",
       "barcode": "1381FOXINI",
-      "stock": 94
+      "stock": 68
     },
     {
       "name": "SHAMROM",
       "barcode": "1381FSHAMROM",
-      "stock": 740
+      "stock": 695
     },
     {
       "name": "shilajit",
       "barcode": "1381CAPSHILA",
-      "stock": 28
+      "stock": 20
     },
     {
       "name": "SUPERHUMAN",
       "barcode": "1381FFOCUS",
-      "stock": 258
+      "stock": 245
     },
     {
       "name": "TRUFFEFEM",
       "barcode": "1381FTRUEF",
-      "stock": 435
+      "stock": 427
     }
   ]
 }
