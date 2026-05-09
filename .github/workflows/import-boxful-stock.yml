@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   import-boxful-stock:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 90
     env:
       BOXFUL_HEADLESS: "true"
@@ -49,6 +49,32 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Validate required secrets
+        run: |
+          missing=0
+
+          check_secret() {
+            env_name="$1"
+            secret_name="$2"
+            if [ -z "${!env_name}" ]; then
+              echo "::error::Falta GitHub Repository Secret: $secret_name"
+              missing=1
+            fi
+          }
+
+          check_secret "SUPABASE_URL" "SUPABASE_URL"
+          check_secret "SUPABASE_KEY" "SUPABASE_SERVICE_ROLE_KEY"
+          check_secret "STORE_CR_BOXFUL_EMAIL" "STORE_CR_BOXFUL_EMAIL"
+          check_secret "STORE_CR_BOXFUL_PASSWORD" "STORE_CR_BOXFUL_PASSWORD"
+          check_secret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL"
+          check_secret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN"
+          check_secret "STORE_HN_BOXFUL_EMAIL" "STORE_HN_BOXFUL_EMAIL"
+          check_secret "STORE_HN_BOXFUL_PASSWORD" "STORE_HN_BOXFUL_PASSWORD"
+          check_secret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL"
+          check_secret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN"
+
+          exit "$missing"
 
       - name: Install dependencies
         run: |
