@@ -862,7 +862,7 @@
 
     .insight-row {
       display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      grid-template-columns: minmax(0, 0.82fr) minmax(540px, 1.35fr);
       gap: 8px;
       min-width: 0;
     }
@@ -1032,18 +1032,34 @@
     }
 
     .portfolio-chart {
-      min-height: 162px;
+      min-height: 214px;
       border: 1px solid var(--line);
       border-radius: 7px;
       background:
         linear-gradient(180deg, rgba(246, 247, 244, 0.68), rgba(255, 255, 255, 0.84));
+      padding: 7px;
+      overflow: hidden;
+    }
+
+    .portfolio-chart-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 136px;
+      gap: 8px;
+      min-height: 198px;
+    }
+
+    .portfolio-plot-shell {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
       overflow: hidden;
     }
 
     .portfolio-svg {
       display: block;
       width: 100%;
-      height: 132px;
+      height: 198px;
     }
 
     .portfolio-axis,
@@ -1077,10 +1093,13 @@
     .portfolio-point.neutral { fill: #52605b; }
 
     .portfolio-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      padding: 0 6px 6px;
+      display: grid;
+      align-content: start;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+      padding: 8px;
       color: var(--muted);
       font-size: 10px;
       font-weight: 800;
@@ -1090,6 +1109,16 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      min-height: 22px;
+      white-space: nowrap;
+    }
+
+    .portfolio-legend strong {
+      display: block;
+      color: var(--ink);
+      font-size: 11px;
+      line-height: 1.15;
+      margin-bottom: 2px;
     }
 
     .table-section {
@@ -1534,8 +1563,18 @@
       .summary-metrics,
       .summary-status,
       .insight-row,
+      .portfolio-chart-layout,
       .priority-columns {
         grid-template-columns: 1fr;
+      }
+
+      .portfolio-chart {
+        min-height: auto;
+      }
+
+      .portfolio-legend {
+        display: flex;
+        flex-wrap: wrap;
       }
 
       .priority-column {
@@ -4192,9 +4231,9 @@
         return;
       }
 
-      const width = 420;
-      const height = 132;
-      const margin = { top: 12, right: 14, bottom: 24, left: 34 };
+      const width = 640;
+      const height = 198;
+      const margin = { top: 20, right: 20, bottom: 38, left: 48 };
       const plotWidth = width - margin.left - margin.right;
       const plotHeight = height - margin.top - margin.bottom;
       const xValues = adRows.map((row) => Number(row.dailyAvg || 0));
@@ -4222,24 +4261,30 @@
       }).join("");
 
       els.portfolioMapChart.innerHTML = `
-        <svg class="portfolio-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mapa de cartera por Prom/dia y CPA 7d">
-          <rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" rx="6" fill="white"></rect>
-          <line class="portfolio-grid" x1="${margin.left}" y1="${scaleY(CPA_THRESHOLDS.scaleBelow)}" x2="${width - margin.right}" y2="${scaleY(CPA_THRESHOLDS.scaleBelow)}"></line>
-          <line class="portfolio-cutline" x1="${xCutPx}" y1="${margin.top}" x2="${xCutPx}" y2="${height - margin.bottom}"></line>
-          <line class="portfolio-cutline" x1="${margin.left}" y1="${yCutPx}" x2="${width - margin.right}" y2="${yCutPx}"></line>
-          <line class="portfolio-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>
-          <line class="portfolio-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>
-          <text class="portfolio-label" x="${margin.left}" y="10">CPA alto</text>
-          <text class="portfolio-label" x="${width - margin.right - 78}" y="${height - 7}">Mas velocidad</text>
-          <text class="portfolio-label" x="${xCutPx + 4}" y="${height - margin.bottom - 4}">mediana</text>
-          <text class="portfolio-label" x="${margin.left + 4}" y="${yCutPx - 4}">CPA ${CPA_THRESHOLDS.pauseFrom}</text>
-          ${points}
-        </svg>
-        <div class="portfolio-legend" aria-hidden="true">
-          <span><span class="dot" style="background:var(--good)"></span>CPA &lt; ${CPA_THRESHOLDS.scaleBelow}</span>
-          <span><span class="dot" style="background:var(--warn)"></span>Revisar</span>
-          <span><span class="dot" style="background:var(--danger)"></span>Pausar</span>
-          <span><span class="dot" style="background:var(--info)"></span>Sobrestock</span>
+        <div class="portfolio-chart-layout">
+          <div class="portfolio-plot-shell">
+            <svg class="portfolio-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mapa de cartera por Prom/dia y CPA 7d">
+              <rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" rx="6" fill="white"></rect>
+              <line class="portfolio-grid" x1="${margin.left}" y1="${scaleY(CPA_THRESHOLDS.scaleBelow)}" x2="${width - margin.right}" y2="${scaleY(CPA_THRESHOLDS.scaleBelow)}"></line>
+              <line class="portfolio-cutline" x1="${xCutPx}" y1="${margin.top}" x2="${xCutPx}" y2="${height - margin.bottom}"></line>
+              <line class="portfolio-cutline" x1="${margin.left}" y1="${yCutPx}" x2="${width - margin.right}" y2="${yCutPx}"></line>
+              <line class="portfolio-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>
+              <line class="portfolio-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>
+              <text class="portfolio-label" x="${margin.left}" y="14">CPA alto</text>
+              <text class="portfolio-label" x="${margin.left}" y="${scaleY(CPA_THRESHOLDS.pauseFrom) - 5}">CPA ${CPA_THRESHOLDS.pauseFrom}</text>
+              <text class="portfolio-label" x="${xCutPx + 5}" y="${height - margin.bottom - 5}">mediana</text>
+              <text class="portfolio-label" x="${width - margin.right - 92}" y="${height - 12}">Mas velocidad</text>
+              <text class="portfolio-label" x="${margin.left}" y="${height - 12}">Menos velocidad</text>
+              ${points}
+            </svg>
+          </div>
+          <div class="portfolio-legend" aria-hidden="true">
+            <strong>Lectura</strong>
+            <span><span class="dot" style="background:var(--good)"></span>CPA &lt; ${CPA_THRESHOLDS.scaleBelow}</span>
+            <span><span class="dot" style="background:var(--warn)"></span>Revisar</span>
+            <span><span class="dot" style="background:var(--danger)"></span>Pausar</span>
+            <span><span class="dot" style="background:var(--info)"></span>Sobrestock</span>
+          </div>
         </div>
       `;
     }
