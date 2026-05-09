@@ -75,8 +75,9 @@ async function ensureBucket(config) {
     headers: serviceHeaders(config.serviceKey),
   });
   if (bucketResponse.ok) return;
-  if (bucketResponse.status !== 404) {
-    throw new Error(`Storage bucket HTTP ${bucketResponse.status}: ${await bucketResponse.text()}`);
+  const bucketError = await bucketResponse.text();
+  if (bucketResponse.status !== 404 && !isMissingBucketError(bucketResponse.status, bucketError)) {
+    throw new Error(`Storage bucket HTTP ${bucketResponse.status}: ${bucketError}`);
   }
 
   const createResponse = await fetch(`${config.url}/storage/v1/bucket`, {
@@ -92,6 +93,16 @@ async function ensureBucket(config) {
   });
   if (!createResponse.ok && createResponse.status !== 409) {
     throw new Error(`Crear bucket HTTP ${createResponse.status}: ${await createResponse.text()}`);
+  }
+}
+
+function isMissingBucketError(status, body) {
+  if (status === 404) return true;
+  try {
+    const payload = JSON.parse(body || "{}");
+    return payload.statusCode === "404" || payload.statusCode === 404 || payload.error === "Bucket not found";
+  } catch {
+    return String(body || "").toLowerCase().includes("bucket not found");
   }
 }
 
