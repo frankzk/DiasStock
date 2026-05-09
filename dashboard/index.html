@@ -801,7 +801,8 @@
 
     .summary-chip,
     .summary-group,
-    .summary-priority {
+    .summary-priority,
+    .portfolio-map {
       min-width: 0;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -854,8 +855,16 @@
     }
 
     .summary-group,
-    .summary-priority {
+    .summary-priority,
+    .portfolio-map {
       padding: 6px 8px;
+    }
+
+    .insight-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 8px;
+      min-width: 0;
     }
 
     .summary-group-header,
@@ -993,6 +1002,94 @@
     .compact-empty {
       padding: 6px;
       font-size: 11px;
+    }
+
+    .portfolio-map {
+      display: grid;
+      gap: 6px;
+    }
+
+    .portfolio-header,
+    .portfolio-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .portfolio-header h2 {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .portfolio-header p,
+    .portfolio-foot {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+
+    .portfolio-chart {
+      min-height: 162px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background:
+        linear-gradient(180deg, rgba(246, 247, 244, 0.68), rgba(255, 255, 255, 0.84));
+      overflow: hidden;
+    }
+
+    .portfolio-svg {
+      display: block;
+      width: 100%;
+      height: 132px;
+    }
+
+    .portfolio-axis,
+    .portfolio-grid {
+      stroke: #d9e1dc;
+      stroke-width: 1;
+    }
+
+    .portfolio-cutline {
+      stroke: #b9c6c0;
+      stroke-width: 1;
+      stroke-dasharray: 4 4;
+    }
+
+    .portfolio-label {
+      fill: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .portfolio-point {
+      stroke: white;
+      stroke-width: 1.5;
+      opacity: 0.92;
+    }
+
+    .portfolio-point.good { fill: var(--good); }
+    .portfolio-point.watch { fill: var(--warn); }
+    .portfolio-point.danger { fill: var(--danger); }
+    .portfolio-point.overstock { fill: var(--info); }
+    .portfolio-point.neutral { fill: #52605b; }
+
+    .portfolio-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 0 6px 6px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .portfolio-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .table-section {
@@ -1303,6 +1400,92 @@
       color: #b42318;
     }
 
+    .trend-cell {
+      display: grid;
+      gap: 2px;
+      justify-items: end;
+      min-width: 0;
+    }
+
+    .trend-cell strong {
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .sparkline {
+      display: block;
+      width: min(66px, 100%);
+      height: 18px;
+      overflow: visible;
+    }
+
+    .sparkline-line {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sparkline-up .sparkline-line { stroke: var(--good); }
+    .sparkline-down .sparkline-line { stroke: var(--danger); }
+    .sparkline-flat .sparkline-line { stroke: #52605b; }
+
+    .sparkline-baseline {
+      stroke: #d9e1dc;
+      stroke-width: 1;
+    }
+
+    .sparkline-empty {
+      width: min(66px, 100%);
+      height: 18px;
+      border-radius: 999px;
+      background: repeating-linear-gradient(90deg, #e8eeeb 0 7px, transparent 7px 12px);
+      opacity: 0.7;
+    }
+
+    .days-risk {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 0 7px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .days-critical {
+      background: #7f1d1d;
+      color: white;
+    }
+
+    .days-warning {
+      background: #fff1cb;
+      color: #8a4b00;
+    }
+
+    .days-healthy {
+      background: #dff5e5;
+      color: #0f6b32;
+    }
+
+    .days-stable {
+      background: #eef6f2;
+      color: #315f55;
+    }
+
+    .days-overstock {
+      background: #ffead5;
+      color: #9a4a07;
+    }
+
+    .days-empty {
+      background: #f3f5f5;
+      color: #52605b;
+    }
+
     .empty {
       padding: 24px 12px;
       color: var(--muted);
@@ -1350,6 +1533,7 @@
       .summary-strip,
       .summary-metrics,
       .summary-status,
+      .insight-row,
       .priority-columns {
         grid-template-columns: 1fr;
       }
@@ -1423,6 +1607,10 @@
 
       td.number {
         text-align: left;
+      }
+
+      .trend-cell {
+        justify-items: start;
       }
 
       td.empty {
@@ -1676,29 +1864,48 @@
           <div class="status-chip-list" id="saleStatusList"></div>
         </article>
       </div>
-      <article class="summary-priority">
-        <div class="priority-header">
-          <h2>Prioridad</h2>
-          <span class="count-pill" id="priorityTotal">0</span>
-        </div>
-        <div class="priority-columns">
-          <section class="priority-column" aria-label="Reordenar urgente">
-            <div class="priority-column-title">
-              <span>Reordenar urgente</span>
-              <span class="count-pill" id="reorderPriorityTotal">0</span>
+      <div class="insight-row">
+        <article class="summary-priority">
+          <div class="priority-header">
+            <h2>Prioridad</h2>
+            <span class="count-pill" id="priorityTotal">0</span>
+          </div>
+          <div class="priority-columns">
+            <section class="priority-column" aria-label="Reordenar urgente">
+              <div class="priority-column-title">
+                <span>Reordenar urgente</span>
+                <span class="count-pill" id="reorderPriorityTotal">0</span>
+              </div>
+              <div class="priority-list" id="reorderPriorityList"></div>
+            </section>
+            <section class="priority-column" aria-label="Riesgo de sobrestock">
+              <div class="priority-column-title">
+                <span>Riesgo sobrestock</span>
+                <span class="count-pill" id="overstockPriorityTotal">0</span>
+              </div>
+              <div class="priority-list" id="overstockPriorityList"></div>
+            </section>
+          </div>
+          <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
+        </article>
+
+        <article class="portfolio-map" aria-label="Mapa de cartera">
+          <div class="portfolio-header">
+            <div>
+              <h2>Mapa de cartera</h2>
+              <p>Prom/dia vs CPA 7d</p>
             </div>
-            <div class="priority-list" id="reorderPriorityList"></div>
-          </section>
-          <section class="priority-column" aria-label="Riesgo de sobrestock">
-            <div class="priority-column-title">
-              <span>Riesgo sobrestock</span>
-              <span class="count-pill" id="overstockPriorityTotal">0</span>
-            </div>
-            <div class="priority-list" id="overstockPriorityList"></div>
-          </section>
-        </div>
-        <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
-      </article>
+            <span class="count-pill" id="portfolioAdsCount">0 con ads</span>
+          </div>
+          <div class="portfolio-chart" id="portfolioMapChart">
+            <p class="empty compact-empty">Sin gasto ads para graficar</p>
+          </div>
+          <div class="portfolio-foot">
+            <span id="portfolioNoAdsCount">0 sin ads</span>
+            <span>Burbuja = stock</span>
+          </div>
+        </article>
+      </div>
     </section>
 
     <section class="table-section" aria-labelledby="tableTitle">
@@ -1970,6 +2177,9 @@
       reorderPriorityList: $("#reorderPriorityList"),
       overstockPriorityList: $("#overstockPriorityList"),
       priorityMoreBtn: $("#priorityMoreBtn"),
+      portfolioMapChart: $("#portfolioMapChart"),
+      portfolioAdsCount: $("#portfolioAdsCount"),
+      portfolioNoAdsCount: $("#portfolioNoAdsCount"),
       metricProducts: $("#metricProducts"),
       metricProductsNote: $("#metricProductsNote"),
       metricReorder: $("#metricReorder"),
@@ -2356,6 +2566,7 @@
         adCpa7: 0,
         adCpaClass: "",
         adCurrency: "USD",
+        salesTrend30: [],
         salesSource: "snapshot",
         salesWindowStart: addDays(row.run_date || "", -6),
         salesWindowEnd: row.run_date || "",
@@ -2476,6 +2687,19 @@
       }
 
       for (const row of state.rows) {
+        const storeKey = normalizeKey(row.storeKey);
+        const skuKey = normalizeKey(row.sku);
+        if (!storeKey || !skuKey) {
+          row.salesTrend30 = [];
+          continue;
+        }
+        const endDate = latestIds.has(row.id)
+          ? latestDateByStore.get(storeKey)
+          : (row.salesWindowEnd || row.date || latestDateByStore.get(storeKey));
+        row.salesTrend30 = buildSalesTrend(salesByStoreSku.get(`${storeKey}::${skuKey}`) || [], endDate, 30);
+      }
+
+      for (const row of state.rows) {
         if (!latestIds.has(row.id)) continue;
         const storeKey = normalizeKey(row.storeKey);
         const skuKey = normalizeKey(row.sku);
@@ -2579,6 +2803,22 @@
       return Math.round((Number(value) || 0) * factor) / factor;
     }
 
+    function clampNumber(value, min, max) {
+      const number = Number(value || 0);
+      return Math.min(Math.max(number, min), max);
+    }
+
+    function medianNumber(values) {
+      const numbers = values
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
+        .sort((a, b) => a - b);
+      if (!numbers.length) return 0;
+      const middle = Math.floor(numbers.length / 2);
+      if (numbers.length % 2) return numbers[middle];
+      return (numbers[middle - 1] + numbers[middle]) / 2;
+    }
+
     function splitAlerts(value) {
       return String(value || "")
         .split(/\s*(?:·|\||,|;|\+)\s*/)
@@ -2598,6 +2838,24 @@
         }
       }
       return parts;
+    }
+
+    function buildSalesTrend(sales, endDate, days) {
+      if (!endDate || !Array.isArray(sales) || !sales.length) return [];
+      const size = Math.max(1, Number(days || 30));
+      const startDate = addDays(endDate, -(size - 1));
+      if (!startDate) return [];
+
+      const unitsByDate = new Map();
+      for (const sale of sales) {
+        if (!sale.date || sale.date < startDate || sale.date > endDate) continue;
+        unitsByDate.set(sale.date, (unitsByDate.get(sale.date) || 0) + Number(sale.unitsSold || 0));
+      }
+
+      return Array.from({ length: size }, (_, index) => {
+        const date = addDays(startDate, index);
+        return { date, value: unitsByDate.get(date) || 0 };
+      });
     }
 
     function addDays(dateValue, delta) {
@@ -3758,6 +4016,7 @@
       renderMetrics();
       renderStatusBars();
       renderPriorityList();
+      renderPortfolioMap();
       renderTable();
     }
 
@@ -3916,6 +4175,84 @@
       return `${words.slice(0, 4).join(" ")}...`;
     }
 
+    function renderPortfolioMap() {
+      const rows = state.filteredRows;
+      const adRows = rows.filter((row) => (
+        Number(row.adSpend7 || 0) > 0 &&
+        Number.isFinite(Number(row.adCpa7)) &&
+        Number.isFinite(Number(row.dailyAvg))
+      ));
+      const noAdsCount = rows.length - adRows.length;
+
+      els.portfolioAdsCount.textContent = `${formatNumber(adRows.length)} con ads`;
+      els.portfolioNoAdsCount.textContent = `${formatNumber(noAdsCount)} sin ads`;
+
+      if (!adRows.length) {
+        els.portfolioMapChart.innerHTML = `<p class="empty compact-empty">Sin gasto ads para graficar</p>`;
+        return;
+      }
+
+      const width = 420;
+      const height = 132;
+      const margin = { top: 12, right: 14, bottom: 24, left: 34 };
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const xValues = adRows.map((row) => Number(row.dailyAvg || 0));
+      const yValues = adRows.map((row) => Number(row.adCpa7 || 0));
+      const maxStock = Math.max(1, ...adRows.map((row) => Number(row.stock || 0)));
+      const xMax = Math.max(1, Math.max(...xValues) * 1.15);
+      const yMax = Math.max(CPA_THRESHOLDS.pauseFrom * 1.2, Math.max(...yValues) * 1.15, 1);
+      const xCut = clampNumber(medianNumber(xValues) || xMax / 2, 0, xMax);
+      const yCut = clampNumber(CPA_THRESHOLDS.pauseFrom, 0, yMax);
+      const scaleX = (value) => margin.left + (clampNumber(value, 0, xMax) / xMax) * plotWidth;
+      const scaleY = (value) => margin.top + (1 - clampNumber(value, 0, yMax) / yMax) * plotHeight;
+      const xCutPx = scaleX(xCut);
+      const yCutPx = scaleY(yCut);
+
+      const points = adRows.map((row) => {
+        const x = scaleX(Number(row.dailyAvg || 0));
+        const y = scaleY(Number(row.adCpa7 || 0));
+        const radius = 3 + Math.sqrt(Number(row.stock || 0) / maxStock) * 7;
+        const title = `${row.product || row.sku || "Producto"} | ${formatDecimal(row.dailyAvg)} prom/dia | ${formatMoney(row.adCpa7, row.adCurrency)} CPA | Stock ${formatNumber(row.stock)}`;
+        return `
+          <circle class="portfolio-point ${portfolioPointClass(row)}" cx="${roundNumber(x, 2)}" cy="${roundNumber(y, 2)}" r="${roundNumber(radius, 2)}">
+            <title>${escapeHtml(title)}</title>
+          </circle>
+        `;
+      }).join("");
+
+      els.portfolioMapChart.innerHTML = `
+        <svg class="portfolio-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Mapa de cartera por Prom/dia y CPA 7d">
+          <rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" rx="6" fill="white"></rect>
+          <line class="portfolio-grid" x1="${margin.left}" y1="${scaleY(CPA_THRESHOLDS.scaleBelow)}" x2="${width - margin.right}" y2="${scaleY(CPA_THRESHOLDS.scaleBelow)}"></line>
+          <line class="portfolio-cutline" x1="${xCutPx}" y1="${margin.top}" x2="${xCutPx}" y2="${height - margin.bottom}"></line>
+          <line class="portfolio-cutline" x1="${margin.left}" y1="${yCutPx}" x2="${width - margin.right}" y2="${yCutPx}"></line>
+          <line class="portfolio-axis" x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}"></line>
+          <line class="portfolio-axis" x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}"></line>
+          <text class="portfolio-label" x="${margin.left}" y="10">CPA alto</text>
+          <text class="portfolio-label" x="${width - margin.right - 78}" y="${height - 7}">Mas velocidad</text>
+          <text class="portfolio-label" x="${xCutPx + 4}" y="${height - margin.bottom - 4}">mediana</text>
+          <text class="portfolio-label" x="${margin.left + 4}" y="${yCutPx - 4}">CPA ${CPA_THRESHOLDS.pauseFrom}</text>
+          ${points}
+        </svg>
+        <div class="portfolio-legend" aria-hidden="true">
+          <span><span class="dot" style="background:var(--good)"></span>CPA &lt; ${CPA_THRESHOLDS.scaleBelow}</span>
+          <span><span class="dot" style="background:var(--warn)"></span>Revisar</span>
+          <span><span class="dot" style="background:var(--danger)"></span>Pausar</span>
+          <span><span class="dot" style="background:var(--info)"></span>Sobrestock</span>
+        </div>
+      `;
+    }
+
+    function portfolioPointClass(row) {
+      const alert = normalizeKey(row.alert);
+      if (Number(row.adCpa7 || 0) >= CPA_THRESHOLDS.pauseFrom || alert.includes("pausar ads")) return "danger";
+      if (alert.includes("sobrestock")) return "overstock";
+      if (alert.includes("reordenar")) return "watch";
+      if (Number(row.adCpa7 || 0) < CPA_THRESHOLDS.scaleBelow) return "good";
+      return "watch";
+    }
+
     function renderTable() {
       const rows = state.filteredRows;
       renderSortIndicators();
@@ -3956,12 +4293,66 @@
           <td data-label="Ventas 7d" class="number">${formatNumber(row.sold7)}</td>
           <td data-label="Gasto 7d" class="number">${row.adSpend7 ? formatMoney(row.adSpend7, row.adCurrency) : "-"}</td>
           <td data-label="CPA 7d" class="number">${renderCpaCell(row)}</td>
-          <td data-label="Prom/dia" class="number">${formatDecimal(row.dailyAvg)}</td>
-          <td data-label="Dias Stock" class="number">${formatDays(row.days)}</td>
+          <td data-label="Prom/dia" class="number">${renderTrendCell(row)}</td>
+          <td data-label="Dias Stock" class="number">${renderDaysCell(row)}</td>
           <td data-label="Estado venta"><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
           <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${renderAlertCell(row)}</td>
         </tr>
       `;
+    }
+
+    function renderTrendCell(row) {
+      const value = formatDecimal(row.dailyAvg);
+      const trend = Array.isArray(row.salesTrend30) ? row.salesTrend30 : [];
+      const values = trend.map((point) => Number(point.value || 0));
+      const max = Math.max(0, ...values);
+
+      if (!trend.length || max <= 0) {
+        return `
+          <span class="trend-cell">
+            <strong>${value}</strong>
+            <span class="sparkline-empty" aria-hidden="true"></span>
+          </span>
+        `;
+      }
+
+      const width = 66;
+      const height = 18;
+      const first = values[0] || 0;
+      const last = values[values.length - 1] || 0;
+      const trendClass = last > first ? "sparkline-up" : last < first ? "sparkline-down" : "sparkline-flat";
+      const points = values.map((item, index) => {
+        const x = values.length === 1 ? width : (index / (values.length - 1)) * width;
+        const y = height - (item / max) * (height - 2) - 1;
+        return `${roundNumber(x, 2)},${roundNumber(y, 2)}`;
+      }).join(" ");
+      const total = values.reduce((sum, item) => sum + item, 0);
+
+      return `
+        <span class="trend-cell">
+          <strong>${value}</strong>
+          <svg class="sparkline ${trendClass}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Ventas diarias ultimos 30 dias">
+            <title>${escapeHtml(`Ventas ultimos 30 dias: ${formatNumber(total)}`)}</title>
+            <line class="sparkline-baseline" x1="0" y1="${height - 1}" x2="${width}" y2="${height - 1}"></line>
+            <polyline class="sparkline-line" points="${points}"></polyline>
+          </svg>
+        </span>
+      `;
+    }
+
+    function renderDaysCell(row) {
+      const className = daysRiskClass(row.days);
+      return `<span class="days-risk ${className}">${formatDays(row.days)}</span>`;
+    }
+
+    function daysRiskClass(value) {
+      if (value === null || value === undefined || !Number.isFinite(Number(value))) return "days-empty";
+      const days = Number(value);
+      if (days <= 15) return "days-critical";
+      if (days <= 30) return "days-warning";
+      if (days <= 60) return "days-healthy";
+      if (days <= 90) return "days-stable";
+      return "days-overstock";
     }
 
     function renderCpaCell(row) {
