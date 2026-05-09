@@ -276,7 +276,6 @@
     }
 
     .config-panel,
-    .filters,
     .table-section {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -632,18 +631,18 @@
     .filters {
       display: grid;
       gap: 6px;
-      padding: 8px;
-      margin-bottom: 10px;
+      padding: 0;
+      margin: 0;
     }
 
     .filter-bar {
       grid-template-columns:
-        minmax(200px, 1.5fr)
-        repeat(4, minmax(96px, 0.7fr))
-        repeat(4, minmax(108px, 0.75fr))
-        minmax(94px, auto);
+        minmax(170px, 1.35fr)
+        repeat(4, minmax(88px, 0.68fr))
+        repeat(4, minmax(96px, 0.72fr))
+        minmax(92px, auto);
       align-items: end;
-      gap: 5px;
+      gap: 4px;
     }
 
     .filter-bar .field,
@@ -668,7 +667,7 @@
     .filter-bar input,
     .filter-bar select,
     .filter-bar button {
-      min-height: 36px;
+      min-height: 32px;
       font-size: 12px;
     }
 
@@ -1001,6 +1000,28 @@
       box-shadow: none;
     }
 
+    .table-toolbar {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+      padding: 7px 9px;
+      border-bottom: 1px solid var(--line);
+      background: #fcfdfc;
+    }
+
+    .table-title-block {
+      display: grid;
+      gap: 4px;
+      min-width: 96px;
+      padding-bottom: 3px;
+    }
+
+    .table-title-block h2 {
+      font-size: 15px;
+      line-height: 1.1;
+    }
+
     .table-head {
       display: flex;
       align-items: center;
@@ -1013,8 +1034,14 @@
     .table-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
       flex-wrap: wrap;
+    }
+
+    .table-toolbar .table-actions button {
+      min-height: 32px;
+      padding: 0 12px;
+      white-space: nowrap;
     }
 
     .count-pill {
@@ -1290,7 +1317,8 @@
       }
 
       .topbar,
-      .table-head {
+      .table-head,
+      .table-toolbar {
         align-items: flex-start;
         flex-direction: column;
       }
@@ -1317,6 +1345,7 @@
       .stock-source-form,
       .user-form,
       .filters,
+      .table-toolbar,
       .range-filters,
       .summary-strip,
       .summary-metrics,
@@ -1672,72 +1701,73 @@
       </article>
     </section>
 
-    <section class="filters filter-bar" aria-label="Filtros">
-      <div class="field search-field filter-control" data-filter-field="search">
-        <span id="searchFilterLabel">Buscar</span>
-        <div class="product-filter-control">
-          <input id="searchInput" type="search" autocomplete="off" placeholder="Producto o SKU" aria-labelledby="searchFilterLabel">
-          <div class="product-picker" id="productPicker">
-            <button type="button" class="product-menu-button" id="productMenuButton" aria-haspopup="true" aria-expanded="false">Lista</button>
-            <div class="product-menu hidden" id="productMenu">
-              <div id="productChecklist"></div>
+    <section class="table-section" aria-labelledby="tableTitle">
+      <div class="table-toolbar">
+        <div class="table-title-block">
+          <h2 id="tableTitle">Snapshots</h2>
+          <span class="count-pill" id="resultCount">0 resultados</span>
+        </div>
+        <section class="filters filter-bar" aria-label="Filtros">
+          <div class="field search-field filter-control" data-filter-field="search">
+            <span id="searchFilterLabel">Buscar</span>
+            <div class="product-filter-control">
+              <input id="searchInput" type="search" autocomplete="off" placeholder="Producto o SKU" aria-labelledby="searchFilterLabel">
+              <div class="product-picker" id="productPicker">
+                <button type="button" class="product-menu-button" id="productMenuButton" aria-haspopup="true" aria-expanded="false">Lista</button>
+                <div class="product-menu hidden" id="productMenu">
+                  <div id="productChecklist"></div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-      <label class="field filter-control" data-filter-field="date" for="dateFilter">
-        <span>Fecha</span>
-        <select id="dateFilter"></select>
-      </label>
-      <label class="field filter-control" data-filter-field="status" for="statusFilter">
-        <span>Estado inventario</span>
-        <select id="statusFilter"></select>
-      </label>
-      <label class="field filter-control" data-filter-field="saleStatus" for="saleStatusFilter">
-        <span>Estado venta</span>
-        <select id="saleStatusFilter"></select>
-      </label>
-      <label class="field filter-control" data-filter-field="alert" for="alertFilter">
-        <span>Alerta</span>
-        <select id="alertFilter"></select>
-      </label>
-      <label class="range-field filter-control" data-filter-field="stock" for="stockMin">
-        <span>Stock</span>
-        <span class="range-inputs">
-          <input id="stockMin" type="number" inputmode="decimal" min="1" placeholder="Min" value="1">
-          <input id="stockMax" type="number" inputmode="decimal" placeholder="Max">
-        </span>
-      </label>
-      <label class="range-field filter-control" data-filter-field="sold" for="soldMin">
-        <span>Ventas 7d</span>
-        <span class="range-inputs">
-          <input id="soldMin" type="number" inputmode="decimal" placeholder="Min">
-          <input id="soldMax" type="number" inputmode="decimal" placeholder="Max">
-        </span>
-      </label>
-      <label class="range-field filter-control" data-filter-field="avg" for="avgMin">
-        <span>Prom/dia</span>
-        <span class="range-inputs">
-          <input id="avgMin" type="number" inputmode="decimal" step="0.01" placeholder="Min">
-          <input id="avgMax" type="number" inputmode="decimal" step="0.01" placeholder="Max">
-        </span>
-      </label>
-      <label class="range-field filter-control" data-filter-field="days" for="daysMin">
-        <span>Dias Stock</span>
-        <span class="range-inputs">
-          <input id="daysMin" type="number" inputmode="decimal" step="0.1" placeholder="Min">
-          <input id="daysMax" type="number" inputmode="decimal" step="0.1" placeholder="Max">
-        </span>
-      </label>
-      <button type="button" id="resetFiltersBtn">Limpiar filtros</button>
-    </section>
-
-    <section class="table-section" aria-labelledby="tableTitle">
-      <div class="table-head">
-        <h2 id="tableTitle">Snapshots</h2>
+          <label class="field filter-control" data-filter-field="date" for="dateFilter">
+            <span>Fecha</span>
+            <select id="dateFilter"></select>
+          </label>
+          <label class="field filter-control" data-filter-field="status" for="statusFilter">
+            <span>Estado inventario</span>
+            <select id="statusFilter"></select>
+          </label>
+          <label class="field filter-control" data-filter-field="saleStatus" for="saleStatusFilter">
+            <span>Estado venta</span>
+            <select id="saleStatusFilter"></select>
+          </label>
+          <label class="field filter-control" data-filter-field="alert" for="alertFilter">
+            <span>Alerta</span>
+            <select id="alertFilter"></select>
+          </label>
+          <label class="range-field filter-control" data-filter-field="stock" for="stockMin">
+            <span>Stock</span>
+            <span class="range-inputs">
+              <input id="stockMin" type="number" inputmode="decimal" min="1" placeholder="Min" value="1">
+              <input id="stockMax" type="number" inputmode="decimal" placeholder="Max">
+            </span>
+          </label>
+          <label class="range-field filter-control" data-filter-field="sold" for="soldMin">
+            <span>Ventas 7d</span>
+            <span class="range-inputs">
+              <input id="soldMin" type="number" inputmode="decimal" placeholder="Min">
+              <input id="soldMax" type="number" inputmode="decimal" placeholder="Max">
+            </span>
+          </label>
+          <label class="range-field filter-control" data-filter-field="avg" for="avgMin">
+            <span>Prom/dia</span>
+            <span class="range-inputs">
+              <input id="avgMin" type="number" inputmode="decimal" step="0.01" placeholder="Min">
+              <input id="avgMax" type="number" inputmode="decimal" step="0.01" placeholder="Max">
+            </span>
+          </label>
+          <label class="range-field filter-control" data-filter-field="days" for="daysMin">
+            <span>Dias Stock</span>
+            <span class="range-inputs">
+              <input id="daysMin" type="number" inputmode="decimal" step="0.1" placeholder="Min">
+              <input id="daysMax" type="number" inputmode="decimal" step="0.1" placeholder="Max">
+            </span>
+          </label>
+          <button type="button" id="resetFiltersBtn">Limpiar filtros</button>
+        </section>
         <div class="table-actions">
           <button type="button" id="tableExportBtn">Descargar Excel</button>
-          <span class="count-pill" id="resultCount">0 resultados</span>
         </div>
       </div>
       <div class="table-wrap">
