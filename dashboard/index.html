@@ -452,6 +452,63 @@
       opacity: 1;
     }
 
+    .stock-source-form {
+      display: grid;
+      grid-template-columns: minmax(150px, 210px) minmax(120px, 160px) minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .stock-file-field input {
+      padding: 8px 10px;
+    }
+
+    .stock-upload-list {
+      display: grid;
+      gap: 6px;
+      max-height: 132px;
+      overflow: auto;
+    }
+
+    .stock-upload-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fcfdfc;
+      padding: 7px 8px;
+    }
+
+    .stock-upload-row strong,
+    .stock-upload-row span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stock-upload-row strong {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .stock-upload-row span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .stock-upload-badge {
+      border-radius: 999px;
+      background: #eef6f2;
+      color: var(--good);
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
     .ads-row strong,
     .ads-row span {
       display: block;
@@ -1257,6 +1314,7 @@
       .ads-workspace,
       .ads-mapping-form,
       .ads-source-row,
+      .stock-source-form,
       .user-form,
       .filters,
       .range-filters,
@@ -1472,6 +1530,32 @@
           </section>
         </div>
         <p class="ads-status" id="adsStatus"></p>
+      </div>
+
+      <div class="ads-config stock-config" id="stockSourcesConfig" aria-label="Fuentes de stock">
+        <div class="ads-config-header">
+          <h3>Fuentes de stock</h3>
+          <p class="ads-help">Sube capturas manuales y queda guardada la fecha de carga.</p>
+        </div>
+
+        <form class="stock-source-form" id="stockImageForm">
+          <label class="field" for="stockImageStore">
+            <span>Tienda</span>
+            <select id="stockImageStore"></select>
+          </label>
+          <label class="field" for="stockImageDate">
+            <span>Fecha de subida</span>
+            <input id="stockImageDate" type="date">
+          </label>
+          <label class="field stock-file-field" for="stockImageFile">
+            <span>Captura de stock</span>
+            <input id="stockImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+          </label>
+          <button type="submit" class="primary" id="stockImageSaveBtn">Guardar imagen</button>
+        </form>
+
+        <div class="stock-upload-list" id="stockImageList"></div>
+        <p class="ads-status" id="stockImageStatus"></p>
       </div>
 
       <div class="ads-config" id="usersConfig" aria-label="Usuarios y accesos">
@@ -1710,6 +1794,9 @@
     const SUPABASE_ANON = DEPLOY_CONFIG.SUPABASE_ANON_KEY || "";
     const STORAGE_KEY = "diasstock.supabase.config.v1";
     const DEFAULT_STOCK_MIN = "1";
+    const STOCK_IMAGE_STORE_OPTIONS = [
+      { key: "KA", name: "Kenku Argentina" },
+    ];
 
     const STATUS_ORDER = ["CRITICO", "BAJO", "OK", "ALTO", "Sin ventas"];
     const STATUS_META = {
@@ -1756,6 +1843,7 @@
       adDaily: [],
       shopifySalesDaily: [],
       shopifySalesRuns: [],
+      stockImageUploads: [],
       salesProblem: "",
       currentUser: null,
       currentProfile: null,
@@ -1797,6 +1885,14 @@
       adsSkuSelect: $("#adsSkuSelect"),
       adsMappingsList: $("#adsMappingsList"),
       adsStatus: $("#adsStatus"),
+      stockSourcesConfig: $("#stockSourcesConfig"),
+      stockImageForm: $("#stockImageForm"),
+      stockImageStore: $("#stockImageStore"),
+      stockImageDate: $("#stockImageDate"),
+      stockImageFile: $("#stockImageFile"),
+      stockImageSaveBtn: $("#stockImageSaveBtn"),
+      stockImageList: $("#stockImageList"),
+      stockImageStatus: $("#stockImageStatus"),
       usersConfig: $("#usersConfig"),
       userAccessForm: $("#userAccessForm"),
       userEditId: $("#userEditId"),
@@ -1880,6 +1976,7 @@
       const admin = isAdmin();
       els.configToggle.hidden = !admin;
       els.usersConfig.hidden = !admin;
+      els.stockSourcesConfig.hidden = !admin;
       if (!admin) closeConfig();
     }
 
@@ -1892,6 +1989,7 @@
       state.adDaily = [];
       state.shopifySalesDaily = [];
       state.shopifySalesRuns = [];
+      state.stockImageUploads = [];
       state.dashboardUsers = [];
       state.sheetCampaigns = {};
       state.campaignLoadingSourceIds.clear();
@@ -1903,6 +2001,7 @@
       state.showAllPriority = false;
       buildFilters();
       renderAdsConfig();
+      renderStockImageConfig();
       renderUserAdmin();
       render();
     }
@@ -2120,7 +2219,9 @@
         renderAdsConfig();
         applyFilters();
         await loadDashboardUsers();
+        await loadStockImageUploads();
         renderUserAdmin();
+        renderStockImageConfig();
         closeConfig();
         const now = new Date();
         els.lastUpdated.textContent = `Actualizado ${now.toLocaleString("es-PE")}`;
@@ -2942,6 +3043,162 @@
     function setAdsStatus(message, isError = false) {
       els.adsStatus.textContent = message || "";
       els.adsStatus.classList.toggle("error", Boolean(isError));
+    }
+
+    async function loadStockImageUploads() {
+      if (!isAdmin()) {
+        state.stockImageUploads = [];
+        return;
+      }
+
+      try {
+        const responses = await Promise.all(
+          STOCK_IMAGE_STORE_OPTIONS.map((store) => stockImagesRequest("GET", null, { storeKey: store.key }))
+        );
+        state.stockImageUploads = responses.flatMap((response) => response.uploads || []);
+        setStockImageStatus("");
+      } catch (error) {
+        state.stockImageUploads = [];
+        setStockImageStatus(error.message || "No se pudieron cargar las imagenes de stock.", true);
+      }
+    }
+
+    async function stockImagesRequest(method, payload, params = {}) {
+      const client = state.client || createClient({ openConfigOnError: false });
+      if (!client) throw new Error("No hay sesion activa.");
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("No hay token de sesion.");
+
+      const query = params.storeKey ? `?storeKey=${encodeURIComponent(params.storeKey)}` : "";
+      const response = await fetch(`/api/stock-images${query}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: payload ? JSON.stringify(payload) : undefined,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Stock imagenes HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function renderStockImageConfig() {
+      const admin = isAdmin();
+      els.stockSourcesConfig.hidden = !admin;
+      if (!admin) return;
+
+      const selectedStore = els.stockImageStore.value || STOCK_IMAGE_STORE_OPTIONS[0]?.key || "";
+      fillSelect(
+        els.stockImageStore,
+        STOCK_IMAGE_STORE_OPTIONS.map((store) => [store.key, store.name]),
+        selectedStore
+      );
+      if (!els.stockImageDate.value) els.stockImageDate.value = todayLimaDate();
+
+      const storeNames = new Map(STOCK_IMAGE_STORE_OPTIONS.map((store) => [store.key, store.name]));
+      const uploads = [...state.stockImageUploads].sort((a, b) => {
+        const dateCompare = String(b.uploadedDate || "").localeCompare(String(a.uploadedDate || ""));
+        if (dateCompare) return dateCompare;
+        return String(b.created_at || "").localeCompare(String(a.created_at || ""));
+      });
+
+      if (!uploads.length) {
+        els.stockImageList.innerHTML = `<p class="empty compact-empty">Sin capturas guardadas</p>`;
+        return;
+      }
+
+      els.stockImageList.innerHTML = uploads.map((upload, index) => {
+        const storeName = storeNames.get(upload.storeKey) || upload.storeName || upload.storeKey || "Tienda";
+        const uploadedDate = upload.uploadedDate ? formatDate(upload.uploadedDate) : "Sin fecha";
+        const createdAt = upload.created_at ? new Date(upload.created_at).toLocaleString("es-PE") : "";
+        return `
+          <div class="stock-upload-row">
+            <div>
+              <strong>${escapeHtml(storeName)}</strong>
+              <span>${escapeHtml(uploadedDate)} · ${escapeHtml(upload.fileName || "imagen")} · ${escapeHtml(formatBytes(upload.size))}${createdAt ? ` · ${escapeHtml(createdAt)}` : ""}</span>
+            </div>
+            <span class="stock-upload-badge">${index === 0 ? "Ultima" : "Guardada"}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function saveStockImageUpload(event) {
+      event.preventDefault();
+      if (!isAdmin()) return;
+
+      const storeKey = els.stockImageStore.value;
+      const store = STOCK_IMAGE_STORE_OPTIONS.find((item) => item.key === storeKey);
+      const uploadedDate = els.stockImageDate.value;
+      const file = els.stockImageFile.files?.[0] || null;
+
+      if (!store) {
+        setStockImageStatus("Selecciona una tienda.", true);
+        return;
+      }
+      if (!uploadedDate) {
+        setStockImageStatus("Selecciona la fecha de subida.", true);
+        return;
+      }
+      if (!file) {
+        setStockImageStatus("Selecciona una captura de stock.", true);
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        setStockImageStatus("El archivo debe ser una imagen.", true);
+        return;
+      }
+      if (file.size > 6 * 1024 * 1024) {
+        setStockImageStatus("La imagen supera 6 MB.", true);
+        return;
+      }
+
+      const previousText = els.stockImageSaveBtn.textContent;
+      els.stockImageSaveBtn.disabled = true;
+      els.stockImageSaveBtn.textContent = "Guardando";
+      setStockImageStatus("Subiendo captura...");
+      try {
+        const dataBase64 = await fileToBase64(file);
+        await stockImagesRequest("POST", {
+          storeKey: store.key,
+          storeName: store.name,
+          uploadedDate,
+          fileName: file.name,
+          contentType: file.type,
+          dataBase64,
+        });
+        els.stockImageFile.value = "";
+        await loadStockImageUploads();
+        renderStockImageConfig();
+        setStockImageStatus(`Imagen guardada para ${store.name} (${formatDate(uploadedDate)}).`);
+      } catch (error) {
+        setStockImageStatus(error.message || "No se pudo guardar la imagen.", true);
+      } finally {
+        els.stockImageSaveBtn.disabled = false;
+        els.stockImageSaveBtn.textContent = previousText;
+      }
+    }
+
+    function setStockImageStatus(message, isError = false) {
+      els.stockImageStatus.textContent = message || "";
+      els.stockImageStatus.classList.toggle("error", Boolean(isError));
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const value = String(reader.result || "");
+          resolve(value.includes(",") ? value.split(",").pop() : value);
+        };
+        reader.onerror = () => reject(reader.error || new Error("No se pudo leer la imagen."));
+        reader.readAsDataURL(file);
+      });
     }
 
     async function loadDashboardUsers() {
@@ -3860,6 +4117,14 @@
       }
     }
 
+    function formatBytes(value) {
+      const number = Number(value || 0);
+      if (!number) return "-";
+      if (number < 1024) return `${formatNumber(number)} B`;
+      if (number < 1024 * 1024) return `${formatDecimal(number / 1024)} KB`;
+      return `${formatDecimal(number / (1024 * 1024))} MB`;
+    }
+
     function formatDays(value) {
       if (value === null || value === undefined || !Number.isFinite(Number(value))) return "-";
       return formatDecimal(value);
@@ -3874,6 +4139,17 @@
         month: "2-digit",
         year: "numeric",
       });
+    }
+
+    function todayLimaDate() {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Lima",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+      const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return `${values.year}-${values.month}-${values.day}`;
     }
 
     function escapeHtml(value) {
@@ -3903,6 +4179,9 @@
       state.adSources = [];
       state.campaignMappings = [];
       state.adDaily = [];
+      state.shopifySalesDaily = [];
+      state.shopifySalesRuns = [];
+      state.stockImageUploads = [];
       state.sheetCampaigns = {};
       state.campaignLoadingSourceIds.clear();
       state.editingAdSourceIds.clear();
@@ -3914,6 +4193,7 @@
       render();
       buildFilters();
       renderAdsConfig();
+      renderStockImageConfig();
       els.lastUpdated.textContent = "Sin datos cargados";
     });
 
@@ -3934,6 +4214,7 @@
     });
     els.adsSourceForm.addEventListener("submit", saveAdsSource);
     els.adsMappingForm.addEventListener("submit", saveCampaignMapping);
+    els.stockImageForm.addEventListener("submit", saveStockImageUpload);
     els.adsMappingSource.addEventListener("change", () => {
       renderAdsMappingChoices();
       renderAdsMappingsList();
@@ -4018,6 +4299,7 @@
     async function initApp() {
       buildFilters();
       renderAdsConfig();
+      renderStockImageConfig();
       renderUserAdmin();
       render();
 

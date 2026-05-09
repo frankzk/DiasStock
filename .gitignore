@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .playwright/
 dashboard/dist/
+data/image_inventory_downloads/

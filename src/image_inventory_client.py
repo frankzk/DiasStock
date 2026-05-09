@@ -1,8 +1,12 @@
 import base64
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 import anthropic
 
@@ -22,7 +26,7 @@ _PROMPT = (
 
 
 def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
-    path = Path(store.image_path)
+    path = _latest_storage_image_path(store) or Path(store.image_path)
     cache_path = _cache_path(store)
     cache = _read_cache(cache_path)
 
@@ -104,6 +108,82 @@ def _products_to_inventory(products: list[dict]) -> list[dict]:
 
 def _cache_path(store: Store) -> Path:
     return Path("data") / "image_inventory_cache" / f"{store.key}.json"
+
+
+def _latest_storage_image_path(store: Store) -> Path | None:
+    config = _storage_config()
+    if not config:
+        return None
+
+    try:
+        object_name = _latest_storage_object_name(store, config)
+        if not object_name:
+            return None
+
+        download_dir = Path("data") / "image_inventory_downloads" / store.key
+        download_dir.mkdir(parents=True, exist_ok=True)
+        path = download_dir / Path(object_name).name
+        if not path.exists():
+            print(f"  Descargando ultima imagen subida: {object_name}")
+            _download_storage_object(config, object_name, path)
+        return path
+    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
+        print(f"  Imagen remota omitida: {error}")
+        return None
+
+
+def _storage_config() -> dict | None:
+    url = (os.getenv("SUPABASE_URL") or "").rstrip("/")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY") or ""
+    if not url or not key:
+        return None
+    return {
+        "url": url,
+        "key": key,
+        "bucket": os.getenv("STOCK_IMAGE_BUCKET") or "stock-images",
+    }
+
+
+def _latest_storage_object_name(store: Store, config: dict) -> str | None:
+    body = json.dumps({
+        "prefix": f"{store.key}/",
+        "limit": 50,
+        "offset": 0,
+        "sortBy": {"column": "created_at", "order": "desc"},
+    }).encode("utf-8")
+    request = Request(
+        f"{config['url']}/storage/v1/object/list/{quote(config['bucket'])}",
+        data=body,
+        method="POST",
+        headers=_storage_headers(config, content_type="application/json"),
+    )
+    with urlopen(request, timeout=25) as response:
+        items = json.loads(response.read().decode("utf-8"))
+
+    files = [item for item in items if item.get("id") and item.get("name")]
+    if not files:
+        return None
+    name = files[0]["name"]
+    return name if name.startswith(f"{store.key}/") else f"{store.key}/{name}"
+
+
+def _download_storage_object(config: dict, object_name: str, target_path: Path) -> None:
+    request = Request(
+        f"{config['url']}/storage/v1/object/{quote(config['bucket'])}/{quote(object_name, safe='/')}",
+        headers=_storage_headers(config),
+    )
+    with urlopen(request, timeout=40) as response:
+        target_path.write_bytes(response.read())
+
+
+def _storage_headers(config: dict, content_type: str | None = None) -> dict:
+    headers = {
+        "apikey": config["key"],
+        "Authorization": f"Bearer {config['key']}",
+    }
+    if content_type:
+        headers["Content-Type"] = content_type
+    return headers
 
 
 def _read_cache(path: Path) -> dict | None:
