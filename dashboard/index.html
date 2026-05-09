@@ -862,9 +862,10 @@
 
     .insight-row {
       display: grid;
-      grid-template-columns: minmax(0, 0.82fr) minmax(540px, 1.35fr);
+      grid-template-columns: minmax(520px, 0.95fr) minmax(580px, 1.25fr);
       gap: 8px;
       min-width: 0;
+      align-items: stretch;
     }
 
     .summary-group-header,
@@ -918,19 +919,18 @@
 
     .priority-list {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 5px;
     }
 
     .priority-columns {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px;
     }
 
     .priority-column {
       min-width: 0;
-      grid-column: span 2;
     }
 
     .priority-column-title {
@@ -947,10 +947,10 @@
 
     .priority-item {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) max-content;
       gap: 8px;
       align-items: center;
-      min-height: 27px;
+      min-height: 34px;
       border: 1px solid var(--line);
       border-radius: 6px;
       padding: 4px 6px;
@@ -963,7 +963,7 @@
 
     .priority-item .badge {
       justify-self: end;
-      max-width: 126px;
+      max-width: 158px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
@@ -1009,8 +1009,7 @@
       gap: 6px;
     }
 
-    .portfolio-header,
-    .portfolio-foot {
+    .portfolio-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1023,29 +1022,48 @@
       line-height: 1.2;
     }
 
-    .portfolio-header p,
-    .portfolio-foot {
+    .portfolio-header p {
       color: var(--muted);
       font-size: 11px;
       line-height: 1.2;
       font-weight: 700;
     }
 
+    .portfolio-badges {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .portfolio-size-note {
+      min-height: 24px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 8px;
+      white-space: nowrap;
+    }
+
     .portfolio-chart {
-      min-height: 214px;
+      min-height: 194px;
       border: 1px solid var(--line);
       border-radius: 7px;
       background:
         linear-gradient(180deg, rgba(246, 247, 244, 0.68), rgba(255, 255, 255, 0.84));
-      padding: 7px;
+      padding: 6px;
       overflow: hidden;
     }
 
     .portfolio-chart-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 136px;
+      grid-template-columns: minmax(0, 1fr) 118px;
       gap: 8px;
-      min-height: 198px;
+      min-height: 180px;
     }
 
     .portfolio-plot-shell {
@@ -1059,7 +1077,7 @@
     .portfolio-svg {
       display: block;
       width: 100%;
-      height: 198px;
+      height: 180px;
     }
 
     .portfolio-axis,
@@ -1105,12 +1123,19 @@
       font-weight: 800;
     }
 
-    .portfolio-legend span {
+    .portfolio-legend .legend-item {
       display: inline-flex;
       align-items: center;
       gap: 4px;
       min-height: 22px;
       white-space: nowrap;
+    }
+
+    .portfolio-legend .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      min-height: 8px;
     }
 
     .portfolio-legend strong {
@@ -1568,6 +1593,10 @@
         grid-template-columns: 1fr;
       }
 
+      .insight-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
       .portfolio-chart {
         min-height: auto;
       }
@@ -1934,14 +1963,14 @@
               <h2>Mapa de cartera</h2>
               <p>Prom/dia vs CPA 7d</p>
             </div>
-            <span class="count-pill" id="portfolioAdsCount">0 con ads</span>
+            <div class="portfolio-badges">
+              <span class="count-pill" id="portfolioAdsCount">0 con ads</span>
+              <span class="count-pill" id="portfolioNoAdsCount">0 sin ads</span>
+              <span class="portfolio-size-note">Tamaño de burbuja = stock</span>
+            </div>
           </div>
           <div class="portfolio-chart" id="portfolioMapChart">
             <p class="empty compact-empty">Sin gasto ads para graficar</p>
-          </div>
-          <div class="portfolio-foot">
-            <span id="portfolioNoAdsCount">0 sin ads</span>
-            <span>Burbuja = stock</span>
           </div>
         </article>
       </div>
@@ -4232,19 +4261,31 @@
       }
 
       const width = 640;
-      const height = 198;
-      const margin = { top: 20, right: 20, bottom: 38, left: 48 };
+      const height = 180;
+      const margin = { top: 18, right: 18, bottom: 34, left: 44 };
       const plotWidth = width - margin.left - margin.right;
       const plotHeight = height - margin.top - margin.bottom;
       const xValues = adRows.map((row) => Number(row.dailyAvg || 0));
       const yValues = adRows.map((row) => Number(row.adCpa7 || 0));
       const maxStock = Math.max(1, ...adRows.map((row) => Number(row.stock || 0)));
-      const xMax = Math.max(1, Math.max(...xValues) * 1.15);
-      const yMax = Math.max(CPA_THRESHOLDS.pauseFrom * 1.2, Math.max(...yValues) * 1.15, 1);
-      const xCut = clampNumber(medianNumber(xValues) || xMax / 2, 0, xMax);
-      const yCut = clampNumber(CPA_THRESHOLDS.pauseFrom, 0, yMax);
-      const scaleX = (value) => margin.left + (clampNumber(value, 0, xMax) / xMax) * plotWidth;
-      const scaleY = (value) => margin.top + (1 - clampNumber(value, 0, yMax) / yMax) * plotHeight;
+      const xMinRaw = Math.min(...xValues);
+      const xMaxRaw = Math.max(...xValues);
+      const yMinRaw = Math.min(...yValues);
+      const yMaxRaw = Math.max(...yValues);
+      const xSpan = Math.max(1, xMaxRaw - xMinRaw);
+      const ySpan = Math.max(1, yMaxRaw - yMinRaw);
+      const xMin = Math.max(0, xMinRaw - xSpan * 0.18);
+      const xMax = xMaxRaw + xSpan * 0.08;
+      const yMin = Math.max(0, Math.min(yMinRaw, CPA_THRESHOLDS.scaleBelow) - ySpan * 0.18);
+      const yMax = Math.max(CPA_THRESHOLDS.pauseFrom, yMaxRaw) + ySpan * 0.16;
+      const xCut = clampNumber(medianNumber(xValues) || (xMin + xMax) / 2, xMin, xMax);
+      const yCut = clampNumber(CPA_THRESHOLDS.pauseFrom, yMin, yMax);
+      const normalizeRange = (value, min, max) => {
+        if (max <= min) return 0.5;
+        return clampNumber((Number(value || 0) - min) / (max - min), 0, 1);
+      };
+      const scaleX = (value) => margin.left + Math.sqrt(normalizeRange(value, xMin, xMax)) * plotWidth;
+      const scaleY = (value) => margin.top + (1 - normalizeRange(value, yMin, yMax)) * plotHeight;
       const xCutPx = scaleX(xCut);
       const yCutPx = scaleY(yCut);
 
@@ -4280,10 +4321,10 @@
           </div>
           <div class="portfolio-legend" aria-hidden="true">
             <strong>Lectura</strong>
-            <span><span class="dot" style="background:var(--good)"></span>CPA &lt; ${CPA_THRESHOLDS.scaleBelow}</span>
-            <span><span class="dot" style="background:var(--warn)"></span>Revisar</span>
-            <span><span class="dot" style="background:var(--danger)"></span>Pausar</span>
-            <span><span class="dot" style="background:var(--info)"></span>Sobrestock</span>
+            <span class="legend-item"><span class="dot" style="background:var(--good)"></span>CPA &lt; ${CPA_THRESHOLDS.scaleBelow}</span>
+            <span class="legend-item"><span class="dot" style="background:var(--warn)"></span>Revisar</span>
+            <span class="legend-item"><span class="dot" style="background:var(--danger)"></span>Pausar</span>
+            <span class="legend-item"><span class="dot" style="background:var(--info)"></span>Sobrestock</span>
           </div>
         </div>
       `;
