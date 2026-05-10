@@ -1,6 +1,7 @@
 import argparse
 import base64
 import json
+import shutil
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -8,25 +9,45 @@ from playwright.sync_api import sync_playwright
 
 DEFAULT_STORE_SLUG = "mireva-costa-rica"
 DEFAULT_OUTPUT = ".shopify-admin-storage-state.json"
+DEFAULT_PROFILE_DIR = ".shopify-admin-profile"
 
 
 def main() -> int:
     args = parse_args()
     output = Path(args.output)
+    profile_dir = Path(args.profile_dir)
     url = f"https://admin.shopify.com/store/{args.store_slug}"
 
-    print("Se abrira Chromium para iniciar sesion en Shopify Admin.")
+    if args.reset_profile and profile_dir.exists():
+        shutil.rmtree(profile_dir)
+
+    print("Se abrira Chrome para iniciar sesion en Shopify Admin.")
     print(f"URL: {url}")
+    print(f"Perfil temporal: {profile_dir.resolve()}")
     print("Cuando ya veas Shopify Admin cargado, vuelve a esta terminal y presiona Enter.")
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=False)
-        context = browser.new_context(locale="es-PE")
+        try:
+            context = playwright.chromium.launch_persistent_context(
+                user_data_dir=str(profile_dir),
+                channel=args.browser,
+                headless=False,
+                locale="es-PE",
+            )
+        except Exception:
+            if args.browser != "chrome":
+                raise
+            print("No se pudo abrir Chrome instalado. Probando Chromium de Playwright...")
+            context = playwright.chromium.launch_persistent_context(
+                user_data_dir=str(profile_dir),
+                headless=False,
+                locale="es-PE",
+            )
         page = context.new_page()
         page.goto(url, wait_until="domcontentloaded")
         input("Presiona Enter para guardar la sesion...")
         context.storage_state(path=str(output))
-        browser.close()
+        context.close()
 
     raw = output.read_text(encoding="utf-8")
     encoded = base64.b64encode(raw.encode("utf-8")).decode("ascii")
@@ -41,6 +62,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Genera storage_state de Shopify Admin para Playwright.")
     parser.add_argument("--store-slug", default=DEFAULT_STORE_SLUG, help="Slug de Shopify Admin, ej: mireva-costa-rica.")
     parser.add_argument("--output", default=DEFAULT_OUTPUT, help="Archivo local donde guardar la sesion.")
+    parser.add_argument("--profile-dir", default=DEFAULT_PROFILE_DIR, help="Carpeta local de perfil temporal para Chrome.")
+    parser.add_argument("--browser", default="chrome", help="Canal de navegador Playwright. Default: chrome.")
+    parser.add_argument("--reset-profile", action="store_true", help="Borra el perfil temporal antes de abrir Chrome.")
     return parser.parse_args()
 
 

@@ -4,5 +4,6 @@ __pycache__/
 *.pyc
 .playwright/
 .shopify-admin-storage-state.json
+.shopify-admin-profile/
 dashboard/dist/
 data/image_inventory_downloads/
