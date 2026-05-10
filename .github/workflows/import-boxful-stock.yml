@@ -73,7 +73,7 @@ jobs:
 
           store_requested() {
             store_key="$1"
-            stores=",${INPUT_STORES:-CR,HN,KA},"
+            stores=",${INPUT_STORES:-CR,HN},"
             stores="$(echo "$stores" | tr '[:lower:]' '[:upper:]' | tr -d ' ')"
             echo "$stores" | grep -q ",$store_key,"
           }
