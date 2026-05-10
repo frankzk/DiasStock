@@ -2,6 +2,9 @@ import os
 from dataclasses import dataclass
 
 
+_REQUIRED = object()
+
+
 @dataclass
 class Store:
     key: str           # ej: "CR", "HN", "KE", "KA"
@@ -91,9 +94,11 @@ def _discover_store_keys() -> list[str]:
     return sorted(keys)
 
 
-def _get(store_key: str, field: str, default: str = "") -> str:
+def _get(store_key: str, field: str, default: str | object = _REQUIRED) -> str:
     env_var = f"STORE_{store_key}_{field}"
-    value = os.environ.get(env_var, default)
-    if not value and not default:
-        raise ValueError(f"Falta variable de entorno: {env_var}")
-    return value
+    value = os.environ.get(env_var)
+    if value is not None:
+        return value
+    if default is not _REQUIRED:
+        return str(default)
+    raise ValueError(f"Falta variable de entorno: {env_var}")
