@@ -13,7 +13,7 @@ on:
       stores:
         description: "Tiendas a procesar separadas por coma."
         required: false
-        default: "CR,HN,KA"
+        default: "CR,HN"
         type: string
 
 concurrency:
@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 90
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       SHOPIFY_API_VERSION: "2026-04"
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -56,9 +57,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate required secrets
-        env:
-          INPUT_STORES: ${{ github.event.inputs.stores }}
+      - name: Validate global secrets
         run: |
           missing=0
 
@@ -71,31 +70,9 @@ jobs:
             fi
           }
 
-          store_requested() {
-            store_key="$1"
-            stores=",${INPUT_STORES:-CR,HN,KA},"
-            stores="$(echo "$stores" | tr '[:lower:]' '[:upper:]' | tr -d ' ')"
-            echo "$stores" | grep -q ",$store_key,"
-          }
-
           check_secret "SUPABASE_URL" "SUPABASE_URL"
           check_secret "SUPABASE_SERVICE_ROLE_KEY" "SUPABASE_SERVICE_ROLE_KEY"
           check_secret "SHOPIFY_ADMIN_STORAGE_STATE_B64" "SHOPIFY_ADMIN_STORAGE_STATE_B64"
-
-          if store_requested "CR"; then
-            check_secret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL"
-            check_secret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN"
-          fi
-
-          if store_requested "HN"; then
-            check_secret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL"
-            check_secret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN"
-          fi
-
-          if store_requested "KA"; then
-            check_secret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL"
-            check_secret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN"
-          fi
 
           exit "$missing"
 
@@ -116,7 +93,7 @@ jobs:
             RUN_DATE="$(TZ=America/Lima date +%F)"
           fi
 
-          STORES="${INPUT_STORES:-CR,HN,KA}"
+          STORES="${INPUT_STORES:-CR,HN}"
           echo "run_date=$RUN_DATE" >> "$GITHUB_OUTPUT"
           echo "stores=$STORES" >> "$GITHUB_OUTPUT"
           echo "EasySell run date: $RUN_DATE"
@@ -124,6 +101,66 @@ jobs:
 
       - name: Import EasySell upsells
         run: |
-          python import_easysell_to_supabase.py \
-            --run-date "${{ steps.vars.outputs.run_date }}" \
-            --stores "${{ steps.vars.outputs.stores }}"
+          check_secret() {
+            env_name="$1"
+            secret_name="$2"
+            if [ -z "${!env_name}" ]; then
+              echo "::error::Falta GitHub Repository Secret: $secret_name"
+              return 1
+            fi
+            return 0
+          }
+
+          validate_store() {
+            store_key="$1"
+            missing=0
+
+            case "$store_key" in
+              CR)
+                check_secret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL" || missing=1
+                check_secret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN" || missing=1
+                ;;
+              HN)
+                check_secret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL" || missing=1
+                check_secret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN" || missing=1
+                ;;
+              KA)
+                check_secret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL" || missing=1
+                check_secret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN" || missing=1
+                ;;
+              *)
+                echo "::error::Tienda no soportada: $store_key"
+                missing=1
+                ;;
+            esac
+
+            return "$missing"
+          }
+
+          failed_stores=()
+          IFS=',' read -ra STORE_LIST <<< "${{ steps.vars.outputs.stores }}"
+          for raw_store in "${STORE_LIST[@]}"; do
+            store="$(echo "$raw_store" | xargs | tr '[:lower:]' '[:upper:]')"
+            if [ -z "$store" ]; then
+              continue
+            fi
+
+            echo "::group::Import EasySell $store"
+            if ! validate_store "$store"; then
+              failed_stores+=("$store:secrets")
+              echo "::endgroup::"
+              continue
+            fi
+
+            if ! python import_easysell_to_supabase.py \
+              --run-date "${{ steps.vars.outputs.run_date }}" \
+              --store "$store"; then
+              failed_stores+=("$store:import")
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ "${#failed_stores[@]}" -gt 0 ]; then
+            echo "::error::Fallaron tiendas EasySell: ${failed_stores[*]}"
+            exit 1
+          fi
