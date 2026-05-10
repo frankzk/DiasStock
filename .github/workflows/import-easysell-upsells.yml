@@ -1,0 +1,129 @@
+name: Import EasySell Upsells
+
+on:
+  schedule:
+    # 12:15pm America/Lima. GitHub Actions cron usa UTC.
+    - cron: "15 17 * * *"
+  workflow_dispatch:
+    inputs:
+      run_date:
+        description: "Fecha del run YYYY-MM-DD. Vacio = hoy en America/Lima."
+        required: false
+        type: string
+      stores:
+        description: "Tiendas a procesar separadas por coma."
+        required: false
+        default: "CR,HN,KA"
+        type: string
+
+concurrency:
+  group: import-easysell-upsells
+  cancel-in-progress: false
+
+jobs:
+  import-easysell-upsells:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      SHOPIFY_API_VERSION: "2026-04"
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SHOPIFY_ADMIN_STORAGE_STATE_B64: ${{ secrets.SHOPIFY_ADMIN_STORAGE_STATE_B64 }}
+
+      STORE_CR_NAME: "Mireva Costa Rica"
+      STORE_CR_SHOPIFY_ADMIN_SLUG: "mireva-costa-rica"
+      STORE_CR_SHOPIFY_URL: ${{ secrets.STORE_CR_SHOPIFY_URL }}
+      STORE_CR_SHOPIFY_TOKEN: ${{ secrets.STORE_CR_SHOPIFY_TOKEN }}
+
+      STORE_HN_NAME: "Mireva Honduras"
+      STORE_HN_SHOPIFY_ADMIN_SLUG: "w0qckv-cz"
+      STORE_HN_SHOPIFY_URL: ${{ secrets.STORE_HN_SHOPIFY_URL }}
+      STORE_HN_SHOPIFY_TOKEN: ${{ secrets.STORE_HN_SHOPIFY_TOKEN }}
+
+      STORE_KA_NAME: "Kenku Argentina"
+      STORE_KA_TYPE: "image_inventory"
+      STORE_KA_IMAGE_PATH: "data/kenku_argentina.jpeg"
+      STORE_KA_SHOPIFY_ADMIN_SLUG: "rayytn-ia"
+      STORE_KA_SHOPIFY_URL: ${{ secrets.STORE_KA_SHOPIFY_URL }}
+      STORE_KA_SHOPIFY_TOKEN: ${{ secrets.STORE_KA_SHOPIFY_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate required secrets
+        env:
+          INPUT_STORES: ${{ github.event.inputs.stores }}
+        run: |
+          missing=0
+
+          check_secret() {
+            env_name="$1"
+            secret_name="$2"
+            if [ -z "${!env_name}" ]; then
+              echo "::error::Falta GitHub Repository Secret: $secret_name"
+              missing=1
+            fi
+          }
+
+          store_requested() {
+            store_key="$1"
+            stores=",${INPUT_STORES:-CR,HN,KA},"
+            stores="$(echo "$stores" | tr '[:lower:]' '[:upper:]' | tr -d ' ')"
+            echo "$stores" | grep -q ",$store_key,"
+          }
+
+          check_secret "SUPABASE_URL" "SUPABASE_URL"
+          check_secret "SUPABASE_SERVICE_ROLE_KEY" "SUPABASE_SERVICE_ROLE_KEY"
+          check_secret "SHOPIFY_ADMIN_STORAGE_STATE_B64" "SHOPIFY_ADMIN_STORAGE_STATE_B64"
+
+          if store_requested "CR"; then
+            check_secret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL"
+            check_secret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN"
+          fi
+
+          if store_requested "HN"; then
+            check_secret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL"
+            check_secret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN"
+          fi
+
+          if store_requested "KA"; then
+            check_secret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL"
+            check_secret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN"
+          fi
+
+          exit "$missing"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Determine run date and stores
+        id: vars
+        env:
+          INPUT_RUN_DATE: ${{ github.event.inputs.run_date }}
+          INPUT_STORES: ${{ github.event.inputs.stores }}
+        run: |
+          RUN_DATE="${INPUT_RUN_DATE}"
+          if [ -z "$RUN_DATE" ]; then
+            RUN_DATE="$(TZ=America/Lima date +%F)"
+          fi
+
+          STORES="${INPUT_STORES:-CR,HN,KA}"
+          echo "run_date=$RUN_DATE" >> "$GITHUB_OUTPUT"
+          echo "stores=$STORES" >> "$GITHUB_OUTPUT"
+          echo "EasySell run date: $RUN_DATE"
+          echo "Stores: $STORES"
+
+      - name: Import EasySell upsells
+        run: |
+          python import_easysell_to_supabase.py \
+            --run-date "${{ steps.vars.outputs.run_date }}" \
+            --stores "${{ steps.vars.outputs.stores }}"

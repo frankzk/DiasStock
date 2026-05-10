@@ -3,5 +3,6 @@ outputs/
 __pycache__/
 *.pyc
 .playwright/
+.shopify-admin-storage-state.json
 dashboard/dist/
 data/image_inventory_downloads/

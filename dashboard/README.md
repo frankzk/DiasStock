@@ -132,3 +132,42 @@ Si el Google Sheet no puede ser publico, crea una Google Service Account, compar
 - `GOOGLE_PRIVATE_KEY`
 
 Con esas variables, `/api/sheets-tabs` y `node import_ads_to_supabase.js` leen el archivo privado desde backend.
+
+## EasySell Upsells
+
+EasySell se importa con GitHub Actions en `.github/workflows/import-easysell-upsells.yml`. El flujo entra a Shopify Admin con una sesion Playwright guardada, lee `1-Click`, `1-Tick` y `Ofertas de cantidad`, abre cada regla para detectar el producto principal y guarda conversiones de los ultimos 30 dias en Supabase.
+
+Antes de usarlo:
+
+1. Ejecuta nuevamente `dashboard/supabase-schema.sql` en Supabase para crear:
+   - `easysell_import_runs`
+   - `easysell_rules`
+   - `easysell_rule_products`
+2. Genera la sesion Shopify localmente:
+
+```powershell
+py generate_shopify_admin_session.py --store-slug mireva-costa-rica
+```
+
+3. Copia el valor que imprime y guardalo en GitHub `Settings > Secrets and variables > Actions` como:
+   - `SHOPIFY_ADMIN_STORAGE_STATE_B64`
+
+Tambien deben existir estos secrets:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `STORE_CR_SHOPIFY_URL`
+- `STORE_CR_SHOPIFY_TOKEN`
+- `STORE_HN_SHOPIFY_URL`
+- `STORE_HN_SHOPIFY_TOKEN`
+- `STORE_KA_SHOPIFY_URL`
+- `STORE_KA_SHOPIFY_TOKEN`
+
+El workflow corre todos los dias a las `12:15pm America/Lima`. Si Shopify invalida la sesion, vuelve a correr `generate_shopify_admin_session.py` y reemplaza `SHOPIFY_ADMIN_STORAGE_STATE_B64`.
+
+Para probar localmente:
+
+```powershell
+py import_easysell_to_supabase.py --store CR --dry-run --limit-rules 2 --headed
+py import_easysell_to_supabase.py --store CR
+```

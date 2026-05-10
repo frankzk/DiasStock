@@ -161,6 +161,76 @@ create index if not exists idx_campaign_mappings_source on campaign_sku_mappings
 create index if not exists idx_ad_daily_store_sku_date on ad_campaign_daily(store_key, sku, spend_date desc);
 create index if not exists idx_ad_daily_source_campaign on ad_campaign_daily(source_id, campaign_name);
 
+create table if not exists easysell_import_runs (
+    id                 bigserial primary key,
+    run_date           date not null,
+    store_key          text not null,
+    store_name         text not null,
+    shopify_admin_slug text,
+    status             text not null default 'success',
+    rules_imported     int not null default 0,
+    active_rules       int not null default 0,
+    unmapped_rules     int not null default 0,
+    error_message      text,
+    created_at         timestamptz default now(),
+    updated_at         timestamptz default now(),
+    unique(run_date, store_key)
+);
+
+create table if not exists easysell_rules (
+    id                   bigserial primary key,
+    run_date             date not null,
+    store_key            text not null,
+    store_name           text not null,
+    shopify_admin_slug   text,
+    rule_type            text not null check (rule_type in ('one_click', 'one_tick', 'quantity_offer')),
+    external_id          text not null,
+    source_rule_id       text,
+    rule_name            text not null,
+    active               boolean not null default false,
+    primary_product_id   text,
+    primary_product_name text,
+    primary_sku          text,
+    metrics_window       text not null default 'last_30_days',
+    impressions          int not null default 0,
+    orders_count         int not null default 0,
+    conversion_rate      numeric(8,4) not null default 0,
+    additional_revenue   numeric(14,2) not null default 0,
+    currency             text,
+    raw_metrics          text,
+    detail_url           text,
+    created_at           timestamptz default now(),
+    updated_at           timestamptz default now(),
+    unique(run_date, store_key, rule_type, external_id)
+);
+
+create table if not exists easysell_rule_products (
+    id              bigserial primary key,
+    rule_id         bigint not null references easysell_rules(id) on delete cascade,
+    run_date        date not null,
+    store_key       text not null,
+    store_name      text not null,
+    rule_type       text not null,
+    external_id     text not null,
+    product_role    text not null default 'offered',
+    position        int not null default 0,
+    product_id      text,
+    product_name    text,
+    sku             text,
+    image_url       text,
+    price_amount    numeric(14,2),
+    currency        text,
+    created_at      timestamptz default now()
+);
+
+create index if not exists idx_easysell_runs_store_date on easysell_import_runs(store_key, run_date desc);
+create index if not exists idx_easysell_rules_store_sku_date on easysell_rules(store_key, primary_sku, run_date desc);
+create index if not exists idx_easysell_rules_store_type_date on easysell_rules(store_key, rule_type, run_date desc);
+create index if not exists idx_easysell_rule_products_rule on easysell_rule_products(rule_id);
+create index if not exists idx_easysell_rule_products_store_sku on easysell_rule_products(store_key, sku);
+create unique index if not exists idx_easysell_rule_products_unique
+on easysell_rule_products(rule_id, product_role, position, (coalesce(product_id, '')), (coalesce(product_name, '')));
+
 create schema if not exists private;
 
 create or replace function private.is_dashboard_admin()
@@ -205,6 +275,9 @@ alter table shopify_sales_import_runs enable row level security;
 alter table ad_sheet_sources enable row level security;
 alter table campaign_sku_mappings enable row level security;
 alter table ad_campaign_daily enable row level security;
+alter table easysell_import_runs enable row level security;
+alter table easysell_rules enable row level security;
+alter table easysell_rule_products enable row level security;
 
 drop policy if exists "Public read inventory snapshots" on inventory_snapshots;
 drop policy if exists "Authenticated read inventory snapshots by store" on inventory_snapshots;
@@ -331,6 +404,51 @@ using (private.can_access_store(store_key));
 drop policy if exists "Admin manage ad campaign daily" on ad_campaign_daily;
 create policy "Admin manage ad campaign daily"
 on ad_campaign_daily
+for all
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
+
+drop policy if exists "Authenticated read easysell import runs by store" on easysell_import_runs;
+create policy "Authenticated read easysell import runs by store"
+on easysell_import_runs
+for select
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Admin manage easysell import runs" on easysell_import_runs;
+create policy "Admin manage easysell import runs"
+on easysell_import_runs
+for all
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
+
+drop policy if exists "Authenticated read easysell rules by store" on easysell_rules;
+create policy "Authenticated read easysell rules by store"
+on easysell_rules
+for select
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Admin manage easysell rules" on easysell_rules;
+create policy "Admin manage easysell rules"
+on easysell_rules
+for all
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
+
+drop policy if exists "Authenticated read easysell rule products by store" on easysell_rule_products;
+create policy "Authenticated read easysell rule products by store"
+on easysell_rule_products
+for select
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Admin manage easysell rule products" on easysell_rule_products;
+create policy "Admin manage easysell rule products"
+on easysell_rule_products
 for all
 to authenticated
 using (private.is_dashboard_admin())

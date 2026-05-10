@@ -1376,20 +1376,21 @@
     }
 
     .col-history { width: 4%; }
-    .col-date { width: 5.5%; }
-    .col-store { width: 6%; }
-    .col-image { width: 4%; }
-    .col-product { width: 15%; }
-    .col-sku { width: 7%; }
-    .col-stock { width: 4.5%; }
-    .col-sold { width: 4.5%; }
-    .col-ad-spend { width: 5.5%; }
-    .col-ad-cpa { width: 5%; }
-    .col-average { width: 5%; }
-    .col-days { width: 5.5%; }
-    .col-inventory { width: 9%; }
-    .col-sale { width: 7%; }
-    .col-alert { width: 12.5%; }
+    .col-date { width: 5.2%; }
+    .col-store { width: 5.4%; }
+    .col-image { width: 3.8%; }
+    .col-product { width: 13%; }
+    .col-sku { width: 6.3%; }
+    .col-stock { width: 4%; }
+    .col-sold { width: 4.3%; }
+    .col-ad-spend { width: 5.2%; }
+    .col-ad-cpa { width: 4.7%; }
+    .col-average { width: 4.8%; }
+    .col-days { width: 5.2%; }
+    .col-inventory { width: 7.7%; }
+    .col-sale { width: 6.2%; }
+    .col-easysell { width: 8.5%; }
+    .col-alert { width: 11.7%; }
 
     th,
     td {
@@ -1594,6 +1595,177 @@
       color: #137333;
     }
 
+    .easysell-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      min-height: 28px;
+      max-width: 100%;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      padding: 2px;
+      cursor: pointer;
+    }
+
+    .easysell-cell:hover {
+      border-color: var(--line);
+      background: #f9fbfa;
+    }
+
+    .easysell-cell.empty {
+      cursor: default;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .easysell-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      max-width: 48px;
+      min-height: 20px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f7faf8;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 1;
+      padding: 0 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .easysell-pill.ok {
+      border-color: #b8e5c2;
+      background: var(--good-soft);
+      color: var(--good);
+    }
+
+    .easysell-pill.warn {
+      border-color: #ffd88e;
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
+
+    .easysell-pill.danger {
+      border-color: #ffc4bd;
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .easysell-pill.muted {
+      color: var(--muted);
+    }
+
+    .easysell-modal-body {
+      display: grid;
+      gap: 10px;
+      min-height: 0;
+      padding: 12px;
+      overflow: auto;
+      background: var(--bg);
+    }
+
+    .easysell-modal-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .easysell-summary-card,
+    .easysell-rule-card {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      padding: 9px;
+    }
+
+    .easysell-summary-card {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .easysell-summary-card strong {
+      font-size: 18px;
+      line-height: 1.05;
+    }
+
+    .easysell-rule-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .easysell-rule-list {
+      display: grid;
+      align-content: start;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .easysell-rule-list h3 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.15;
+    }
+
+    .easysell-rule-card {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .easysell-rule-title {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+      font-weight: 900;
+    }
+
+    .easysell-rule-title span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .easysell-rule-meta,
+    .easysell-offers {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .easysell-offers {
+      display: grid;
+      gap: 2px;
+    }
+
+    .easysell-status {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 2px 6px;
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .easysell-status.active {
+      background: var(--good-soft);
+      color: var(--good);
+    }
+
+    .easysell-status.inactive {
+      background: #edf1ef;
+      color: var(--muted);
+    }
+
     .cpa-signal {
       font-weight: 800;
     }
@@ -1746,6 +1918,8 @@
       .insight-row,
       .portfolio-chart-layout,
       .portfolio-modal-layout,
+      .easysell-modal-summary,
+      .easysell-rule-grid,
       .priority-columns {
         grid-template-columns: 1fr;
       }
@@ -2245,6 +2419,7 @@
             <col class="col-average">
             <col class="col-days">
             <col class="col-sale">
+            <col class="col-easysell">
             <col class="col-alert">
           </colgroup>
           <thead>
@@ -2263,12 +2438,13 @@
               <th><button type="button" class="sort-button" data-sort-key="dailyAvg">Prom/dia <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="days">Dias Stock <span class="sort-indicator"></span></button></th>
               <th><button type="button" class="sort-button" data-sort-key="saleStatus">Estado venta <span class="sort-indicator"></span></button></th>
+              <th>Upsells</th>
               <th><button type="button" class="sort-button" data-sort-key="alert">Alerta <span class="sort-indicator"></span></button></th>
             </tr>
           </thead>
           <tbody id="snapshotBody">
             <tr>
-              <td colspan="15" class="empty">Sin datos</td>
+              <td colspan="16" class="empty">Sin datos</td>
             </tr>
           </tbody>
         </table>
@@ -2291,6 +2467,23 @@
         </div>
         <div class="portfolio-modal-chart" id="portfolioModalChart">
           <p class="empty compact-empty">Sin gasto ads para graficar</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="portfolio-modal-backdrop hidden" id="easysellModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="easysellModalTitle">
+      <section class="portfolio-modal" aria-label="Detalle EasySell por SKU">
+        <div class="portfolio-modal-header">
+          <div class="portfolio-modal-title">
+            <h2 id="easysellModalTitle">EasySell por SKU</h2>
+            <p id="easysellModalSubtitle">1-click, 1-tick y ofertas de cantidad</p>
+          </div>
+          <div class="portfolio-modal-actions">
+            <button type="button" class="portfolio-modal-close" id="easysellModalClose" aria-label="Cerrar detalle EasySell">&times;</button>
+          </div>
+        </div>
+        <div class="easysell-modal-body" id="easysellModalBody">
+          <p class="empty compact-empty">Sin reglas EasySell para este SKU</p>
         </div>
       </section>
     </div>
@@ -2325,6 +2518,11 @@
       scaleBelow: 7,
       pauseFrom: 9,
     };
+    const EASYSELL_TYPES = {
+      one_click: { label: "1C", title: "1-Click", expected: 1 },
+      one_tick: { label: "1T", title: "1-Tick", expected: 2 },
+      quantity_offer: { label: "Cant", title: "Cantidad", expected: 1 },
+    };
     const TABLE_COLUMNS = [
       { key: "date", label: "Fecha", type: "date" },
       { key: "storeName", label: "Tienda", type: "text" },
@@ -2349,10 +2547,14 @@
       adSources: [],
       campaignMappings: [],
       adDaily: [],
+      easysellRuns: [],
+      easysellRules: [],
+      easysellRuleProducts: [],
       shopifySalesDaily: [],
       shopifySalesRuns: [],
       stockImageUploads: [],
       salesProblem: "",
+      easysellProblem: "",
       currentUser: null,
       currentProfile: null,
       currentAccess: [],
@@ -2365,6 +2567,8 @@
       expandedProductKeys: new Set(),
       showAllPriority: false,
       portfolioModalOpen: false,
+      easysellModalOpen: false,
+      easysellModalKey: "",
       loading: false,
       client: null,
       sort: { key: "sold7", direction: "desc" },
@@ -2458,6 +2662,11 @@
       portfolioModalChart: $("#portfolioModalChart"),
       portfolioModalAdsCount: $("#portfolioModalAdsCount"),
       portfolioModalNoAdsCount: $("#portfolioModalNoAdsCount"),
+      easysellModalBackdrop: $("#easysellModalBackdrop"),
+      easysellModalClose: $("#easysellModalClose"),
+      easysellModalTitle: $("#easysellModalTitle"),
+      easysellModalSubtitle: $("#easysellModalSubtitle"),
+      easysellModalBody: $("#easysellModalBody"),
       metricProducts: $("#metricProducts"),
       metricProductsNote: $("#metricProductsNote"),
       metricReorder: $("#metricReorder"),
@@ -2505,6 +2714,9 @@
       state.adSources = [];
       state.campaignMappings = [];
       state.adDaily = [];
+      state.easysellRuns = [];
+      state.easysellRules = [];
+      state.easysellRuleProducts = [];
       state.shopifySalesDaily = [];
       state.shopifySalesRuns = [];
       state.stockImageUploads = [];
@@ -2711,6 +2923,7 @@
       state.client = client;
       setLoading(true);
       state.adsProblem = "";
+      state.easysellProblem = "";
       els.lastUpdated.textContent = "Cargando snapshots";
 
       try {
@@ -2731,6 +2944,7 @@
         state.rows = filterRowsForCurrentUser((data || []).map(normalizeRow));
         await loadShopifySalesTable(client);
         await loadAdsTables(client);
+        await loadEasySellTables(client);
         state.expandedProductKeys.clear();
         state.showAllPriority = false;
         buildFilters();
@@ -2812,6 +3026,35 @@
       return [];
     }
 
+    async function loadEasySellTables(client) {
+      state.easysellProblem = "";
+      const [runs, rules, products] = await Promise.all([
+        fetchOptionalEasySellTable(client.from("easysell_import_runs").select("*").order("run_date", { ascending: false }).limit(1000)),
+        fetchOptionalEasySellTable(client.from("easysell_rules").select("*").order("run_date", { ascending: false }).limit(20000)),
+        fetchOptionalEasySellTable(client.from("easysell_rule_products").select("*").order("position", { ascending: true }).limit(30000)),
+      ]);
+
+      state.easysellRuns = filterRowsForCurrentUser(runs.map(normalizeEasySellRun));
+      state.easysellRules = filterRowsForCurrentUser(rules.map(normalizeEasySellRule));
+      state.easysellRuleProducts = filterRowsForCurrentUser(products.map(normalizeEasySellProduct));
+      enrichRowsWithEasySell();
+    }
+
+    async function fetchOptionalEasySellTable(query) {
+      const { data, error } = await query;
+      if (!error) return data || [];
+      state.easysellProblem = formatEasySellSchemaError(error);
+      return [];
+    }
+
+    function formatEasySellSchemaError(error) {
+      const message = error?.message || String(error || "");
+      if (error?.code === "PGRST205" || message.includes("easysell_") || message.includes("schema cache")) {
+        return "Faltan tablas EasySell en Supabase. Ejecuta dashboard/supabase-schema.sql una vez en el SQL Editor.";
+      }
+      return message || "No se pudieron cargar las tablas EasySell.";
+    }
+
     function formatAdsSchemaError(error) {
       const message = error?.message || String(error || "");
       if (error?.code === "PGRST205" || message.includes("ad_sheet_sources") || message.includes("schema cache")) {
@@ -2844,6 +3087,9 @@
         adCpa7: 0,
         adCpaClass: "",
         adCurrency: "USD",
+        easysellSummary: createEmptyEasySellSummary(),
+        easysellRules: [],
+        easysellHasRun: false,
         salesTrend30: [],
         salesSource: "snapshot",
         salesWindowStart: addDays(row.run_date || "", -6),
@@ -2924,6 +3170,64 @@
         cpm: row.cpm === null || row.cpm === undefined ? null : Number(row.cpm),
         ctr: row.ctr === null || row.ctr === undefined ? null : Number(row.ctr),
         impressions: Number(row.impressions || 0),
+      };
+    }
+
+    function normalizeEasySellRun(row) {
+      return {
+        id: Number(row.id),
+        runDate: row.run_date || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "",
+        rulesImported: Number(row.rules_imported || 0),
+        activeRules: Number(row.active_rules || 0),
+        unmappedRules: Number(row.unmapped_rules || 0),
+        status: row.status || "",
+      };
+    }
+
+    function normalizeEasySellRule(row) {
+      return {
+        id: Number(row.id),
+        runDate: row.run_date || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "",
+        type: row.rule_type || "",
+        externalId: row.external_id || "",
+        sourceRuleId: row.source_rule_id || "",
+        name: row.rule_name || "",
+        active: row.active !== false,
+        primaryProductId: row.primary_product_id || "",
+        primaryProductName: row.primary_product_name || "",
+        primarySku: row.primary_sku || "",
+        impressions: Number(row.impressions || 0),
+        orders: Number(row.orders_count || 0),
+        conversionRate: Number(row.conversion_rate || 0),
+        revenue: Number(row.additional_revenue || 0),
+        currency: row.currency || "",
+        rawMetrics: row.raw_metrics || "",
+        detailUrl: row.detail_url || "",
+        offeredProducts: [],
+      };
+    }
+
+    function normalizeEasySellProduct(row) {
+      return {
+        id: Number(row.id),
+        ruleId: Number(row.rule_id),
+        runDate: row.run_date || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "",
+        type: row.rule_type || "",
+        externalId: row.external_id || "",
+        role: row.product_role || "offered",
+        position: Number(row.position || 0),
+        productId: row.product_id || "",
+        productName: row.product_name || "",
+        sku: row.sku || "",
+        imageUrl: row.image_url || "",
+        priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+        currency: row.currency || "",
       };
     }
 
@@ -3037,6 +3341,112 @@
         row.alertParts = mergeAlertParts(row.baseAlert, cpaSignal?.alert || "");
         row.alert = row.alertParts.join(" · ");
       }
+    }
+
+    function createEmptyEasySellSummary() {
+      return Object.fromEntries(Object.keys(EASYSELL_TYPES).map((type) => [
+        type,
+        {
+          type,
+          activeCount: 0,
+          totalCount: 0,
+          impressions: 0,
+          orders: 0,
+          conversionRate: 0,
+          state: "muted",
+          rules: [],
+        },
+      ]));
+    }
+
+    function enrichRowsWithEasySell() {
+      for (const row of state.rows) {
+        row.easysellSummary = createEmptyEasySellSummary();
+        row.easysellRules = [];
+        row.easysellHasRun = false;
+      }
+      if (!state.rows.length || !state.easysellRules.length) return;
+
+      const productsByRuleId = new Map();
+      for (const product of state.easysellRuleProducts) {
+        if (!productsByRuleId.has(product.ruleId)) productsByRuleId.set(product.ruleId, []);
+        productsByRuleId.get(product.ruleId).push(product);
+      }
+
+      const latestRunByStore = new Map();
+      for (const rule of state.easysellRules) {
+        const storeKey = normalizeKey(rule.storeKey);
+        if (!storeKey || !rule.runDate) continue;
+        const current = latestRunByStore.get(storeKey);
+        if (!current || rule.runDate > current) latestRunByStore.set(storeKey, rule.runDate);
+      }
+
+      const rulesBySku = new Map();
+      for (const rule of state.easysellRules) {
+        const storeKey = normalizeKey(rule.storeKey);
+        const skuKey = normalizeKey(rule.primarySku);
+        if (!storeKey || !skuKey) continue;
+        if (latestRunByStore.get(storeKey) !== rule.runDate) continue;
+        const enrichedRule = {
+          ...rule,
+          offeredProducts: (productsByRuleId.get(rule.id) || []).sort((a, b) => a.position - b.position),
+        };
+        const key = `${storeKey}::${skuKey}`;
+        if (!rulesBySku.has(key)) rulesBySku.set(key, []);
+        rulesBySku.get(key).push(enrichedRule);
+      }
+
+      for (const row of state.rows) {
+        const storeKey = normalizeKey(row.storeKey);
+        const key = `${storeKey}::${normalizeKey(row.sku)}`;
+        const rules = rulesBySku.get(key) || [];
+        row.easysellHasRun = latestRunByStore.has(storeKey);
+        row.easysellRules = rules;
+        row.easysellSummary = summarizeEasySellRules(rules);
+        const easyAlerts = row.easysellHasRun ? buildEasySellAlerts(row.easysellSummary) : [];
+        if (easyAlerts.length) {
+          row.alertParts = mergeAlertParts(row.alertParts.join(" · "), easyAlerts.join(" · "));
+          row.alert = row.alertParts.join(" · ");
+        }
+      }
+    }
+
+    function summarizeEasySellRules(rules) {
+      const summary = createEmptyEasySellSummary();
+      for (const rule of rules) {
+        const bucket = summary[rule.type];
+        if (!bucket) continue;
+        bucket.totalCount += 1;
+        bucket.rules.push(rule);
+        if (!rule.active) continue;
+        bucket.activeCount += 1;
+        bucket.impressions += Number(rule.impressions || 0);
+        bucket.orders += Number(rule.orders || 0);
+      }
+
+      for (const [type, meta] of Object.entries(EASYSELL_TYPES)) {
+        const bucket = summary[type];
+        bucket.conversionRate = bucket.impressions > 0 ? roundNumber((bucket.orders / bucket.impressions) * 100, 2) : 0;
+        if (!bucket.totalCount) bucket.state = "muted";
+        else if (bucket.activeCount === meta.expected) bucket.state = "ok";
+        else if (bucket.activeCount === 0 || bucket.activeCount > meta.expected) bucket.state = "danger";
+        else bucket.state = "warn";
+      }
+      return summary;
+    }
+
+    function buildEasySellAlerts(summary) {
+      const alerts = [];
+      for (const [type, meta] of Object.entries(EASYSELL_TYPES)) {
+        const bucket = summary[type];
+        if (!bucket || !bucket.totalCount) {
+          alerts.push(`EasySell ${meta.label} falta`);
+          continue;
+        }
+        if (bucket.activeCount < meta.expected) alerts.push(`EasySell ${meta.label} falta`);
+        if (bucket.activeCount > meta.expected) alerts.push(`EasySell ${meta.label} exceso`);
+      }
+      return alerts;
     }
 
     function getCpaSignal(cpa, spend) {
@@ -4296,6 +4706,7 @@
       renderPriorityList();
       renderPortfolioMap();
       if (state.portfolioModalOpen) renderPortfolioModalChart();
+      if (state.easysellModalOpen) renderEasySellModal();
       renderTable();
     }
 
@@ -4676,7 +5087,7 @@
       const rows = state.filteredRows;
       renderSortIndicators();
       if (!rows.length) {
-        els.body.innerHTML = `<tr><td colspan="15" class="empty">Sin datos para estos filtros</td></tr>`;
+        els.body.innerHTML = `<tr><td colspan="16" class="empty">Sin datos para estos filtros</td></tr>`;
         return;
       }
 
@@ -4693,6 +5104,7 @@
 
       els.body.innerHTML = html.join("");
       bindHistoryToggles();
+      bindEasySellButtons();
     }
 
     function renderSnapshotRow(row, options = {}) {
@@ -4715,6 +5127,7 @@
           <td data-label="Prom/dia" class="number">${renderTrendCell(row)}</td>
           <td data-label="Dias Stock" class="number">${renderDaysCell(row)}</td>
           <td data-label="Estado venta"><span class="badge ${saleMeta.className}"><span class="dot" style="background:${saleMeta.color}"></span>${escapeHtml(row.saleStatus || "SIN VENTAS")}</span></td>
+          <td data-label="Upsells">${renderEasySellCell(row)}</td>
           <td data-label="Alerta" class="${row.alert ? "alert-text" : ""}">${renderAlertCell(row)}</td>
         </tr>
       `;
@@ -4780,6 +5193,120 @@
       return `<span class="${className}">${formatMoney(row.adCpa7, row.adCurrency)}</span>`;
     }
 
+    function renderEasySellCell(row) {
+      const summary = row.easysellSummary || createEmptyEasySellSummary();
+      const hasData = Object.values(summary).some((bucket) => bucket.totalCount > 0);
+      if (!hasData && (!state.easysellRules.length || !row.easysellHasRun)) {
+        return `<span class="easysell-cell empty">-</span>`;
+      }
+
+      const title = hasData ? "Ver detalle EasySell" : "Sin reglas EasySell mapeadas a este SKU";
+      const pills = Object.entries(EASYSELL_TYPES).map(([type, meta]) => {
+        const bucket = summary[type] || createEmptyEasySellSummary()[type];
+        const rate = bucket.impressions > 0 ? `${formatDecimal(bucket.conversionRate)}%` : "-";
+        return `
+          <span class="easysell-pill ${bucket.state}" title="${escapeHtml(`${meta.title}: ${bucket.activeCount}/${meta.expected} activas, conversion ${rate}`)}">
+            ${escapeHtml(meta.label)} ${bucket.activeCount}/${meta.expected}
+          </span>
+        `;
+      }).join("");
+
+      return `
+        <button type="button" class="easysell-cell" data-easysell-key="${escapeHtml(productKey(row))}" title="${escapeHtml(title)}">
+          ${pills}
+        </button>
+      `;
+    }
+
+    function bindEasySellButtons() {
+      els.body.querySelectorAll("[data-easysell-key]").forEach((button) => {
+        button.addEventListener("click", () => openEasySellModal(button.dataset.easysellKey || ""));
+      });
+    }
+
+    function openEasySellModal(key) {
+      state.easysellModalOpen = true;
+      state.easysellModalKey = key;
+      renderEasySellModal();
+      els.easysellModalBackdrop.classList.remove("hidden");
+      document.body.classList.add("modal-open");
+      setTimeout(() => els.easysellModalClose.focus(), 0);
+    }
+
+    function closeEasySellModal() {
+      state.easysellModalOpen = false;
+      state.easysellModalKey = "";
+      els.easysellModalBackdrop.classList.add("hidden");
+      document.body.classList.remove("modal-open");
+    }
+
+    function renderEasySellModal() {
+      const row = state.filteredRows.find((item) => productKey(item) === state.easysellModalKey)
+        || state.rows.find((item) => productKey(item) === state.easysellModalKey);
+      if (!row) return;
+
+      els.easysellModalTitle.textContent = row.product || row.sku || "EasySell por SKU";
+      els.easysellModalSubtitle.textContent = `${row.storeName} · ${row.sku || "sin SKU"} · ${formatDate(row.date)}`;
+      els.easysellModalBody.innerHTML = renderEasySellModalBody(row);
+    }
+
+    function renderEasySellModalBody(row) {
+      const summary = row.easysellSummary || createEmptyEasySellSummary();
+      const summaryCards = Object.entries(EASYSELL_TYPES).map(([type, meta]) => {
+        const bucket = summary[type] || createEmptyEasySellSummary()[type];
+        const rate = bucket.impressions > 0 ? `${formatDecimal(bucket.conversionRate)}%` : "-";
+        return `
+          <div class="easysell-summary-card">
+            <span class="subtitle">${escapeHtml(meta.title)}</span>
+            <strong>${escapeHtml(rate)}</strong>
+            <span>${formatNumber(bucket.activeCount)} / ${formatNumber(meta.expected)} activa(s)</span>
+            <span class="subtitle">${formatNumber(bucket.impressions)} imp. · ${formatNumber(bucket.orders)} pedidos</span>
+          </div>
+        `;
+      }).join("");
+
+      const lists = Object.entries(EASYSELL_TYPES).map(([type, meta]) => {
+        const rules = (summary[type]?.rules || []).slice().sort((a, b) => Number(b.active) - Number(a.active));
+        const content = rules.length
+          ? rules.map(renderEasySellRuleCard).join("")
+          : `<p class="empty compact-empty">Sin reglas ${escapeHtml(meta.title)}</p>`;
+        return `
+          <div class="easysell-rule-list">
+            <h3>${escapeHtml(meta.title)}</h3>
+            ${content}
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="easysell-modal-summary">${summaryCards}</div>
+        <div class="easysell-rule-grid">${lists}</div>
+      `;
+    }
+
+    function renderEasySellRuleCard(rule) {
+      const conversion = rule.impressions > 0 ? `${formatDecimal(rule.conversionRate)}%` : "-";
+      const revenue = rule.revenue ? formatMoney(rule.revenue, rule.currency || "USD") : "-";
+      const offers = (rule.offeredProducts || []).length
+        ? rule.offeredProducts.map((product) => `
+            <span>${escapeHtml(product.sku || "sin SKU")} · ${escapeHtml(product.productName || "Producto sin nombre")}</span>
+          `).join("")
+        : `<span>Sin productos ofrecidos detectados</span>`;
+
+      return `
+        <article class="easysell-rule-card">
+          <div class="easysell-rule-title">
+            <span title="${escapeHtml(rule.name)}">${escapeHtml(rule.name || "Regla sin nombre")}</span>
+            <span class="easysell-status ${rule.active ? "active" : "inactive"}">${rule.active ? "Activa" : "Inactiva"}</span>
+          </div>
+          <div class="easysell-rule-meta">
+            ${formatNumber(rule.impressions)} imp. · ${formatNumber(rule.orders)} pedidos · ${escapeHtml(conversion)} conv. · ${revenue}
+          </div>
+          <div class="easysell-offers">${offers}</div>
+        </article>
+      `;
+    }
+
     function renderAlertCell(row) {
       const parts = row.alertParts || splitAlerts(row.alert);
       if (!parts.length) return "";
@@ -4792,6 +5319,7 @@
       const key = normalizeKey(value);
       if (key === "escalar") return "alert-tag-escalar";
       if (key === "pausar ads") return "alert-tag-pausar";
+      if (key.startsWith("easysell")) return "alert-tag-pausar";
       return "alert-tag-default";
     }
 
@@ -4883,6 +5411,14 @@
       applyFilters();
     }
 
+    function exportEasySellSummary(row, type) {
+      const meta = EASYSELL_TYPES[type];
+      const bucket = row.easysellSummary?.[type];
+      if (!meta || !bucket || (!bucket.totalCount && !row.easysellHasRun)) return "";
+      const rate = bucket.impressions > 0 ? `${formatDecimal(bucket.conversionRate)}%` : "-";
+      return `${bucket.activeCount}/${meta.expected} activas · ${rate}`;
+    }
+
     function exportExcel() {
       if (!state.filteredRows.length) return;
       if (!window.XLSX) {
@@ -4904,6 +5440,9 @@
         "Prom/dia": row.dailyAvg,
         "Dias Stock": row.days === null ? "" : row.days,
         "Estado de Venta": row.saleStatus,
+        "EasySell 1C": exportEasySellSummary(row, "one_click"),
+        "EasySell 1T": exportEasySellSummary(row, "one_tick"),
+        "EasySell Cant": exportEasySellSummary(row, "quantity_offer"),
         "Alerta": row.alert,
       }));
       const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -4920,6 +5459,9 @@
         { wch: 10 },
         { wch: 10 },
         { wch: 10 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 18 },
         { wch: 18 },
         { wch: 24 },
       ];
@@ -5027,8 +5569,11 @@
       state.editingAdSourceIds.clear();
       state.editingAdsSheetUrl = false;
       state.adsProblem = "";
+      state.easysellProblem = "";
       state.expandedProductKeys.clear();
       state.showAllPriority = false;
+      state.easysellModalOpen = false;
+      state.easysellModalKey = "";
       openConfig("Credenciales locales borradas.");
       render();
       buildFilters();
@@ -5102,6 +5647,10 @@
     els.portfolioModalBackdrop.addEventListener("click", (event) => {
       if (event.target === els.portfolioModalBackdrop) closePortfolioModal();
     });
+    els.easysellModalClose.addEventListener("click", closeEasySellModal);
+    els.easysellModalBackdrop.addEventListener("click", (event) => {
+      if (event.target === els.easysellModalBackdrop) closeEasySellModal();
+    });
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutBtn.addEventListener("click", handleLogout);
     els.searchInput.addEventListener("input", applyFilters);
@@ -5137,6 +5686,7 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         if (state.portfolioModalOpen) closePortfolioModal();
+        if (state.easysellModalOpen) closeEasySellModal();
         setProductMenuOpen(false);
         setStoreMenuOpen(false);
       }
