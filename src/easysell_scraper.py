@@ -104,9 +104,10 @@ def scrape_easysell_section(
     page.goto(url, wait_until="domcontentloaded")
     time.sleep(3)
     assert_shopify_session(page, store)
-    scroll_to_load(page)
+    surface = get_easysell_surface(page)
+    scroll_to_load(surface)
 
-    cards = extract_rule_cards(page)
+    cards = extract_rule_cards(surface)
     if limit_rules > 0:
         cards = cards[:limit_rules]
     print(f"    {len(cards)} regla(s) detectadas")
@@ -118,17 +119,18 @@ def scrape_easysell_section(
         detail = {}
 
         try:
-            fresh_cards = extract_rule_cards(page)
+            surface = get_easysell_surface(page)
+            fresh_cards = extract_rule_cards(surface)
             detail_index = fresh_cards[index - 1]["index"] if index - 1 < len(fresh_cards) else card_info["index"]
-            open_card_detail(page, detail_index)
+            open_card_detail(surface, detail_index)
             time.sleep(2)
-            detail = extract_detail(page, section)
+            detail = extract_detail(get_easysell_surface(page), section)
         except Exception as error:
             print(f"    Advertencia: detalle omitido para '{source_name}': {error}")
         finally:
             page.goto(url, wait_until="domcontentloaded")
             time.sleep(1)
-            scroll_to_load(page)
+            scroll_to_load(get_easysell_surface(page))
 
         rule_name = detail.get("name") or source_name
         source_rule_id = detail.get("source_rule_id") or stable_key(rule_name)
@@ -232,6 +234,52 @@ def scroll_to_load(page) -> None:
         time.sleep(0.7)
 
 
+def get_easysell_surface(page):
+    deadline = time.time() + 45
+    while time.time() < deadline:
+        for frame in page.frames:
+            frame_url = (frame.url or "").lower()
+            if is_easysell_frame(frame_url):
+                return frame
+
+        for frame in page.frames:
+            body_text = safe_inner_text(frame, "body").lower()
+            if is_easysell_body(body_text):
+                return frame
+
+        body_text = safe_inner_text(page, "body").lower()
+        if is_easysell_body(body_text):
+            return page
+
+        time.sleep(1)
+
+    return page
+
+
+def is_easysell_frame(frame_url: str) -> bool:
+    return (
+        "quick-order-4" in frame_url
+        or "easysell" in frame_url
+        or "/upsells/" in frame_url
+        or "/offers" in frame_url
+    )
+
+
+def is_easysell_body(body_text: str) -> bool:
+    return any(
+        marker in body_text
+        for marker in [
+            "easysell cod form",
+            "1-click upsells",
+            "1-tick upsell",
+            "ofertas de cantidad",
+            "upsells y downsells",
+            "ultimos 30 dias",
+            "últimos 30 días",
+        ]
+    )
+
+
 def extract_rule_cards(page) -> list[dict[str, Any]]:
     try:
         page.wait_for_selector("body", timeout=TIMEOUT)
@@ -257,11 +305,13 @@ def extract_rule_cards(page) -> list[dict[str, Any]]:
             const aria = toggle.getAttribute('aria-checked') || toggle.getAttribute('data-state');
             if (aria && /true|checked|on/i.test(aria)) return true;
             if (aria && /false|unchecked|off/i.test(aria)) return false;
+            const text = (container.innerText || '').toLowerCase();
+            if (/(^|\\b)(inactivo|desactivado|desactivada|inactive|disabled)(\\b|$)/i.test(text)) return false;
+            if (/(^|\\b)(activo|activa|activado|activada|active|enabled)(\\b|$)/i.test(text)) return true;
             const style = getComputedStyle(toggle);
             const color = `${style.backgroundColor} ${style.color}`.toLowerCase();
             if (/rgb\\((1[0-9]|2[0-9]|3[0-9]),\\s*(1[0-9]|2[0-9]|3[0-9]),\\s*(1[0-9]|2[0-9]|3[0-9])\\)/.test(color)) return true;
-            if (/activo/i.test(container.innerText || '')) return true;
-            return !/inactivo|desactivado/i.test(container.innerText || '');
+            return false;
           }
 
           function cardName(container) {
@@ -356,7 +406,13 @@ def split_products_by_section(
         return [], []
 
     if rule_type == "quantity_offer":
-        return products, []
+        quantity_block = block_between(
+            body_text,
+            ["Aplicado a", "Seleccionar productos", "Productos especificos", "Productos específicos"],
+            ["Ultimos 30", "Últimos 30", "Tasa de conversion", "Tasa de conversión", "ingresos adicionales"],
+        )
+        primary = [product for product in products if product_in_block(product, quantity_block)]
+        return (primary or products[:1]), []
 
     primary_block = block_between(
         body_text,

@@ -18,6 +18,19 @@ def main() -> int:
     profile_dir = Path(args.profile_dir)
     url = f"https://admin.shopify.com/store/{args.store_slug}"
 
+    if args.cdp_url:
+        print("Conectando a Chrome normal por CDP.")
+        print(f"CDP URL: {args.cdp_url}")
+        print("Cuando ya veas Shopify Admin cargado en ese Chrome, vuelve aqui y presiona Enter.")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.connect_over_cdp(args.cdp_url)
+            if not browser.contexts:
+                raise RuntimeError("No se encontro ningun contexto de Chrome en la conexion CDP.")
+            input("Presiona Enter para guardar la sesion...")
+            browser.contexts[0].storage_state(path=str(output))
+            browser.close()
+        return print_secret(output)
+
     if args.reset_profile and profile_dir.exists():
         shutil.rmtree(profile_dir)
 
@@ -49,6 +62,10 @@ def main() -> int:
         context.storage_state(path=str(output))
         context.close()
 
+    return print_secret(output)
+
+
+def print_secret(output: Path) -> int:
     raw = output.read_text(encoding="utf-8")
     encoded = base64.b64encode(raw.encode("utf-8")).decode("ascii")
     print(f"\nSesion guardada en: {output.resolve()}")
@@ -65,6 +82,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile-dir", default=DEFAULT_PROFILE_DIR, help="Carpeta local de perfil temporal para Chrome.")
     parser.add_argument("--browser", default="chrome", help="Canal de navegador Playwright. Default: chrome.")
     parser.add_argument("--reset-profile", action="store_true", help="Borra el perfil temporal antes de abrir Chrome.")
+    parser.add_argument("--cdp-url", default="", help="Captura sesion desde un Chrome normal abierto con remote debugging.")
     return parser.parse_args()
 
 
