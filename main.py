@@ -1,4 +1,5 @@
 import argparse
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -63,6 +64,8 @@ def run_store(
             save_snapshot(results, store_key=store.key, store_name=store.name, run_date=run_date)
         except Exception as e:
             print(f"  Supabase omitido: {e}")
+            if os.getenv("REQUIRE_SUPABASE_SAVE", "").lower() in {"1", "true", "yes"}:
+                raise
 
     print(f"\nListo. Archivo: {excel_path}")
     print(f"Productos procesados: {len(results)}")

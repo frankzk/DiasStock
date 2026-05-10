@@ -26,6 +26,7 @@ jobs:
     timeout-minutes: 90
     env:
       BOXFUL_HEADLESS: "true"
+      REQUIRE_SUPABASE_SAVE: "true"
       SHOPIFY_API_VERSION: "2026-04"
       SHOPIFY_SALES_TIMEZONE: "America/Lima"
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -56,9 +57,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate required secrets
-        env:
-          INPUT_STORES: ${{ github.event.inputs.stores }}
+      - name: Validate global secrets
         run: |
           missing=0
 
@@ -71,34 +70,8 @@ jobs:
             fi
           }
 
-          store_requested() {
-            store_key="$1"
-            stores=",${INPUT_STORES:-CR,HN},"
-            stores="$(echo "$stores" | tr '[:lower:]' '[:upper:]' | tr -d ' ')"
-            echo "$stores" | grep -q ",$store_key,"
-          }
-
           check_secret "SUPABASE_URL" "SUPABASE_URL"
           check_secret "SUPABASE_KEY" "SUPABASE_SERVICE_ROLE_KEY"
-
-          if store_requested "CR"; then
-            check_secret "STORE_CR_BOXFUL_EMAIL" "STORE_CR_BOXFUL_EMAIL"
-            check_secret "STORE_CR_BOXFUL_PASSWORD" "STORE_CR_BOXFUL_PASSWORD"
-            check_secret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL"
-            check_secret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN"
-          fi
-
-          if store_requested "HN"; then
-            check_secret "STORE_HN_BOXFUL_EMAIL" "STORE_HN_BOXFUL_EMAIL"
-            check_secret "STORE_HN_BOXFUL_PASSWORD" "STORE_HN_BOXFUL_PASSWORD"
-            check_secret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL"
-            check_secret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN"
-          fi
-
-          if store_requested "KA"; then
-            check_secret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL"
-            check_secret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN"
-          fi
 
           exit "$missing"
 
@@ -119,7 +92,7 @@ jobs:
             RUN_DATE="$(TZ=America/Lima date -d 'yesterday' +%F)"
           fi
 
-          STORES="${INPUT_STORES:-CR,HN}"
+          STORES="${INPUT_STORES:-CR,HN,KA}"
           echo "run_date=$RUN_DATE" >> "$GITHUB_OUTPUT"
           echo "stores=$STORES" >> "$GITHUB_OUTPUT"
           echo "Snapshot date: $RUN_DATE"
@@ -127,6 +100,47 @@ jobs:
 
       - name: Import Boxful stock
         run: |
+          check_secret() {
+            env_name="$1"
+            secret_name="$2"
+            if [ -z "${!env_name}" ]; then
+              echo "::error::Falta GitHub Repository Secret: $secret_name"
+              return 1
+            fi
+            return 0
+          }
+
+          validate_store() {
+            store_key="$1"
+            missing=0
+
+            case "$store_key" in
+              CR)
+                check_secret "STORE_CR_BOXFUL_EMAIL" "STORE_CR_BOXFUL_EMAIL" || missing=1
+                check_secret "STORE_CR_BOXFUL_PASSWORD" "STORE_CR_BOXFUL_PASSWORD" || missing=1
+                check_secret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL" || missing=1
+                check_secret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN" || missing=1
+                ;;
+              HN)
+                check_secret "STORE_HN_BOXFUL_EMAIL" "STORE_HN_BOXFUL_EMAIL" || missing=1
+                check_secret "STORE_HN_BOXFUL_PASSWORD" "STORE_HN_BOXFUL_PASSWORD" || missing=1
+                check_secret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL" || missing=1
+                check_secret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN" || missing=1
+                ;;
+              KA)
+                check_secret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL" || missing=1
+                check_secret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN" || missing=1
+                ;;
+              *)
+                echo "::error::Tienda no soportada: $store_key"
+                missing=1
+                ;;
+            esac
+
+            return "$missing"
+          }
+
+          failed_stores=()
           IFS=',' read -ra STORE_LIST <<< "${{ steps.vars.outputs.stores }}"
           for raw_store in "${STORE_LIST[@]}"; do
             store="$(echo "$raw_store" | xargs | tr '[:lower:]' '[:upper:]')"
@@ -135,6 +149,19 @@ jobs:
             fi
 
             echo "::group::Import $store"
-            python main.py --store "$store" --run-date "${{ steps.vars.outputs.run_date }}" --headless
+            if ! validate_store "$store"; then
+              failed_stores+=("$store:secrets")
+              echo "::endgroup::"
+              continue
+            fi
+
+            if ! python main.py --store "$store" --run-date "${{ steps.vars.outputs.run_date }}" --headless; then
+              failed_stores+=("$store:import")
+            fi
             echo "::endgroup::"
           done
+
+          if [ "${#failed_stores[@]}" -gt 0 ]; then
+            echo "::error::Fallaron tiendas: ${failed_stores[*]}"
+            exit 1
+          fi
