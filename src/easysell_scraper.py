@@ -117,7 +117,11 @@ def scrape_easysell_section(
     page.goto(url, wait_until="domcontentloaded")
     time.sleep(3)
     assert_shopify_session(page, store)
-    surface = get_easysell_surface(page, wait_seconds=challenge_wait_seconds(headless))
+    surface = get_prepared_easysell_surface(
+        page,
+        section,
+        wait_seconds=challenge_wait_seconds(headless),
+    )
     if is_cloudflare_challenge(page):
         write_easysell_debug(page, surface, store, section)
         raise RuntimeError(
@@ -141,18 +145,18 @@ def scrape_easysell_section(
         detail = {}
 
         try:
-            surface = get_easysell_surface(page)
+            surface = get_prepared_easysell_surface(page, section)
             fresh_cards = extract_rule_cards(surface)
             detail_index = fresh_cards[index - 1]["index"] if index - 1 < len(fresh_cards) else card_info["index"]
             open_card_detail(surface, detail_index)
             time.sleep(2)
-            detail = extract_detail(get_easysell_surface(page), section)
+            detail = extract_detail(surface, section)
         except Exception as error:
             print(f"    Advertencia: detalle omitido para '{source_name}': {error}")
         finally:
             page.goto(url, wait_until="domcontentloaded")
             time.sleep(1)
-            scroll_to_load(get_easysell_surface(page))
+            scroll_to_load(get_prepared_easysell_surface(page, section))
 
         rule_name = detail.get("name") or source_name
         source_rule_id = detail.get("source_rule_id") or stable_key(rule_name)
@@ -337,64 +341,164 @@ def scroll_to_load(page) -> None:
         time.sleep(0.7)
 
 
+def get_prepared_easysell_surface(page, section: dict[str, str], wait_seconds: int = 45):
+    surface = get_easysell_surface(page, wait_seconds=wait_seconds)
+    if section.get("rule_type") == "quantity_offer":
+        surface = enter_quantity_offers_list(page, surface)
+    return surface
+
+
 def get_easysell_surface(page, wait_seconds: int = 45):
     deadline = time.time() + max(1, wait_seconds)
     fallback_frame = None
     while time.time() < deadline:
-        for frame in page.frames:
-            body_text = safe_inner_text(frame, "body")
-            if is_easysell_body(body_text):
-                return frame
-
-        body_text = safe_inner_text(page, "body")
-        if is_easysell_body(body_text):
-            return page
+        iframe_frame = find_easysell_iframe_frame(page)
+        if iframe_frame:
+            fallback_frame = iframe_frame
+            body_text = safe_inner_text(iframe_frame, "body")
+            if is_easysell_app_body(body_text):
+                return iframe_frame
 
         for frame in page.frames:
             frame_url = (frame.url or "").lower()
-            if is_easysell_frame(frame_url):
-                fallback_frame = frame
+            if not is_easysell_app_frame(frame_url):
+                continue
+            fallback_frame = frame
+            body_text = safe_inner_text(frame, "body")
+            if is_easysell_app_body(body_text):
+                return frame
+
+        for frame in page.frames:
+            frame_url = (frame.url or "").lower()
+            if is_shopify_admin_wrapper(frame_url):
+                continue
+            body_text = safe_inner_text(frame, "body")
+            if is_easysell_app_body(body_text):
+                return frame
+
+        page_url = (page.url or "").lower()
+        if not is_shopify_admin_wrapper(page_url):
+            body_text = safe_inner_text(page, "body")
+            if is_easysell_app_body(body_text):
+                return page
 
         time.sleep(1)
 
     return fallback_frame or page
 
 
-def is_easysell_frame(frame_url: str) -> bool:
+def find_easysell_iframe_frame(page):
+    selectors = [
+        "iframe[name='app-iframe']",
+        "iframe[title*='EasySell']",
+        "iframe[src*='quick.tyslo.com']",
+        "iframe[src*='quick-order-4']",
+    ]
+    for selector in selectors:
+        try:
+            locator = page.locator(selector).first
+            if locator.count() == 0:
+                continue
+            handle = locator.element_handle(timeout=1000)
+            if not handle:
+                continue
+            frame = handle.content_frame()
+            if frame:
+                return frame
+        except Exception:
+            continue
+    return None
+
+
+def is_easysell_app_frame(frame_url: str) -> bool:
     return (
-        "quick-order-4" in frame_url
-        or "easysell" in frame_url
-        or "/upsells/" in frame_url
-        or "/offers" in frame_url
+        "quick.tyslo.com" in frame_url
+        or ("easysell" in frame_url and "admin.shopify.com" not in frame_url)
+        or ("/upsells/" in frame_url and "admin.shopify.com" not in frame_url)
+        or ("/offers" in frame_url and "admin.shopify.com" not in frame_url)
     )
 
 
-def is_easysell_body(body_text: str) -> bool:
+def is_shopify_admin_wrapper(frame_url: str) -> bool:
+    return "admin.shopify.com" in frame_url and "quick-order-4" in frame_url
+
+
+def is_easysell_app_body(body_text: str) -> bool:
     normalized = normalize_text(body_text)
     if any(
         marker in normalized
         for marker in [
-            "easysell cod form",
             "1-click upsells",
             "1-tick upsell",
-            "ofertas de cantidad",
-            "upsells y downsells",
+            "crear 1-click upsell",
+            "crear 1-tick upsell",
+            "crear oferta",
+            "ofertas por cantidad",
+            "ofertas y paquetes por cantidad",
+            "paquetes por cantidad",
             "ultimos 30 dias",
+            "tasa de conversion",
+            "aun no hay datos",
+            "aplicado a",
         ]
     ):
         return True
     return any(
         marker in body_text
         for marker in [
-            "easysell cod form",
             "1-click upsells",
             "1-tick upsell",
-            "ofertas de cantidad",
-            "upsells y downsells",
+            "Crear 1-Click Upsell",
+            "Crear 1-Tick Upsell",
+            "Crear oferta",
+            "Ofertas por Cantidad",
+            "Ofertas y Paquetes por Cantidad",
             "ultimos 30 dias",
-            "últimos 30 días",
+            "Últimos 30 días",
+            "Ãºltimos 30 dÃ­as",
+            "Tasa de conversión",
+            "Tasa de conversiÃ³n",
+            "Aún no hay datos",
+            "AÃºn no hay datos",
         ]
     )
+
+
+def enter_quantity_offers_list(page, surface):
+    body_text = safe_inner_text(surface, "body")
+    normalized = normalize_text(body_text)
+    has_rule_metrics = any(
+        marker in normalized
+        for marker in [
+            "ultimos 30 dias",
+            "tasa de conversion",
+            "aplicado a",
+            "impresiones",
+            "pedidos",
+            "ingresos adicionales",
+        ]
+    )
+    on_landing = (
+        "ofertas y paquetes por cantidad" in normalized
+        or "ofertas por cantidad" in normalized
+        or "paquetes por cantidad" in normalized
+    )
+    if not on_landing or has_rule_metrics:
+        return surface
+
+    try:
+        entry = surface.locator(
+            "button, a",
+            has_text=re.compile(r"ofertas\s+por\s+cantidad", re.I),
+        ).first
+        if entry.count() > 0:
+            entry.click(timeout=10000)
+            time.sleep(2)
+            return get_easysell_surface(page, wait_seconds=15)
+    except Exception as error:
+        print(f"    Advertencia: no se pudo abrir lista de ofertas de cantidad: {error}")
+
+    return surface
 
 
 def write_easysell_debug(page, surface, store: Store, section: dict[str, str]) -> None:
@@ -420,6 +524,14 @@ def write_easysell_debug(page, surface, store: Store, section: dict[str, str]) -
             "url": frame.url,
             "snippet": clean_line(snippet)[:2000],
         })
+        try:
+            if index < 8:
+                (output_dir / f"{prefix}_frame{index}.html").write_text(
+                    frame.content(),
+                    encoding="utf-8",
+                )
+        except Exception as error:
+            print(f"    Advertencia: no se pudo escribir HTML frame[{index}]: {error}")
         if index < 8:
             print(f"      frame[{index}] url={frame.url}")
             print(f"      frame[{index}] text={clean_line(snippet)[:250]}")
@@ -460,7 +572,8 @@ def extract_rule_cards(page) -> list[dict[str, Any]]:
     return page.evaluate(
         """
         () => {
-          const metricPattern = /(últimos 30|ultimos 30|tasa de conversi|aún no hay datos|aun no hay datos|aplicado a \\d+ productos|productos espec)/i;
+          const metricPattern = /(últimos 30|ultimos 30|tasa de conversi|aún no hay datos|aun no hay datos|impresiones|pedidos|ingresos adicionales|aplicado a \\d+ productos?|productos espec)/i;
+          const metricPatternGlobal = /(últimos 30|ultimos 30|tasa de conversi|aún no hay datos|aun no hay datos|impresiones|pedidos|ingresos adicionales|aplicado a \\d+ productos?|productos espec)/gi;
           const candidates = [];
           const seen = new Set();
 
@@ -470,9 +583,11 @@ def extract_rule_cards(page) -> list[dict[str, Any]]:
           }
 
           function activeState(container) {
-            const buttons = Array.from(container.querySelectorAll('button'));
-            const toggle = buttons[0];
+            const toggle = container.querySelector('button[role="switch"]') || container.querySelector('button');
             if (!toggle) return false;
+            const className = String(toggle.className || '');
+            if (/(^|\\s|_)track_on(\\s|_|$)/i.test(className)) return true;
+            if (/\\bfalse\\b/i.test(className) && !/(^|\\s|_)track_on(\\s|_|$)/i.test(className)) return false;
             const aria = toggle.getAttribute('aria-checked') || toggle.getAttribute('data-state');
             if (aria && /true|checked|on/i.test(aria)) return true;
             if (aria && /false|unchecked|off/i.test(aria)) return false;
@@ -499,6 +614,33 @@ def extract_rule_cards(page) -> list[dict[str, Any]]:
             return '';
           }
 
+          function addCandidate(card) {
+            if (!card || seen.has(card) || !visible(card)) return;
+            const text = (card.innerText || '').trim();
+            const metricCount = (text.match(metricPatternGlobal) || []).length;
+            if (!metricPattern.test(text) || metricCount < 1 || metricCount > 5) return;
+            if (text.length < 20 || text.length > 900) return;
+            const buttons = card.querySelectorAll('button').length;
+            if (buttons < 1 || buttons > 8) return;
+            seen.add(card);
+            const index = candidates.length;
+            card.dataset.easysellScrapeIndex = String(index);
+            candidates.push({
+              index,
+              text,
+              name: cardName(card),
+              active: activeState(card),
+            });
+          }
+
+          for (const card of Array.from(document.querySelectorAll('[class*="Polaris-ShadowBevel"]'))) {
+            addCandidate(card);
+          }
+
+          if (candidates.length > 0) {
+            return candidates;
+          }
+
           for (const node of Array.from(document.querySelectorAll('body *'))) {
             if (!visible(node)) continue;
             const text = (node.innerText || '').trim();
@@ -507,23 +649,15 @@ def extract_rule_cards(page) -> list[dict[str, Any]]:
             let card = null;
             for (let depth = 0; depth < 9 && cursor; depth += 1) {
               const cursorText = (cursor.innerText || '').trim();
+              const metricCount = (cursorText.match(metricPatternGlobal) || []).length;
               const buttons = cursor.querySelectorAll('button').length;
-              if (buttons >= 2 && cursorText.length > 20 && cursorText.length < 2600) {
+              if (buttons >= 1 && buttons <= 8 && metricCount >= 1 && metricCount <= 5 && cursorText.length > 20 && cursorText.length < 900) {
                 card = cursor;
                 break;
               }
               cursor = cursor.parentElement;
             }
-            if (!card || seen.has(card)) continue;
-            seen.add(card);
-            const index = candidates.length;
-            card.dataset.easysellScrapeIndex = String(index);
-            candidates.push({
-              index,
-              text: card.innerText || '',
-              name: cardName(card),
-              active: activeState(card),
-            });
+            addCandidate(card);
           }
           return candidates;
         }
@@ -537,12 +671,20 @@ def open_card_detail(page, card_index: int) -> None:
     count = buttons.count()
     if count < 2:
         raise RuntimeError("No se encontro boton de edicion en la regla.")
+    before_url = getattr(page, "url", "")
     buttons.nth(count - 2).click()
+    deadline = time.time() + 15
+    while time.time() < deadline:
+        current_url = getattr(page, "url", "")
+        if current_url != before_url and "/edit" in current_url:
+            break
+        time.sleep(0.5)
+    else:
+        raise RuntimeError("No se abrio el detalle de edicion de la regla EasySell.")
     try:
-        page.wait_for_url(re.compile(r".*/(edit|offers|funnels|bumps)/?.*"), timeout=10000)
+        page.wait_for_load_state("domcontentloaded", timeout=10000)
     except PlaywrightTimeoutError:
         pass
-    page.wait_for_load_state("domcontentloaded")
 
 
 def extract_detail(page, section: dict[str, str]) -> dict[str, Any]:
@@ -693,14 +835,18 @@ class ShopifyProductResolver:
     def __init__(self, store: Store):
         self.store = store
         self.cache: dict[str, ResolvedProduct] = {}
+        self.name_cache: dict[str, ResolvedProduct] = {}
+        self.products_cache: list[dict[str, Any]] | None = None
         self.api_version = os.environ.get("SHOPIFY_API_VERSION", DEFAULT_API_VERSION)
         self.domain = normalize_shopify_domain(store.shopify_url)
 
     def resolve(self, product: dict[str, Any]) -> ResolvedProduct:
         product_id = str(product.get("product_id") or "").strip()
         product_name = str(product.get("product_name") or "").strip()
-        if not product_id or not self.store.shopify_token or not self.domain:
+        if not self.store.shopify_token or not self.domain:
             return ResolvedProduct(product_id=product_id, product_name=product_name)
+        if not product_id:
+            return self._resolve_product_name(product_name) or ResolvedProduct(product_name=product_name)
 
         if product_id in self.cache:
             cached = self.cache[product_id]
@@ -716,6 +862,41 @@ class ShopifyProductResolver:
 
         self.cache[product_id] = resolved
         return resolved
+
+    def _resolve_product_name(self, product_name: str) -> ResolvedProduct | None:
+        normalized_name = normalize_product_lookup(product_name)
+        if not normalized_name:
+            return None
+        if normalized_name in self.name_cache:
+            return self.name_cache[normalized_name]
+
+        products = self._list_products()
+        best_product = None
+        best_score = 0.0
+        for product in products:
+            score = product_name_score(product_name, str(product.get("title") or ""))
+            if score > best_score:
+                best_product = product
+                best_score = score
+
+        if not best_product or best_score < 0.45:
+            return None
+
+        resolved = self._resolved_from_product(best_product)
+        self.name_cache[normalized_name] = resolved
+        if resolved.product_id:
+            self.cache[resolved.product_id] = resolved
+        return resolved
+
+    def _list_products(self) -> list[dict[str, Any]]:
+        if self.products_cache is not None:
+            return self.products_cache
+        data = self._shopify_get("products.json", {
+            "limit": "250",
+            "fields": "id,title,image,variants",
+        })
+        self.products_cache = data.get("products") if data else []
+        return self.products_cache
 
     def _resolve_product_id(self, product_id: str) -> ResolvedProduct | None:
         data = self._shopify_get(f"products/{product_id}.json", {"fields": "id,title,image,variants"})
@@ -775,6 +956,59 @@ class ShopifyProductResolver:
 
 def normalize_shopify_domain(value: str) -> str:
     return re.sub(r"/.*$", "", re.sub(r"^https?://", "", value or "", flags=re.I)).strip()
+
+
+def normalize_product_lookup(value: str) -> str:
+    text = normalize_text(value)
+    replacements = {
+        "magnesio": "magnesium",
+        "magnesium": "magnesium",
+        "capsula": "capsulas",
+        "capsulas": "capsulas",
+    }
+    for source, target in replacements.items():
+        text = re.sub(rf"\b{source}\b", target, text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def product_name_score(query: str, title: str) -> float:
+    query_norm = normalize_product_lookup(query)
+    title_norm = normalize_product_lookup(title)
+    if not query_norm or not title_norm:
+        return 0.0
+    if query_norm == title_norm:
+        return 1.0
+    if query_norm in title_norm or title_norm in query_norm:
+        return 0.9
+
+    stop_words = {
+        "para",
+        "con",
+        "por",
+        "del",
+        "los",
+        "las",
+        "una",
+        "uno",
+        "the",
+        "and",
+        "formula",
+        "formulas",
+        "capsulas",
+        "capsula",
+    }
+    query_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", query_norm)
+        if len(token) > 2 and token not in stop_words
+    }
+    title_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", title_norm)
+        if len(token) > 2 and token not in stop_words
+    }
+    if not query_tokens or not title_tokens:
+        return 0.0
+    overlap = len(query_tokens & title_tokens)
+    return overlap / max(len(query_tokens), 1)
 
 
 def safe_inner_text(page, selector: str) -> str:
