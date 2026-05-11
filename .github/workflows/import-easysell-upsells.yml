@@ -62,6 +62,7 @@ jobs:
           $pythonVersion = "3.12.10"
           $pythonRoot = Join-Path $env:RUNNER_TEMP "python-$pythonVersion-embed-amd64"
           $pythonExe = Join-Path $pythonRoot "python.exe"
+          $repoRoot = (Get-Location).Path
 
           if (-not (Test-Path -LiteralPath $pythonExe)) {
             $zipPath = Join-Path $env:RUNNER_TEMP "python-$pythonVersion-embed-amd64.zip"
@@ -77,18 +78,22 @@ jobs:
               -OutFile $zipPath
             Expand-Archive -LiteralPath $zipPath -DestinationPath $pythonRoot -Force
 
-            $pthFile = Get-ChildItem -LiteralPath $pythonRoot -Filter "python*._pth" | Select-Object -First 1
-            if ($pthFile) {
-              (Get-Content -LiteralPath $pthFile.FullName) `
-                -replace "^#import site$", "import site" |
-                Set-Content -LiteralPath $pthFile.FullName -Encoding ascii
-            }
-
             Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile $getPipPath
             & $pythonExe $getPipPath
           }
 
+          $pthFile = Get-ChildItem -LiteralPath $pythonRoot -Filter "python*._pth" | Select-Object -First 1
+          if ($pthFile) {
+            $pthLines = Get-Content -LiteralPath $pthFile.FullName
+            $pthLines = $pthLines -replace "^#import site$", "import site"
+            if ($pthLines -notcontains $repoRoot) {
+              $pthLines = @($repoRoot) + $pthLines
+            }
+            $pthLines | Set-Content -LiteralPath $pthFile.FullName -Encoding ascii
+          }
+
           $pythonRoot | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "PYTHONPATH=$repoRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           & $pythonExe --version
           & $pythonExe -m pip --version
 
@@ -121,6 +126,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m playwright install chromium
+          python -c "import src.config; print('Repo import OK')"
 
       - name: Determine run date and stores
         id: vars
@@ -204,8 +210,15 @@ jobs:
               continue
             }
 
-            python import_easysell_to_supabase.py --run-date "${{ steps.vars.outputs.run_date }}" --store "$store" --fail-on-zero
-            if ($LASTEXITCODE -ne 0) {
+            $logPath = Join-Path $env:EASYSELL_DEBUG_DIR "$store-import.log"
+            $output = & python import_easysell_to_supabase.py --run-date "${{ steps.vars.outputs.run_date }}" --store "$store" --fail-on-zero 2>&1
+            $exitCode = $LASTEXITCODE
+            $output | ForEach-Object { Write-Host $_ }
+            $output | Out-File -FilePath $logPath -Encoding utf8
+
+            if ($exitCode -ne 0) {
+              $tail = (($output | Select-Object -Last 20) -join "%0A")
+              Write-Host "::error title=EasySell $store fallo::$tail"
               $failedStores += "${store}:import"
             }
 
