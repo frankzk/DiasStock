@@ -57,10 +57,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Setup portable Python
+        run: |
+          $pythonVersion = "3.12.10"
+          $pythonRoot = Join-Path $env:RUNNER_TEMP "python-$pythonVersion-embed-amd64"
+          $pythonExe = Join-Path $pythonRoot "python.exe"
+
+          if (-not (Test-Path -LiteralPath $pythonExe)) {
+            $zipPath = Join-Path $env:RUNNER_TEMP "python-$pythonVersion-embed-amd64.zip"
+            $getPipPath = Join-Path $env:RUNNER_TEMP "get-pip.py"
+
+            if (Test-Path -LiteralPath $pythonRoot) {
+              Remove-Item -LiteralPath $pythonRoot -Recurse -Force
+            }
+
+            New-Item -ItemType Directory -Force -Path $pythonRoot | Out-Null
+            Invoke-WebRequest `
+              -Uri "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip" `
+              -OutFile $zipPath
+            Expand-Archive -LiteralPath $zipPath -DestinationPath $pythonRoot -Force
+
+            $pthFile = Get-ChildItem -LiteralPath $pythonRoot -Filter "python*._pth" | Select-Object -First 1
+            if ($pthFile) {
+              (Get-Content -LiteralPath $pthFile.FullName) `
+                -replace "^#import site$", "import site" |
+                Set-Content -LiteralPath $pthFile.FullName -Encoding ascii
+            }
+
+            Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile $getPipPath
+            & $pythonExe $getPipPath
+          }
+
+          $pythonRoot | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $pythonExe --version
+          & $pythonExe -m pip --version
 
       - name: Validate global secrets
         run: |
