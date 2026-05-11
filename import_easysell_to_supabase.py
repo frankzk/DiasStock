@@ -2,9 +2,8 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import requests
 from dotenv import load_dotenv
@@ -15,6 +14,7 @@ from src.easysell_scraper import scrape_easysell_store
 
 DEFAULT_STORES = "CR,HN,KA"
 SUPABASE_PAGE_SIZE = 1000
+LIMA_TIMEZONE = timezone(timedelta(hours=-5))
 
 
 def main() -> int:
@@ -112,7 +112,7 @@ def load_easysell_stores(requested: str) -> list[Store]:
 
 
 def today_lima() -> str:
-    return datetime.now(ZoneInfo("America/Lima")).date().isoformat()
+    return datetime.now(LIMA_TIMEZONE).date().isoformat()
 
 
 def print_store_summary(rules: list[dict[str, Any]]) -> None:
@@ -189,7 +189,7 @@ def build_run_payload(
         "active_rules": sum(1 for rule in rules if rule.get("active")),
         "unmapped_rules": sum(1 for rule in rules if not rule.get("primary_sku")),
         "error_message": error_message,
-        "updated_at": datetime.now(ZoneInfo("UTC")).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
