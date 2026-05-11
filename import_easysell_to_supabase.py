@@ -9,12 +9,13 @@ import requests
 from dotenv import load_dotenv
 
 from src.config import Store
-from src.easysell_scraper import scrape_easysell_store
+from src.easysell_scraper import get_shopify_admin_slug, scrape_easysell_store
 
 
-DEFAULT_STORES = "CR,HN,KA"
+DEFAULT_STORES = "CR,HN"
 SUPABASE_PAGE_SIZE = 1000
 LIMA_TIMEZONE = timezone(timedelta(hours=-5))
+MAX_NUMERIC_14_2 = 999_999_999_999.99
 
 
 def configure_stdio_encoding() -> None:
@@ -45,6 +46,7 @@ def main() -> int:
     for store in stores:
         print(f"\n=== {store.key} {store.name} ===")
         try:
+            validate_store_config(store)
             result = scrape_easysell_store(
                 store,
                 run_date=run_date,
@@ -92,7 +94,7 @@ def main() -> int:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Importa reglas EasySell COD Form a Supabase.")
     parser.add_argument("--run-date", default="", help="Fecha del run YYYY-MM-DD. Vacio = hoy America/Lima.")
-    parser.add_argument("--stores", default=DEFAULT_STORES, help="Tiendas separadas por coma. Default: CR,HN,KA.")
+    parser.add_argument("--stores", default=DEFAULT_STORES, help="Tiendas separadas por coma. Default: CR,HN.")
     parser.add_argument("--store", default="", help="Atajo para una sola tienda, por ejemplo CR.")
     parser.add_argument("--dry-run", action="store_true", help="Scrapea y muestra resumen sin guardar.")
     parser.add_argument("--headed", action="store_true", help="Abre Chromium visible para depurar.")
@@ -122,6 +124,20 @@ def load_easysell_stores(requested: str) -> list[Store]:
     return stores
 
 
+def validate_store_config(store: Store) -> None:
+    missing = []
+    if not store.name or store.name == store.key:
+        missing.append(f"STORE_{store.key}_NAME")
+    if not get_shopify_admin_slug(store):
+        missing.append(f"STORE_{store.key}_SHOPIFY_ADMIN_SLUG")
+    if not store.shopify_url:
+        missing.append(f"STORE_{store.key}_SHOPIFY_URL")
+    if not store.shopify_token:
+        missing.append(f"STORE_{store.key}_SHOPIFY_TOKEN")
+    if missing:
+        raise RuntimeError("Faltan variables EasySell: " + ", ".join(missing))
+
+
 def today_lima() -> str:
     return datetime.now(LIMA_TIMEZONE).date().isoformat()
 
@@ -145,6 +161,23 @@ def print_store_summary(rules: list[dict[str, Any]]) -> None:
             f"  {rule_type}: {counts['total']} total, "
             f"{counts['active']} activa(s), {counts['mapped']} con SKU"
         )
+
+
+def sanitize_money(value: Any, field: str, context: str, default: float | None = None) -> float | None:
+    if value is None or value == "":
+        return default
+    try:
+        amount = round(float(value), 2)
+    except (TypeError, ValueError):
+        print(f"Advertencia: {field} invalido en {context}: {value!r}. Se guarda vacio.", file=sys.stderr)
+        return default
+    if abs(amount) >= MAX_NUMERIC_14_2:
+        print(
+            f"Advertencia: {field} fuera de rango en {context}: {amount}. Se guarda vacio.",
+            file=sys.stderr,
+        )
+        return default
+    return amount
 
 
 def save_store_result(client: "SupabaseClient", result: dict[str, Any]) -> None:
@@ -231,7 +264,12 @@ def upsert_easysell_rules(
             "impressions": int(rule.get("impressions") or 0),
             "orders_count": int(rule.get("orders_count") or 0),
             "conversion_rate": float(rule.get("conversion_rate") or 0),
-            "additional_revenue": float(rule.get("additional_revenue") or 0),
+            "additional_revenue": sanitize_money(
+                rule.get("additional_revenue"),
+                "additional_revenue",
+                f"{result['store_key']} {rule.get('rule_type', '')} {rule.get('rule_name', '')}",
+                default=0.0,
+            ),
             "currency": rule.get("currency", ""),
             "raw_metrics": rule.get("raw_metrics", ""),
             "detail_url": rule.get("detail_url", ""),
@@ -273,7 +311,11 @@ def insert_easysell_rule_products(
                 "product_name": product.get("product_name", ""),
                 "sku": product.get("sku", ""),
                 "image_url": product.get("image_url", ""),
-                "price_amount": product.get("price_amount"),
+                "price_amount": sanitize_money(
+                    product.get("price_amount"),
+                    "price_amount",
+                    f"{result['store_key']} {rule.get('rule_type', '')} {rule.get('rule_name', '')} / {product.get('product_name', '')}",
+                ),
                 "currency": product.get("currency", ""),
             })
 

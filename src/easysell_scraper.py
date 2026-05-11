@@ -22,6 +22,7 @@ DEFAULT_ADMIN_SLUGS = {
     "HN": "w0qckv-cz",
     "KA": "rayytn-ia",
 }
+CURRENCY_PATTERN = r"(?:[\u20a1$\u20ac]|USD|CRC|HNL|ARS|PEN|EUR|COP|MXN)"
 SECTION_CONFIGS = [
     {
         "rule_type": "one_click",
@@ -1064,7 +1065,7 @@ def guess_primary_name(rule_name: str) -> str:
     return text[-1].strip() if len(text) > 1 else rule_name
 
 
-def extract_price_near(lines: list[str], index: int) -> float | None:
+def _extract_price_near_legacy(lines: list[str], index: int) -> float | None:
     window = " ".join(lines[max(0, index - 4):index + 2])
     match = re.search(r"([₡$€]|[A-Z]{3})?\s*([\d.,]+)", window)
     if not match:
@@ -1072,7 +1073,7 @@ def extract_price_near(lines: list[str], index: int) -> float | None:
     return parse_decimal(match.group(2))
 
 
-def extract_currency_near(lines: list[str], index: int) -> str:
+def _extract_currency_near_legacy(lines: list[str], index: int) -> str:
     window = " ".join(lines[max(0, index - 4):index + 2])
     match = re.search(r"([₡$€]|USD|HNL|ARS|PEN)", window, re.I)
     return normalize_currency(match.group(1)) if match else ""
@@ -1107,13 +1108,38 @@ def parse_decimal(value: str) -> float:
         return 0.0
 
 
-def normalize_currency(value: str) -> str:
+def _normalize_currency_legacy(value: str) -> str:
     value = str(value or "").strip().upper()
     if value == "$":
         return "USD"
     if value == "₡":
         return "CRC"
     if value == "€":
+        return "EUR"
+    return value
+
+
+def extract_price_near(lines: list[str], index: int) -> float | None:
+    window = " ".join(lines[max(0, index - 4):index + 2])
+    match = re.search(rf"({CURRENCY_PATTERN})\s*([\d.,]+)", window, re.I)
+    if not match:
+        return None
+    return parse_decimal(match.group(2))
+
+
+def extract_currency_near(lines: list[str], index: int) -> str:
+    window = " ".join(lines[max(0, index - 4):index + 2])
+    match = re.search(rf"({CURRENCY_PATTERN})", window, re.I)
+    return normalize_currency(match.group(1)) if match else ""
+
+
+def normalize_currency(value: str) -> str:
+    value = str(value or "").strip().upper()
+    if value == "$":
+        return "USD"
+    if value in {"\u20a1", "CRC"}:
+        return "CRC"
+    if value in {"\u20ac", "EUR"}:
         return "EUR"
     return value
 
