@@ -20,6 +20,10 @@ concurrency:
   group: import-easysell-upsells
   cancel-in-progress: false
 
+defaults:
+  run:
+    shell: powershell -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+
 jobs:
   import-easysell-upsells:
     runs-on: [self-hosted, Windows, X64, diasstock-easysell]
@@ -59,7 +63,6 @@ jobs:
           python-version: "3.12"
 
       - name: Validate global secrets
-        shell: powershell
         run: |
           $missing = $false
 
@@ -84,7 +87,6 @@ jobs:
           }
 
       - name: Install dependencies
-        shell: powershell
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
@@ -92,7 +94,6 @@ jobs:
 
       - name: Determine run date and stores
         id: vars
-        shell: powershell
         env:
           INPUT_RUN_DATE: ${{ github.event.inputs.run_date }}
           INPUT_STORES: ${{ github.event.inputs.stores }}
@@ -114,7 +115,6 @@ jobs:
           Write-Host "Stores: $stores"
 
       - name: Import EasySell upsells
-        shell: powershell
         run: |
           if (Test-Path -LiteralPath $env:EASYSELL_DEBUG_DIR) {
             Remove-Item -LiteralPath $env:EASYSELL_DEBUG_DIR -Recurse -Force
