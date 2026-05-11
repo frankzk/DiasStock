@@ -57,31 +57,42 @@ def scrape_easysell_store(
     limit_rules: int = 0,
 ) -> dict[str, Any]:
     slug = get_shopify_admin_slug(store)
-    storage_state = load_shopify_storage_state()
+    user_data_dir = os.environ.get("SHOPIFY_ADMIN_USER_DATA_DIR", "").strip()
+    storage_state = load_shopify_storage_state(required=not user_data_dir)
     resolver = ShopifyProductResolver(store)
     rules: list[dict[str, Any]] = []
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(
-            headless=headless,
-            args=["--no-sandbox"] if headless else [],
-        )
-        context = browser.new_context(storage_state=storage_state, locale="es-PE")
-        page = context.new_page()
-        page.set_default_timeout(TIMEOUT)
+        browser = None
+        context = None
+        try:
+            if user_data_dir:
+                context = launch_persistent_admin_context(playwright, user_data_dir, headless)
+                apply_storage_state_to_context(context, storage_state)
+                page = context.pages[0] if context.pages else context.new_page()
+            else:
+                browser = launch_admin_browser(playwright, headless)
+                context = browser.new_context(storage_state=storage_state, locale="es-PE")
+                page = context.new_page()
 
-        for section in SECTION_CONFIGS:
-            section_rules = scrape_easysell_section(
-                page,
-                store,
-                slug,
-                section,
-                resolver,
-                limit_rules=limit_rules,
-            )
-            rules.extend(section_rules)
+            page.set_default_timeout(TIMEOUT)
 
-        browser.close()
+            for section in SECTION_CONFIGS:
+                section_rules = scrape_easysell_section(
+                    page,
+                    store,
+                    slug,
+                    section,
+                    resolver,
+                    limit_rules=limit_rules,
+                    headless=headless,
+                )
+                rules.extend(section_rules)
+        finally:
+            if context:
+                context.close()
+            if browser:
+                browser.close()
 
     return {
         "run_date": run_date,
@@ -99,13 +110,21 @@ def scrape_easysell_section(
     section: dict[str, str],
     resolver: "ShopifyProductResolver",
     limit_rules: int = 0,
+    headless: bool = True,
 ) -> list[dict[str, Any]]:
     url = f"{SHOPIFY_ADMIN_BASE}/{slug}{section['path']}"
     print(f"  EasySell {section['label']}: {url}")
     page.goto(url, wait_until="domcontentloaded")
     time.sleep(3)
     assert_shopify_session(page, store)
-    surface = get_easysell_surface(page)
+    surface = get_easysell_surface(page, wait_seconds=challenge_wait_seconds(headless))
+    if is_cloudflare_challenge(page):
+        write_easysell_debug(page, surface, store, section)
+        raise RuntimeError(
+            "Shopify Admin pidio verificacion Cloudflare. "
+            "En el runner local abre/resuelve la ventana de Chrome, o renueva el perfil "
+            "SHOPIFY_ADMIN_USER_DATA_DIR/SHOPIFY_ADMIN_STORAGE_STATE_B64."
+        )
     scroll_to_load(surface)
 
     cards = extract_rule_cards(surface)
@@ -198,7 +217,54 @@ def get_shopify_admin_slug(store: Store) -> str:
     return DEFAULT_ADMIN_SLUGS.get(store.key, "")
 
 
-def load_shopify_storage_state() -> dict[str, Any]:
+def launch_admin_browser(playwright, headless: bool):
+    options: dict[str, Any] = {
+        "headless": headless,
+        "args": ["--no-sandbox"] if headless else [],
+    }
+    browser_channel = os.environ.get("SHOPIFY_ADMIN_BROWSER_CHANNEL", "").strip()
+    if browser_channel:
+        options["channel"] = browser_channel
+    return playwright.chromium.launch(**options)
+
+
+def launch_persistent_admin_context(playwright, user_data_dir: str, headless: bool):
+    options: dict[str, Any] = {
+        "user_data_dir": user_data_dir,
+        "headless": headless,
+        "locale": "es-PE",
+        "args": ["--no-sandbox"] if headless else [],
+    }
+    browser_channel = os.environ.get("SHOPIFY_ADMIN_BROWSER_CHANNEL", "chrome").strip()
+    if browser_channel:
+        options["channel"] = browser_channel
+    return playwright.chromium.launch_persistent_context(**options)
+
+
+def apply_storage_state_to_context(context, storage_state: dict[str, Any] | None) -> None:
+    if not storage_state:
+        return
+
+    cookies = storage_state.get("cookies") or []
+    if cookies:
+        context.add_cookies(cookies)
+
+    for origin in storage_state.get("origins") or []:
+        origin_url = json.dumps(origin.get("origin") or "")
+        local_storage = json.dumps(origin.get("localStorage") or [])
+        context.add_init_script(
+            f"""
+            (() => {{
+              if (window.location.origin !== {origin_url}) return;
+              for (const item of {local_storage}) {{
+                window.localStorage.setItem(item.name, item.value);
+              }}
+            }})();
+            """
+        )
+
+
+def load_shopify_storage_state(required: bool = True) -> dict[str, Any] | None:
     raw = os.environ.get("SHOPIFY_ADMIN_STORAGE_STATE_B64", "").strip()
     if raw:
         try:
@@ -211,6 +277,9 @@ def load_shopify_storage_state() -> dict[str, Any]:
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as handle:
             return json.load(handle)
+
+    if not required:
+        return None
 
     raise RuntimeError(
         "Falta sesion Shopify. Genera una con generate_shopify_admin_session.py "
@@ -231,14 +300,45 @@ def assert_shopify_session(page, store: Store) -> None:
         )
 
 
+def challenge_wait_seconds(headless: bool) -> int:
+    env_value = os.environ.get("SHOPIFY_ADMIN_CHALLENGE_TIMEOUT_SECONDS", "").strip()
+    if env_value.isdigit():
+        return int(env_value)
+    return 45 if headless else 180
+
+
+def is_cloudflare_challenge(page) -> bool:
+    body_text = normalize_text(safe_inner_text(page, "body"))
+    if any(
+        marker in body_text
+        for marker in [
+            "se debe verificar tu conexion",
+            "verifying your connection",
+            "your connection needs to be verified",
+            "enable javascript and cookies to continue",
+        ]
+    ):
+        return True
+
+    for frame in page.frames:
+        frame_url = (frame.url or "").lower()
+        if "challenges.cloudflare.com" in frame_url or "cdn-cgi/challenge-platform" in frame_url:
+            return True
+
+    try:
+        return page.locator("input[name='cf-turnstile-response']").count() > 0
+    except Exception:
+        return False
+
+
 def scroll_to_load(page) -> None:
     for _ in range(8):
         page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         time.sleep(0.7)
 
 
-def get_easysell_surface(page):
-    deadline = time.time() + 45
+def get_easysell_surface(page, wait_seconds: int = 45):
+    deadline = time.time() + max(1, wait_seconds)
     fallback_frame = None
     while time.time() < deadline:
         for frame in page.frames:

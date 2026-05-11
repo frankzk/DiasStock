@@ -34,6 +34,9 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SHOPIFY_ADMIN_STORAGE_STATE_B64: ${{ secrets.SHOPIFY_ADMIN_STORAGE_STATE_B64 }}
+      SHOPIFY_ADMIN_BROWSER_CHANNEL: "chrome"
+      SHOPIFY_ADMIN_USER_DATA_DIR: "C:\\Users\\Pc\\.diasstock-shopify-admin-profile"
+      SHOPIFY_ADMIN_CHALLENGE_TIMEOUT_SECONDS: "180"
       EASYSELL_DEBUG_DIR: artifacts/easysell
 
       STORE_CR_NAME: "Mireva Costa Rica"
@@ -211,7 +214,7 @@ jobs:
             }
 
             $logPath = Join-Path $env:EASYSELL_DEBUG_DIR "$store-import.log"
-            $output = & python import_easysell_to_supabase.py --run-date "${{ steps.vars.outputs.run_date }}" --store "$store" --fail-on-zero 2>&1
+            $output = & python import_easysell_to_supabase.py --run-date "${{ steps.vars.outputs.run_date }}" --store "$store" --fail-on-zero --headed 2>&1
             $exitCode = $LASTEXITCODE
             $output | ForEach-Object { Write-Host $_ }
             $output | Out-File -FilePath $logPath -Encoding utf8
