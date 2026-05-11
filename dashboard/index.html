@@ -700,14 +700,21 @@
       min-width: 0;
     }
 
-    .product-menu-button {
+    .alert-picker {
+      position: relative;
+      min-width: 0;
+    }
+
+    .product-menu-button,
+    .alert-menu-button {
       width: 100%;
       padding: 0 10px;
       justify-content: space-between;
       white-space: nowrap;
     }
 
-    .product-menu-button::after {
+    .product-menu-button::after,
+    .alert-menu-button::after {
       content: "v";
       color: var(--muted);
       font-size: 10px;
@@ -715,7 +722,8 @@
       margin-left: 8px;
     }
 
-    .product-menu {
+    .product-menu,
+    .alert-menu {
       position: absolute;
       top: calc(100% + 6px);
       right: 0;
@@ -730,11 +738,17 @@
       padding: 6px;
     }
 
-    .product-menu.hidden {
+    .alert-menu {
+      width: min(260px, calc(100vw - 32px));
+    }
+
+    .product-menu.hidden,
+    .alert-menu.hidden {
       display: none;
     }
 
-    .product-option {
+    .product-option,
+    .alert-option {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: 8px;
@@ -747,17 +761,20 @@
       font-weight: 700;
     }
 
-    .product-option:hover {
+    .product-option:hover,
+    .alert-option:hover {
       background: var(--soft);
     }
 
-    .product-option input {
+    .product-option input,
+    .alert-option input {
       width: 14px;
       min-height: 14px;
       margin: 0;
     }
 
-    .product-option span {
+    .product-option span,
+    .alert-option span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -819,6 +836,16 @@
       gap: 0 8px;
       min-height: 58px;
       padding: 7px 10px;
+    }
+
+    button.summary-chip {
+      width: 100%;
+      text-align: left;
+    }
+
+    .summary-chip.summary-action:hover {
+      border-color: #b9d6cf;
+      background: #f2faf7;
     }
 
     .metric-label {
@@ -997,6 +1024,42 @@
 
     .priority-more.hidden {
       display: none;
+    }
+
+    .priority-modal {
+      width: min(92vw, 980px);
+      height: min(82vh, 720px);
+    }
+
+    .priority-modal-body {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      min-height: 0;
+      padding: 10px;
+      overflow: auto;
+      background: var(--bg);
+    }
+
+    .priority-modal-column {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 7px;
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      padding: 8px;
+    }
+
+    .priority-modal-list {
+      display: grid;
+      align-content: start;
+      gap: 6px;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
     }
 
     .compact-empty {
@@ -1375,31 +1438,31 @@
       border-collapse: collapse;
     }
 
-    .col-history { width: 4%; }
-    .col-date { width: 5.2%; }
-    .col-store { width: 5.4%; }
-    .col-image { width: 3.8%; }
-    .col-product { width: 13%; }
-    .col-sku { width: 6.3%; }
-    .col-stock { width: 4%; }
-    .col-sold { width: 4.3%; }
+    .col-history { width: 3.1%; }
+    .col-date { width: 4.9%; }
+    .col-store { width: 5%; }
+    .col-image { width: 4.6%; }
+    .col-product { width: 15.2%; }
+    .col-sku { width: 5.7%; }
+    .col-stock { width: 3.7%; }
+    .col-sold { width: 4%; }
     .col-ad-spend { width: 5.2%; }
-    .col-ad-cpa { width: 4.7%; }
-    .col-average { width: 4.8%; }
+    .col-ad-cpa { width: 4.8%; }
+    .col-average { width: 6.4%; }
     .col-days { width: 5.2%; }
-    .col-inventory { width: 7.7%; }
-    .col-sale { width: 6.2%; }
-    .col-easysell { width: 8.5%; }
-    .col-alert { width: 11.7%; }
+    .col-inventory { width: 7.4%; }
+    .col-sale { width: 6.1%; }
+    .col-easysell { width: 6.4%; }
+    .col-alert { width: 12.3%; }
 
     th,
     td {
       border-bottom: 1px solid var(--line);
-      padding: 5px 6px;
+      padding: 4px 5px;
       text-align: left;
       vertical-align: middle;
       font-size: 11px;
-      line-height: 1.25;
+      line-height: 1.2;
       overflow-wrap: anywhere;
     }
 
@@ -1494,13 +1557,15 @@
 
     .product-cell {
       font-weight: 800;
-      overflow-wrap: anywhere;
+      line-height: 1.18;
+      overflow-wrap: break-word;
     }
 
     .product-thumb {
       display: block;
-      width: 28px;
-      height: 28px;
+      width: 34px;
+      height: 34px;
+      margin: 0 auto;
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: #f3f5f4;
@@ -1509,8 +1574,9 @@
 
     .image-placeholder {
       display: grid;
-      width: 28px;
-      height: 28px;
+      width: 34px;
+      height: 34px;
+      margin: 0 auto;
       place-items: center;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -1523,19 +1589,20 @@
     .sku {
       color: var(--muted);
       font-family: var(--mono);
-      font-size: 11px;
+      font-size: 10px;
+      line-height: 1.12;
       overflow-wrap: anywhere;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      min-height: 20px;
+      gap: 4px;
+      min-height: 18px;
       border: 1px solid var(--line);
       border-radius: 999px;
-      padding: 0 7px;
-      font-size: 11px;
+      padding: 0 6px;
+      font-size: 10px;
       font-weight: 800;
       white-space: nowrap;
       max-width: 100%;
@@ -1784,7 +1851,7 @@
 
     .trend-cell {
       display: grid;
-      gap: 2px;
+      gap: 1px;
       justify-items: end;
       min-width: 0;
     }
@@ -1792,12 +1859,13 @@
     .trend-cell strong {
       font-weight: 800;
       line-height: 1;
+      text-align: right;
     }
 
     .sparkline {
       display: block;
-      width: min(66px, 100%);
-      height: 18px;
+      width: min(82px, 100%);
+      height: 22px;
       overflow: visible;
     }
 
@@ -1819,8 +1887,8 @@
     }
 
     .sparkline-empty {
-      width: min(66px, 100%);
-      height: 18px;
+      width: min(82px, 100%);
+      height: 22px;
       border-radius: 999px;
       background: repeating-linear-gradient(90deg, #e8eeeb 0 7px, transparent 7px 12px);
       opacity: 0.7;
@@ -1918,6 +1986,7 @@
       .insight-row,
       .portfolio-chart-layout,
       .portfolio-modal-layout,
+      .priority-modal-body,
       .easysell-modal-summary,
       .easysell-rule-grid,
       .priority-columns {
@@ -2248,16 +2317,16 @@
           <p class="metric-value" id="metricProducts">0</p>
           <p class="metric-note" id="metricProductsNote">Sin filtros</p>
         </article>
-        <article class="summary-chip">
+        <button type="button" class="summary-chip summary-action" id="metricReorderBtn" aria-label="Filtrar alertas de reordenar">
           <p class="metric-label">Reordenar</p>
           <p class="metric-value" id="metricReorder">0</p>
           <p class="metric-note">Urgente o pronto</p>
-        </article>
-        <article class="summary-chip">
+        </button>
+        <button type="button" class="summary-chip summary-action" id="metricOverstockBtn" aria-label="Filtrar alertas de sobrestock">
           <p class="metric-label">Sobrestock</p>
           <p class="metric-value" id="metricOverstock">0</p>
           <p class="metric-note">Riesgo activo</p>
-        </article>
+        </button>
         <article class="summary-chip">
           <p class="metric-label">Dias Stock promedio</p>
           <p class="metric-value" id="metricMedian">0</p>
@@ -2310,7 +2379,7 @@
               <div class="priority-list" id="overstockPriorityList"></div>
             </section>
           </div>
-          <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-expanded="false">Ver mas</button>
+          <button type="button" class="priority-more hidden" id="priorityMoreBtn" aria-haspopup="dialog">Ver mas</button>
         </article>
 
         <article class="portfolio-map" aria-label="Mapa de cartera">
@@ -2364,10 +2433,15 @@
             <span>Estado venta</span>
             <select id="saleStatusFilter"></select>
           </label>
-          <label class="field filter-control" data-filter-field="alert" for="alertFilter">
-            <span>Alerta</span>
-            <select id="alertFilter"></select>
-          </label>
+          <div class="field filter-control" data-filter-field="alert">
+            <span id="alertFilterLabel">Alerta</span>
+            <div class="alert-picker" id="alertPicker">
+              <button type="button" class="alert-menu-button" id="alertMenuButton" aria-labelledby="alertFilterLabel" aria-haspopup="true" aria-expanded="false">Todas</button>
+              <div class="alert-menu hidden" id="alertMenu">
+                <div id="alertChecklist"></div>
+              </div>
+            </div>
+          </div>
           <label class="range-field filter-control" data-filter-field="stock" for="stockMin">
             <span>Stock</span>
             <span class="range-inputs">
@@ -2471,6 +2545,37 @@
       </section>
     </div>
 
+    <div class="portfolio-modal-backdrop hidden" id="priorityModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="priorityModalTitle">
+      <section class="portfolio-modal priority-modal" aria-label="Detalle de prioridades">
+        <div class="portfolio-modal-header">
+          <div class="portfolio-modal-title">
+            <h2 id="priorityModalTitle">Prioridad</h2>
+            <p>Alertas completas con los filtros actuales</p>
+          </div>
+          <div class="portfolio-modal-actions">
+            <span class="count-pill" id="priorityModalTotal">0 alertas</span>
+            <button type="button" class="portfolio-modal-close" id="priorityModalClose" aria-label="Cerrar prioridades">&times;</button>
+          </div>
+        </div>
+        <div class="priority-modal-body">
+          <section class="priority-modal-column" aria-label="Reordenar urgente completo">
+            <div class="priority-column-title">
+              <span>Reordenar urgente</span>
+              <span class="count-pill" id="priorityModalReorderTotal">0</span>
+            </div>
+            <div class="priority-modal-list" id="priorityModalReorderList"></div>
+          </section>
+          <section class="priority-modal-column" aria-label="Riesgo de sobrestock completo">
+            <div class="priority-column-title">
+              <span>Riesgo sobrestock</span>
+              <span class="count-pill" id="priorityModalOverstockTotal">0</span>
+            </div>
+            <div class="priority-modal-list" id="priorityModalOverstockList"></div>
+          </section>
+        </div>
+      </section>
+    </div>
+
     <div class="portfolio-modal-backdrop hidden" id="easysellModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="easysellModalTitle">
       <section class="portfolio-modal" aria-label="Detalle EasySell por SKU">
         <div class="portfolio-modal-header">
@@ -2565,7 +2670,7 @@
       editingAdsSheetUrl: false,
       adsProblem: "",
       expandedProductKeys: new Set(),
-      showAllPriority: false,
+      priorityModalOpen: false,
       portfolioModalOpen: false,
       easysellModalOpen: false,
       easysellModalKey: "",
@@ -2623,6 +2728,10 @@
       productMenuButton: $("#productMenuButton"),
       productMenu: $("#productMenu"),
       productChecklist: $("#productChecklist"),
+      alertPicker: $("#alertPicker"),
+      alertMenuButton: $("#alertMenuButton"),
+      alertMenu: $("#alertMenu"),
+      alertChecklist: $("#alertChecklist"),
       storePicker: $("#storePicker"),
       storeMenuButton: $("#storeMenuButton"),
       storeMenu: $("#storeMenu"),
@@ -2630,7 +2739,6 @@
       dateFilter: $("#dateFilter"),
       statusFilter: $("#statusFilter"),
       saleStatusFilter: $("#saleStatusFilter"),
-      alertFilter: $("#alertFilter"),
       stockMin: $("#stockMin"),
       stockMax: $("#stockMax"),
       soldMin: $("#soldMin"),
@@ -2653,6 +2761,13 @@
       reorderPriorityList: $("#reorderPriorityList"),
       overstockPriorityList: $("#overstockPriorityList"),
       priorityMoreBtn: $("#priorityMoreBtn"),
+      priorityModalBackdrop: $("#priorityModalBackdrop"),
+      priorityModalClose: $("#priorityModalClose"),
+      priorityModalTotal: $("#priorityModalTotal"),
+      priorityModalReorderTotal: $("#priorityModalReorderTotal"),
+      priorityModalOverstockTotal: $("#priorityModalOverstockTotal"),
+      priorityModalReorderList: $("#priorityModalReorderList"),
+      priorityModalOverstockList: $("#priorityModalOverstockList"),
       portfolioExpandBtn: $("#portfolioExpandBtn"),
       portfolioMapChart: $("#portfolioMapChart"),
       portfolioAdsCount: $("#portfolioAdsCount"),
@@ -2671,6 +2786,8 @@
       metricProductsNote: $("#metricProductsNote"),
       metricReorder: $("#metricReorder"),
       metricOverstock: $("#metricOverstock"),
+      metricReorderBtn: $("#metricReorderBtn"),
+      metricOverstockBtn: $("#metricOverstockBtn"),
       metricMedian: $("#metricMedian"),
       metricAdSpend: $("#metricAdSpend"),
       metricAdCpa: $("#metricAdCpa"),
@@ -2728,7 +2845,7 @@
       state.adsProblem = "";
       state.salesProblem = "";
       state.expandedProductKeys.clear();
-      state.showAllPriority = false;
+      state.priorityModalOpen = false;
       buildFilters();
       renderAdsConfig();
       renderStockImageConfig();
@@ -2946,7 +3063,7 @@
         await loadAdsTables(client);
         await loadEasySellTables(client);
         state.expandedProductKeys.clear();
-        state.showAllPriority = false;
+        state.priorityModalOpen = false;
         buildFilters();
         renderAdsConfig();
         applyFilters();
@@ -3028,14 +3145,57 @@
 
     async function loadEasySellTables(client) {
       state.easysellProblem = "";
-      const [runs, rules, products] = await Promise.all([
-        fetchOptionalEasySellTable(client.from("easysell_import_runs").select("*").order("run_date", { ascending: false }).limit(1000)),
-        fetchOptionalEasySellTable(client.from("easysell_rules").select("*").order("run_date", { ascending: false }).limit(20000)),
-        fetchOptionalEasySellTable(client.from("easysell_rule_products").select("*").order("position", { ascending: true }).limit(30000)),
-      ]);
-
+      const runs = await fetchPagedOptionalEasySellTable(
+        () => client.from("easysell_import_runs").select("*").order("run_date", { ascending: false }),
+        1000,
+        5
+      );
       state.easysellRuns = filterRowsForCurrentUser(runs.map(normalizeEasySellRun));
+      const latestRunByStore = getLatestSuccessfulEasySellRunDatesByStore(state.easysellRuns);
+      const latestStoreKeys = Array.from(new Set(
+        state.easysellRuns
+          .filter((run) => latestRunByStore.get(normalizeKey(run.storeKey)) === run.runDate)
+          .map((run) => run.storeKey)
+          .filter(Boolean)
+      ));
+      const latestRunDates = Array.from(new Set(Array.from(latestRunByStore.values()).filter(Boolean)));
+
+      if (!latestStoreKeys.length || !latestRunDates.length) {
+        state.easysellRules = [];
+        state.easysellRuleProducts = [];
+        enrichRowsWithEasySell();
+        return;
+      }
+
+      const rules = await fetchPagedOptionalEasySellTable(
+        () => client
+          .from("easysell_rules")
+          .select("*")
+          .in("store_key", latestStoreKeys)
+          .in("run_date", latestRunDates)
+          .order("run_date", { ascending: false }),
+        1000,
+        50
+      );
       state.easysellRules = filterRowsForCurrentUser(rules.map(normalizeEasySellRule));
+      state.easysellRules = state.easysellRules.filter((rule) => (
+        latestRunByStore.get(normalizeKey(rule.storeKey)) === rule.runDate
+      ));
+
+      const products = [];
+      const ruleIds = state.easysellRules.map((rule) => rule.id).filter(Boolean);
+      for (const idChunk of chunkArray(ruleIds, 200)) {
+        const productRows = await fetchPagedOptionalEasySellTable(
+          () => client
+            .from("easysell_rule_products")
+            .select("*")
+            .in("rule_id", idChunk)
+            .order("position", { ascending: true }),
+          1000,
+          50
+        );
+        products.push(...productRows);
+      }
       state.easysellRuleProducts = filterRowsForCurrentUser(products.map(normalizeEasySellProduct));
       enrichRowsWithEasySell();
     }
@@ -3045,6 +3205,44 @@
       if (!error) return data || [];
       state.easysellProblem = formatEasySellSchemaError(error);
       return [];
+    }
+
+    async function fetchPagedOptionalEasySellTable(queryFactory, pageSize = 1000, maxPages = 20) {
+      const rows = [];
+      for (let page = 0; page < maxPages; page += 1) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await queryFactory().range(from, to);
+        if (error) {
+          state.easysellProblem = formatEasySellSchemaError(error);
+          return rows;
+        }
+        const batch = data || [];
+        rows.push(...batch);
+        if (batch.length < pageSize) return rows;
+      }
+      state.easysellProblem = state.easysellProblem || "EasySell alcanzo el limite de carga. Revisa paginacion o retencion de historial.";
+      return rows;
+    }
+
+    function getLatestSuccessfulEasySellRunDatesByStore(runs) {
+      const latestRunByStore = new Map();
+      for (const run of runs) {
+        const storeKey = normalizeKey(run.storeKey);
+        const status = normalizeKey(run.status || "success");
+        if (!storeKey || !run.runDate || status !== "success") continue;
+        const current = latestRunByStore.get(storeKey);
+        if (!current || run.runDate > current) latestRunByStore.set(storeKey, run.runDate);
+      }
+      return latestRunByStore;
+    }
+
+    function chunkArray(items, size) {
+      const chunks = [];
+      for (let index = 0; index < items.length; index += size) {
+        chunks.push(items.slice(index, index + size));
+      }
+      return chunks;
     }
 
     function formatEasySellSchemaError(error) {
@@ -3365,7 +3563,7 @@
         row.easysellRules = [];
         row.easysellHasRun = false;
       }
-      if (!state.rows.length || !state.easysellRules.length) return;
+      if (!state.rows.length) return;
 
       const productsByRuleId = new Map();
       for (const product of state.easysellRuleProducts) {
@@ -3373,12 +3571,14 @@
         productsByRuleId.get(product.ruleId).push(product);
       }
 
-      const latestRunByStore = new Map();
-      for (const rule of state.easysellRules) {
-        const storeKey = normalizeKey(rule.storeKey);
-        if (!storeKey || !rule.runDate) continue;
-        const current = latestRunByStore.get(storeKey);
-        if (!current || rule.runDate > current) latestRunByStore.set(storeKey, rule.runDate);
+      const latestRunByStore = getLatestSuccessfulEasySellRunDatesByStore(state.easysellRuns);
+      if (!latestRunByStore.size) {
+        for (const rule of state.easysellRules) {
+          const storeKey = normalizeKey(rule.storeKey);
+          if (!storeKey || !rule.runDate) continue;
+          const current = latestRunByStore.get(storeKey);
+          if (!current || rule.runDate > current) latestRunByStore.set(storeKey, rule.runDate);
+        }
       }
 
       const rulesBySku = new Map();
@@ -3573,11 +3773,11 @@
     function buildFilters() {
       const currentStores = getSelectedStoreValues();
       const currentProducts = getSelectedProductValues();
+      const currentAlerts = getSelectedAlertValues();
       const current = {
         date: els.dateFilter.value,
         status: els.statusFilter.value,
         saleStatus: els.saleStatusFilter.value,
-        alert: els.alertFilter.value,
       };
 
       const stores = getAvailableStores();
@@ -3593,10 +3793,10 @@
 
       renderStoreChecklist(stores, currentStores);
       renderProductChecklist(products, currentProducts);
+      renderAlertChecklist(alerts, currentAlerts);
       fillSelect(els.dateFilter, [["", "Todas"], ...dates.map((date) => [date, formatDate(date)])], current.date);
       fillSelect(els.statusFilter, [["", "Todos"], ...STATUS_ORDER.map((status) => [status, status])], current.status);
       fillSelect(els.saleStatusFilter, [["", "Todos"], ...saleStatuses.map((status) => [status, status])], current.saleStatus);
-      fillSelect(els.alertFilter, [["", "Todas"], ["__empty__", "Sin alerta"], ...alerts.map((alert) => [alert, alert])], current.alert);
     }
 
     function getAvailableStores() {
@@ -3671,6 +3871,21 @@
       updateProductMenuLabel(products, Array.from(selectedSet));
     }
 
+    function renderAlertChecklist(alerts, selectedValues) {
+      const options = [["__empty__", "Sin alerta"], ...alerts.map((alert) => [alert, alert])];
+      const availableValues = new Set(options.map(([value]) => value));
+      const selectedSet = new Set(selectedValues.filter((value) => availableValues.has(value)));
+
+      els.alertChecklist.innerHTML = "";
+      els.alertChecklist.appendChild(createAlertOption("", "Todas", selectedSet.size === 0, true));
+
+      for (const [value, label] of options) {
+        els.alertChecklist.appendChild(createAlertOption(value, label, selectedSet.has(value), false));
+      }
+
+      updateAlertMenuLabel(options, Array.from(selectedSet));
+    }
+
     function createStoreOption(value, label, checked, isAllOption) {
       const wrapper = document.createElement("label");
       wrapper.className = "store-option";
@@ -3707,6 +3922,24 @@
       return wrapper;
     }
 
+    function createAlertOption(value, label, checked, isAllOption) {
+      const wrapper = document.createElement("label");
+      wrapper.className = "alert-option";
+
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = "alertOption";
+      input.value = value;
+      input.checked = checked;
+      if (isAllOption) input.dataset.role = "all";
+
+      const text = document.createElement("span");
+      text.textContent = label;
+
+      wrapper.append(input, text);
+      return wrapper;
+    }
+
     function getSelectedStoreValues() {
       if (!els.storeChecklist) return [];
       return Array.from(els.storeChecklist.querySelectorAll('input[name="storeOption"]:checked'))
@@ -3717,6 +3950,13 @@
     function getSelectedProductValues() {
       if (!els.productChecklist) return [];
       return Array.from(els.productChecklist.querySelectorAll('input[name="productOption"]:checked'))
+        .map((input) => input.value)
+        .filter(Boolean);
+    }
+
+    function getSelectedAlertValues() {
+      if (!els.alertChecklist) return [];
+      return Array.from(els.alertChecklist.querySelectorAll('input[name="alertOption"]:checked'))
         .map((input) => input.value)
         .filter(Boolean);
     }
@@ -3750,6 +3990,21 @@
       }
     }
 
+    function updateAlertMenuLabel(alerts = getAlertOptions(), selectedValues = getSelectedAlertValues()) {
+      const values = (Array.isArray(selectedValues) ? selectedValues : Array.from(selectedValues)).filter(Boolean);
+      const labelByValue = new Map(alerts);
+      const allOption = els.alertChecklist.querySelector('input[data-role="all"]');
+      if (allOption) allOption.checked = values.length === 0;
+
+      if (!values.length) {
+        els.alertMenuButton.textContent = "Todas";
+      } else if (values.length === 1) {
+        els.alertMenuButton.textContent = labelByValue.get(values[0]) || values[0];
+      } else {
+        els.alertMenuButton.textContent = `${values.length} alertas`;
+      }
+    }
+
     function getStoreOptions() {
       return Array.from(
         els.storeChecklist.querySelectorAll('input[name="storeOption"]')
@@ -3760,6 +4015,12 @@
       return Array.from(
         els.productChecklist.querySelectorAll('input[name="productOption"]')
       ).map((input) => [input.value, input.closest(".product-option").textContent.trim()]);
+    }
+
+    function getAlertOptions() {
+      return Array.from(
+        els.alertChecklist.querySelectorAll('input[name="alertOption"]')
+      ).map((input) => [input.value, input.closest(".alert-option").textContent.trim()]);
     }
 
     function clearStoreSelection() {
@@ -3774,6 +4035,13 @@
         input.checked = false;
       });
       updateProductMenuLabel();
+    }
+
+    function clearAlertSelection() {
+      els.alertChecklist.querySelectorAll('input[name="alertOption"]').forEach((input) => {
+        input.checked = false;
+      });
+      updateAlertMenuLabel();
     }
 
     function handleStoreChecklistChange(event) {
@@ -3804,6 +4072,31 @@
       applyFilters();
     }
 
+    function handleAlertChecklistChange(event) {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") return;
+
+      if (input.dataset.role === "all") {
+        clearAlertSelection();
+      } else {
+        updateAlertMenuLabel();
+      }
+
+      state.expandedProductKeys.clear();
+      applyFilters();
+    }
+
+    function selectAlertGroup(pattern) {
+      const normalizedPattern = normalizeKey(pattern);
+      els.alertChecklist.querySelectorAll('input[name="alertOption"]').forEach((input) => {
+        input.checked = Boolean(input.value) && normalizeKey(input.value).includes(normalizedPattern);
+      });
+      updateAlertMenuLabel();
+      setAlertMenuOpen(false);
+      state.expandedProductKeys.clear();
+      applyFilters();
+    }
+
     function setStoreMenuOpen(open) {
       els.storeMenu.classList.toggle("hidden", !open);
       els.storeMenuButton.setAttribute("aria-expanded", String(open));
@@ -3812,6 +4105,11 @@
     function setProductMenuOpen(open) {
       els.productMenu.classList.toggle("hidden", !open);
       els.productMenuButton.setAttribute("aria-expanded", String(open));
+    }
+
+    function setAlertMenuOpen(open) {
+      els.alertMenu.classList.toggle("hidden", !open);
+      els.alertMenuButton.setAttribute("aria-expanded", String(open));
     }
 
     function renderAdsConfig() {
@@ -4548,13 +4846,13 @@
 
       const displayRows = filters.date
         ? productPool.filter((row) => row.date === filters.date)
-        : getLatestRowsByProduct(productPool);
+        : getLatestRowsByStoreSnapshot(productPool);
 
       state.filteredRows = displayRows
         .filter((row) => !filters.date || row.date === filters.date)
         .filter((row) => !filters.status || row.status === filters.status)
         .filter((row) => !filters.saleStatus || row.saleStatus === filters.saleStatus)
-        .filter((row) => matchesAlertFilter(row, filters.alert))
+        .filter((row) => matchesAlertFilter(row, filters.alerts))
         .filter((row) => inRange(row.stock, filters.stockMin, filters.stockMax))
         .filter((row) => inRange(row.sold7, filters.soldMin, filters.soldMax))
         .filter((row) => inRange(row.dailyAvg, filters.avgMin, filters.avgMax))
@@ -4579,6 +4877,25 @@
         }
       }
       return Array.from(latest.values());
+    }
+
+    function getLatestRowsByStoreSnapshot(rows) {
+      const latestDateByStore = new Map();
+      for (const row of rows) {
+        const store = row.storeKey || row.storeName || "";
+        if (!store || !row.date) continue;
+        const current = latestDateByStore.get(store);
+        if (!current || row.date > current) {
+          latestDateByStore.set(store, row.date);
+        }
+      }
+
+      const latestSnapshotRows = rows.filter((row) => {
+        const store = row.storeKey || row.storeName || "";
+        return row.date && latestDateByStore.get(store) === row.date;
+      });
+
+      return getLatestRowsByProduct(latestSnapshotRows);
     }
 
     function compareLatestRow(a, b) {
@@ -4613,7 +4930,7 @@
         date: els.dateFilter.value,
         status: els.statusFilter.value,
         saleStatus: els.saleStatusFilter.value,
-        alert: els.alertFilter.value,
+        alerts: getSelectedAlertValues(),
         stockMin: parseFilterNumber(els.stockMin.value),
         stockMax: parseFilterNumber(els.stockMax.value),
         soldMin: parseFilterNumber(els.soldMin.value),
@@ -4638,7 +4955,7 @@
         date: Boolean(filters.date),
         status: Boolean(filters.status),
         saleStatus: Boolean(filters.saleStatus),
-        alert: Boolean(filters.alert),
+        alert: Boolean(filters.alerts.length),
         stock: Boolean(filters.stockMax !== null || (filters.stockMin !== null && filters.stockMin !== defaultStockMin)),
         sold: Boolean(filters.soldMin !== null || filters.soldMax !== null),
         avg: Boolean(filters.avgMin !== null || filters.avgMax !== null),
@@ -4659,11 +4976,13 @@
       return true;
     }
 
-    function matchesAlertFilter(row, filterValue) {
-      if (!filterValue) return true;
+    function matchesAlertFilter(row, filterValues) {
+      const selected = Array.isArray(filterValues) ? filterValues : [filterValues].filter(Boolean);
+      if (!selected.length) return true;
       const parts = row.alertParts || splitAlerts(row.alert);
-      if (filterValue === "__empty__") return parts.length === 0;
-      return parts.some((part) => normalizeKey(part) === normalizeKey(filterValue));
+      const selectedKeys = selected.map(normalizeKey);
+      if (selectedKeys.includes("__empty__") && parts.length === 0) return true;
+      return parts.some((part) => selectedKeys.includes(normalizeKey(part)));
     }
 
     function compareRows(a, b) {
@@ -4705,6 +5024,7 @@
       renderStatusBars();
       renderPriorityList();
       renderPortfolioMap();
+      if (state.priorityModalOpen) renderPriorityModal();
       if (state.portfolioModalOpen) renderPortfolioModalChart();
       if (state.easysellModalOpen) renderEasySellModal();
       renderTable();
@@ -4781,7 +5101,7 @@
           if (rankA !== rankB) return rankA - rankB;
           return compareRows(a, b);
         });
-      const priorities = state.showAllPriority ? allPriorities : allPriorities.slice(0, 3);
+      const priorities = allPriorities.slice(0, 3);
 
       els.priorityTotal.textContent = formatNumber(allPriorities.length);
 
@@ -4804,8 +5124,7 @@
       if (allPriorities.length > 3) {
         const hiddenCount = allPriorities.length - 3;
         els.priorityMoreBtn.classList.remove("hidden");
-        els.priorityMoreBtn.textContent = state.showAllPriority ? "Ver menos" : `Ver ${formatNumber(hiddenCount)} mas`;
-        els.priorityMoreBtn.setAttribute("aria-expanded", state.showAllPriority ? "true" : "false");
+        els.priorityMoreBtn.textContent = `Ver ${formatNumber(hiddenCount)} mas`;
       } else {
         els.priorityMoreBtn.classList.add("hidden");
         els.priorityMoreBtn.setAttribute("aria-expanded", "false");
@@ -4815,8 +5134,8 @@
     function renderPriorityList() {
       const reorderRows = priorityRows("reordenar");
       const overstockRows = priorityRows("sobrestock");
-      const visibleReorder = state.showAllPriority ? reorderRows : reorderRows.slice(0, 4);
-      const visibleOverstock = state.showAllPriority ? overstockRows : overstockRows.slice(0, 4);
+      const visibleReorder = reorderRows.slice(0, 4);
+      const visibleOverstock = overstockRows.slice(0, 4);
       const hiddenCount = Math.max(0, reorderRows.length - 4) + Math.max(0, overstockRows.length - 4);
 
       els.priorityTotal.textContent = formatNumber(reorderRows.length + overstockRows.length);
@@ -4827,12 +5146,35 @@
 
       if (hiddenCount > 0) {
         els.priorityMoreBtn.classList.remove("hidden");
-        els.priorityMoreBtn.textContent = state.showAllPriority ? "Ver menos" : `Ver ${formatNumber(hiddenCount)} mas`;
-        els.priorityMoreBtn.setAttribute("aria-expanded", state.showAllPriority ? "true" : "false");
+        els.priorityMoreBtn.textContent = `Ver ${formatNumber(hiddenCount)} mas`;
       } else {
         els.priorityMoreBtn.classList.add("hidden");
-        els.priorityMoreBtn.setAttribute("aria-expanded", "false");
       }
+    }
+
+    function openPriorityModal() {
+      state.priorityModalOpen = true;
+      renderPriorityModal();
+      els.priorityModalBackdrop.classList.remove("hidden");
+      document.body.classList.add("modal-open");
+      setTimeout(() => els.priorityModalClose.focus(), 0);
+    }
+
+    function closePriorityModal() {
+      state.priorityModalOpen = false;
+      els.priorityModalBackdrop.classList.add("hidden");
+      document.body.classList.remove("modal-open");
+      els.priorityMoreBtn.focus();
+    }
+
+    function renderPriorityModal() {
+      const reorderRows = priorityRows("reordenar");
+      const overstockRows = priorityRows("sobrestock");
+      els.priorityModalTotal.textContent = `${formatNumber(reorderRows.length + overstockRows.length)} alertas`;
+      els.priorityModalReorderTotal.textContent = formatNumber(reorderRows.length);
+      els.priorityModalOverstockTotal.textContent = formatNumber(overstockRows.length);
+      els.priorityModalReorderList.innerHTML = renderPriorityColumn(reorderRows, "Sin reordenar");
+      els.priorityModalOverstockList.innerHTML = renderPriorityColumn(overstockRows, "Sin sobrestock");
     }
 
     function priorityRows(pattern) {
@@ -5148,8 +5490,8 @@
         `;
       }
 
-      const width = 66;
-      const height = 18;
+      const width = 82;
+      const height = 22;
       const first = values[0] || 0;
       const last = values[values.length - 1] || 0;
       const trendClass = last > first ? "sparkline-up" : last < first ? "sparkline-down" : "sparkline-flat";
@@ -5196,7 +5538,7 @@
     function renderEasySellCell(row) {
       const summary = row.easysellSummary || createEmptyEasySellSummary();
       const hasData = Object.values(summary).some((bucket) => bucket.totalCount > 0);
-      if (!hasData && (!state.easysellRules.length || !row.easysellHasRun)) {
+      if (!hasData && !row.easysellHasRun) {
         return `<span class="easysell-cell empty">-</span>`;
       }
 
@@ -5389,7 +5731,6 @@
         els.dateFilter,
         els.statusFilter,
         els.saleStatusFilter,
-        els.alertFilter,
         els.stockMin,
         els.stockMax,
         els.soldMin,
@@ -5404,10 +5745,11 @@
       els.stockMin.value = DEFAULT_STOCK_MIN;
       clearProductSelection();
       clearStoreSelection();
+      clearAlertSelection();
       setProductMenuOpen(false);
       setStoreMenuOpen(false);
+      setAlertMenuOpen(false);
       state.expandedProductKeys.clear();
-      state.showAllPriority = false;
       applyFilters();
     }
 
@@ -5571,7 +5913,7 @@
       state.adsProblem = "";
       state.easysellProblem = "";
       state.expandedProductKeys.clear();
-      state.showAllPriority = false;
+      state.priorityModalOpen = false;
       state.easysellModalOpen = false;
       state.easysellModalKey = "";
       openConfig("Credenciales locales borradas.");
@@ -5638,9 +5980,12 @@
     els.refreshBtn.addEventListener("click", refreshData);
     els.tableExportBtn.addEventListener("click", exportExcel);
     els.resetFiltersBtn.addEventListener("click", resetFilters);
-    els.priorityMoreBtn.addEventListener("click", () => {
-      state.showAllPriority = !state.showAllPriority;
-      renderPriorityList();
+    els.metricReorderBtn.addEventListener("click", () => selectAlertGroup("reordenar"));
+    els.metricOverstockBtn.addEventListener("click", () => selectAlertGroup("sobrestock"));
+    els.priorityMoreBtn.addEventListener("click", openPriorityModal);
+    els.priorityModalClose.addEventListener("click", closePriorityModal);
+    els.priorityModalBackdrop.addEventListener("click", (event) => {
+      if (event.target === els.priorityModalBackdrop) closePriorityModal();
     });
     els.portfolioExpandBtn.addEventListener("click", openPortfolioModal);
     els.portfolioModalClose.addEventListener("click", closePortfolioModal);
@@ -5658,6 +6003,10 @@
       setProductMenuOpen(els.productMenu.classList.contains("hidden"));
     });
     els.productChecklist.addEventListener("change", handleProductChecklistChange);
+    els.alertMenuButton.addEventListener("click", () => {
+      setAlertMenuOpen(els.alertMenu.classList.contains("hidden"));
+    });
+    els.alertChecklist.addEventListener("change", handleAlertChecklistChange);
     els.storeMenuButton.addEventListener("click", () => {
       setStoreMenuOpen(els.storeMenu.classList.contains("hidden"));
     });
@@ -5665,7 +6014,6 @@
     els.dateFilter.addEventListener("change", applyFilters);
     els.statusFilter.addEventListener("change", applyFilters);
     els.saleStatusFilter.addEventListener("change", applyFilters);
-    els.alertFilter.addEventListener("change", applyFilters);
     [
       els.stockMin,
       els.stockMax,
@@ -5681,13 +6029,16 @@
     });
     document.addEventListener("click", (event) => {
       if (!els.productPicker.contains(event.target)) setProductMenuOpen(false);
+      if (!els.alertPicker.contains(event.target)) setAlertMenuOpen(false);
       if (!els.storePicker.contains(event.target)) setStoreMenuOpen(false);
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
+        if (state.priorityModalOpen) closePriorityModal();
         if (state.portfolioModalOpen) closePortfolioModal();
         if (state.easysellModalOpen) closeEasySellModal();
         setProductMenuOpen(false);
+        setAlertMenuOpen(false);
         setStoreMenuOpen(false);
       }
     });
