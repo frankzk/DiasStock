@@ -30,6 +30,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SHOPIFY_ADMIN_STORAGE_STATE_B64: ${{ secrets.SHOPIFY_ADMIN_STORAGE_STATE_B64 }}
+      EASYSELL_DEBUG_DIR: artifacts/easysell
 
       STORE_CR_NAME: "Mireva Costa Rica"
       STORE_CR_SHOPIFY_ADMIN_SLUG: "mireva-costa-rica"
@@ -154,7 +155,8 @@ jobs:
 
             if ! python import_easysell_to_supabase.py \
               --run-date "${{ steps.vars.outputs.run_date }}" \
-              --store "$store"; then
+              --store "$store" \
+              --fail-on-zero; then
               failed_stores+=("$store:import")
             fi
             echo "::endgroup::"
@@ -164,3 +166,11 @@ jobs:
             echo "::error::Fallaron tiendas EasySell: ${failed_stores[*]}"
             exit 1
           fi
+
+      - name: Upload EasySell diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: easysell-debug-${{ github.run_id }}
+          path: artifacts/easysell
+          if-no-files-found: ignore

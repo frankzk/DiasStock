@@ -44,6 +44,19 @@ def main() -> int:
             total_rules += len(rules)
             print_store_summary(rules)
 
+            if args.fail_on_zero and not rules:
+                error_message = (
+                    "No se detectaron reglas EasySell. "
+                    "Revisa los artifacts easysell-debug y confirma que la sesion Shopify siga valida."
+                )
+                if supabase:
+                    supabase.upsert(
+                        "easysell_import_runs",
+                        [build_run_payload(result, rules, status="failed", error_message=error_message)],
+                        on_conflict="run_date,store_key",
+                    )
+                raise RuntimeError(error_message)
+
             if supabase:
                 save_store_result(supabase, result)
                 print(f"Guardado en Supabase: {len(rules)} regla(s).")
@@ -73,6 +86,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="Scrapea y muestra resumen sin guardar.")
     parser.add_argument("--headed", action="store_true", help="Abre Chromium visible para depurar.")
     parser.add_argument("--limit-rules", type=int, default=0, help="Limita reglas por seccion para pruebas.")
+    parser.add_argument(
+        "--fail-on-zero",
+        action="store_true",
+        help="Falla el run si una tienda no detecta reglas; evita imports verdes con cero data.",
+    )
     args = parser.parse_args()
     if args.store:
         args.stores = args.store
@@ -120,34 +138,68 @@ def print_store_summary(rules: list[dict[str, Any]]) -> None:
 
 def save_store_result(client: "SupabaseClient", result: dict[str, Any]) -> None:
     rules = result["rules"]
-    run_payload = {
+    running_payload = build_run_payload(result, rules, status="running")
+    client.upsert(
+        "easysell_import_runs",
+        [running_payload],
+        on_conflict="run_date,store_key",
+    )
+
+    try:
+        saved_rules = upsert_easysell_rules(client, result, rules)
+        if saved_rules:
+            delete_rule_products(client, [row["id"] for row in saved_rules if row.get("id")])
+            insert_easysell_rule_products(client, result, rules, saved_rules)
+        else:
+            client.delete(
+                "easysell_rules",
+                {
+                    "run_date": f"eq.{result['run_date']}",
+                    "store_key": f"eq.{result['store_key']}",
+                },
+            )
+        delete_stale_rules(client, result, [rule.get("external_id", "") for rule in rules])
+        client.upsert(
+            "easysell_import_runs",
+            [build_run_payload(result, rules, status="success")],
+            on_conflict="run_date,store_key",
+        )
+    except Exception as error:
+        client.upsert(
+            "easysell_import_runs",
+            [build_run_payload(result, rules, status="failed", error_message=str(error)[:1000])],
+            on_conflict="run_date,store_key",
+        )
+        raise
+
+
+def build_run_payload(
+    result: dict[str, Any],
+    rules: list[dict[str, Any]],
+    status: str,
+    error_message: str = "",
+) -> dict[str, Any]:
+    return {
         "run_date": result["run_date"],
         "store_key": result["store_key"],
         "store_name": result["store_name"],
         "shopify_admin_slug": result.get("shopify_admin_slug", ""),
-        "status": "success",
+        "status": status,
         "rules_imported": len(rules),
         "active_rules": sum(1 for rule in rules if rule.get("active")),
         "unmapped_rules": sum(1 for rule in rules if not rule.get("primary_sku")),
-        "error_message": "",
+        "error_message": error_message,
         "updated_at": datetime.now(ZoneInfo("UTC")).isoformat(),
     }
-    client.upsert(
-        "easysell_import_runs",
-        [run_payload],
-        on_conflict="run_date,store_key",
-    )
 
-    client.delete(
-        "easysell_rules",
-        {
-            "run_date": f"eq.{result['run_date']}",
-            "store_key": f"eq.{result['store_key']}",
-        },
-    )
 
+def upsert_easysell_rules(
+    client: "SupabaseClient",
+    result: dict[str, Any],
+    rules: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     if not rules:
-        return
+        return []
 
     rule_payloads = []
     for rule in rules:
@@ -176,7 +228,20 @@ def save_store_result(client: "SupabaseClient", result: dict[str, Any]) -> None:
 
     saved_rules = []
     for chunk in chunks(rule_payloads, SUPABASE_PAGE_SIZE):
-        saved_rules.extend(client.insert("easysell_rules", chunk, returning=True))
+        saved_rules.extend(client.upsert(
+            "easysell_rules",
+            chunk,
+            on_conflict="run_date,store_key,rule_type,external_id",
+        ))
+    return saved_rules
+
+
+def insert_easysell_rule_products(
+    client: "SupabaseClient",
+    result: dict[str, Any],
+    rules: list[dict[str, Any]],
+    saved_rules: list[dict[str, Any]],
+) -> None:
     ids_by_external = {row["external_id"]: row["id"] for row in saved_rules if row.get("external_id")}
     product_payloads = []
     for rule in rules:
@@ -203,6 +268,34 @@ def save_store_result(client: "SupabaseClient", result: dict[str, Any]) -> None:
 
     for chunk in chunks(product_payloads, SUPABASE_PAGE_SIZE):
         client.insert("easysell_rule_products", chunk, returning=False)
+
+
+def delete_rule_products(client: "SupabaseClient", rule_ids: list[Any]) -> None:
+    clean_ids = [str(int(rule_id)) for rule_id in rule_ids if str(rule_id).strip()]
+    for chunk in chunks([{"id": rule_id} for rule_id in clean_ids], SUPABASE_PAGE_SIZE):
+        ids = ",".join(item["id"] for item in chunk)
+        client.delete("easysell_rule_products", {"rule_id": f"in.({ids})"})
+
+
+def delete_stale_rules(client: "SupabaseClient", result: dict[str, Any], external_ids: list[str]) -> None:
+    clean_ids = sorted({value for value in external_ids if value})
+    filters = {
+        "run_date": f"eq.{result['run_date']}",
+        "store_key": f"eq.{result['store_key']}",
+    }
+    if not clean_ids:
+        client.delete("easysell_rules", filters)
+        return
+    filters["external_id"] = f"not.in.({postgrest_text_list(clean_ids)})"
+    client.delete("easysell_rules", filters)
+
+
+def postgrest_text_list(values: list[str]) -> str:
+    quoted = []
+    for value in values:
+        escaped = str(value).replace('"', '\\"')
+        quoted.append(f'"{escaped}"')
+    return ",".join(quoted)
 
 
 def chunks(items: list[dict[str, Any]], size: int):

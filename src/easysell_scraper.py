@@ -5,6 +5,7 @@ import re
 import time
 import unicodedata
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -111,6 +112,8 @@ def scrape_easysell_section(
     if limit_rules > 0:
         cards = cards[:limit_rules]
     print(f"    {len(cards)} regla(s) detectadas")
+    if not cards:
+        write_easysell_debug(page, surface, store, section)
 
     rules: list[dict[str, Any]] = []
     for index, card_info in enumerate(cards, start=1):
@@ -236,24 +239,25 @@ def scroll_to_load(page) -> None:
 
 def get_easysell_surface(page):
     deadline = time.time() + 45
+    fallback_frame = None
     while time.time() < deadline:
         for frame in page.frames:
-            frame_url = (frame.url or "").lower()
-            if is_easysell_frame(frame_url):
-                return frame
-
-        for frame in page.frames:
-            body_text = safe_inner_text(frame, "body").lower()
+            body_text = safe_inner_text(frame, "body")
             if is_easysell_body(body_text):
                 return frame
 
-        body_text = safe_inner_text(page, "body").lower()
+        body_text = safe_inner_text(page, "body")
         if is_easysell_body(body_text):
             return page
 
+        for frame in page.frames:
+            frame_url = (frame.url or "").lower()
+            if is_easysell_frame(frame_url):
+                fallback_frame = frame
+
         time.sleep(1)
 
-    return page
+    return fallback_frame or page
 
 
 def is_easysell_frame(frame_url: str) -> bool:
@@ -266,6 +270,19 @@ def is_easysell_frame(frame_url: str) -> bool:
 
 
 def is_easysell_body(body_text: str) -> bool:
+    normalized = normalize_text(body_text)
+    if any(
+        marker in normalized
+        for marker in [
+            "easysell cod form",
+            "1-click upsells",
+            "1-tick upsell",
+            "ofertas de cantidad",
+            "upsells y downsells",
+            "ultimos 30 dias",
+        ]
+    ):
+        return True
     return any(
         marker in body_text
         for marker in [
@@ -278,6 +295,60 @@ def is_easysell_body(body_text: str) -> bool:
             "últimos 30 días",
         ]
     )
+
+
+def write_easysell_debug(page, surface, store: Store, section: dict[str, str]) -> None:
+    debug_dir = os.environ.get("EASYSELL_DEBUG_DIR", "").strip()
+    if not debug_dir:
+        print("    Diagnostico omitido: EASYSELL_DEBUG_DIR no configurado.")
+        return
+
+    output_dir = Path(debug_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    prefix = f"{store.key}_{section['rule_type']}"
+    surface_url = getattr(surface, "url", "")
+    print(
+        "    Diagnostico EasySell: "
+        f"page={page.url} surface={surface_url or 'main'} frames={len(page.frames)}"
+    )
+
+    frames = []
+    for index, frame in enumerate(page.frames):
+        snippet = safe_inner_text(frame, "body")
+        frames.append({
+            "index": index,
+            "url": frame.url,
+            "snippet": clean_line(snippet)[:2000],
+        })
+        if index < 8:
+            print(f"      frame[{index}] url={frame.url}")
+            print(f"      frame[{index}] text={clean_line(snippet)[:250]}")
+
+    try:
+        (output_dir / f"{prefix}.json").write_text(
+            json.dumps({
+                "store_key": store.key,
+                "store_name": store.name,
+                "section": section,
+                "page_url": page.url,
+                "surface_url": surface_url,
+                "frames": frames,
+            }, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception as error:
+        print(f"    Advertencia: no se pudo escribir diagnostico JSON: {error}")
+
+    try:
+        page.screenshot(path=str(output_dir / f"{prefix}.png"), full_page=True)
+    except Exception as error:
+        print(f"    Advertencia: no se pudo capturar screenshot: {error}")
+
+    try:
+        html = surface.content()
+        (output_dir / f"{prefix}.html").write_text(html, encoding="utf-8")
+    except Exception as error:
+        print(f"    Advertencia: no se pudo escribir HTML de diagnostico: {error}")
 
 
 def extract_rule_cards(page) -> list[dict[str, Any]]:
