@@ -165,7 +165,13 @@ def scrape_easysell_section(
         primary_products = detail.get("primary_products") or []
         offered_products = detail.get("offered_products") or []
 
-        if not primary_products:
+        if not primary_products and section["rule_type"] == "quantity_offer":
+            print(
+                f"    Advertencia: oferta de cantidad sin producto principal detectado: '{rule_name}'. "
+                "Se guarda sin mapear para evitar asignarla por nombre.",
+            )
+            primary_products = [{"product_name": "", "product_id": ""}]
+        elif not primary_products:
             primary_products = [{"product_name": guess_primary_name(rule_name), "product_id": ""}]
 
         for primary_index, primary in enumerate(primary_products, start=1):
@@ -720,6 +726,9 @@ def split_products_by_section(
         return [], []
 
     if rule_type == "quantity_offer":
+        return extract_quantity_offer_primary_products(body_text, products), []
+
+    if rule_type == "quantity_offer":
         quantity_block = block_between(
             body_text,
             ["Aplicado a", "Seleccionar productos", "Productos especificos", "Productos específicos"],
@@ -749,6 +758,75 @@ def split_products_by_section(
     primary_ids = {product.get("product_id") for product in primary}
     offered = [product for product in offered if product.get("product_id") not in primary_ids]
     return primary, offered
+
+
+def extract_quantity_offer_primary_products(
+    body_text: str,
+    products: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return only the product(s) that trigger a quantity offer."""
+    selected = extract_products_from_selected_quantity_block(body_text)
+    if selected:
+        return selected
+
+    blocks = [
+        block_between(
+            body_text,
+            ["Crear ofertas para estos productos", "Cambiar producto"],
+            ["Ofertas", "Diseño", "Diseno", "Plantilla", "Vista previa"],
+        ),
+        block_between(
+            body_text,
+            ["Aplicado a", "Seleccionar productos", "Productos especificos", "Productos específicos"],
+            ["Ultimos 30", "Últimos 30", "Tasa de conversion", "Tasa de conversión", "ingresos adicionales"],
+        ),
+    ]
+
+    for block in blocks:
+        primary = [product for product in products if product_in_block(product, block)]
+        if primary:
+            return dedupe_products(primary)
+
+    return []
+
+
+def extract_products_from_selected_quantity_block(text: str) -> list[dict[str, Any]]:
+    lines = [clean_line(line) for line in text.splitlines()]
+    selected_lines: list[str] = []
+    capturing = False
+    for line in lines:
+        if not line:
+            continue
+        normalized = normalize_text(line)
+        if "crear ofertas para estos productos" in normalized or normalized == "cambiar producto":
+            capturing = True
+            continue
+        if capturing and any(
+            marker in normalized
+            for marker in ["ofertas", "diseno", "diseño", "plantilla", "vista previa"]
+        ):
+            break
+        if capturing:
+            selected_lines.append(line)
+
+    if not selected_lines:
+        return []
+    return extract_products_from_text("\n".join(selected_lines))
+
+
+def dedupe_products(products: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for product in products:
+        key = (
+            str(product.get("product_id") or ""),
+            stable_key(str(product.get("product_name") or "")),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(product)
+    return deduped
 
 
 def extract_products_from_text(text: str) -> list[dict[str, Any]]:
