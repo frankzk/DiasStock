@@ -934,6 +934,13 @@ class ShopifyProductResolver:
             return cached
 
         resolved = self._resolve_product_id(product_id) or self._resolve_variant_id(product_id)
+        if (not resolved or not resolved.sku) and product_name:
+            # EasySell sometimes exposes its own product id in app screens.
+            # When that id is not a Shopify product/variant id, fall back to a
+            # high-signal name match so quantity offers still map to the SKU.
+            resolved_by_name = self._resolve_product_name(product_name)
+            if resolved_by_name and resolved_by_name.sku:
+                resolved = resolved_by_name
         if not resolved:
             resolved = ResolvedProduct(product_id=product_id, product_name=product_name)
         elif not resolved.product_name and product_name:
