@@ -17,6 +17,17 @@ SUPABASE_PAGE_SIZE = 1000
 LIMA_TIMEZONE = timezone(timedelta(hours=-5))
 
 
+def configure_stdio_encoding() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+configure_stdio_encoding()
+
+
 def main() -> int:
     load_dotenv()
     args = parse_args()

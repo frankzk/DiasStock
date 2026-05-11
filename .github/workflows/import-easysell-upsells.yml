@@ -30,6 +30,8 @@ jobs:
     timeout-minutes: 90
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
       SHOPIFY_API_VERSION: "2026-04"
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -155,6 +157,9 @@ jobs:
 
       - name: Import EasySell upsells
         run: |
+          [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+          $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+
           if (Test-Path -LiteralPath $env:EASYSELL_DEBUG_DIR) {
             Remove-Item -LiteralPath $env:EASYSELL_DEBUG_DIR -Recurse -Force
           }
