@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   import-easysell-upsells:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Windows, X64, diasstock-easysell]
     timeout-minutes: 90
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -59,113 +59,133 @@ jobs:
           python-version: "3.12"
 
       - name: Validate global secrets
+        shell: powershell
         run: |
-          missing=0
+          $missing = $false
 
-          check_secret() {
-            env_name="$1"
-            secret_name="$2"
-            if [ -z "${!env_name}" ]; then
-              echo "::error::Falta GitHub Repository Secret: $secret_name"
-              missing=1
-            fi
+          function Test-RequiredSecret {
+            param(
+              [string]$EnvName,
+              [string]$SecretName
+            )
+
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($EnvName))) {
+              Write-Host "::error::Falta GitHub Repository Secret: $SecretName"
+              $script:missing = $true
+            }
           }
 
-          check_secret "SUPABASE_URL" "SUPABASE_URL"
-          check_secret "SUPABASE_SERVICE_ROLE_KEY" "SUPABASE_SERVICE_ROLE_KEY"
-          check_secret "SHOPIFY_ADMIN_STORAGE_STATE_B64" "SHOPIFY_ADMIN_STORAGE_STATE_B64"
+          Test-RequiredSecret "SUPABASE_URL" "SUPABASE_URL"
+          Test-RequiredSecret "SUPABASE_SERVICE_ROLE_KEY" "SUPABASE_SERVICE_ROLE_KEY"
+          Test-RequiredSecret "SHOPIFY_ADMIN_STORAGE_STATE_B64" "SHOPIFY_ADMIN_STORAGE_STATE_B64"
 
-          exit "$missing"
+          if ($missing) {
+            exit 1
+          }
 
       - name: Install dependencies
+        shell: powershell
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m playwright install --with-deps chromium
+          python -m playwright install chromium
 
       - name: Determine run date and stores
         id: vars
+        shell: powershell
         env:
           INPUT_RUN_DATE: ${{ github.event.inputs.run_date }}
           INPUT_STORES: ${{ github.event.inputs.stores }}
         run: |
-          RUN_DATE="${INPUT_RUN_DATE}"
-          if [ -z "$RUN_DATE" ]; then
-            RUN_DATE="$(TZ=America/Lima date +%F)"
-          fi
+          $runDate = $env:INPUT_RUN_DATE
+          if ([string]::IsNullOrWhiteSpace($runDate)) {
+            $timeZone = [TimeZoneInfo]::FindSystemTimeZoneById("SA Pacific Standard Time")
+            $runDate = [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $timeZone).ToString("yyyy-MM-dd")
+          }
 
-          STORES="${INPUT_STORES:-CR,HN}"
-          echo "run_date=$RUN_DATE" >> "$GITHUB_OUTPUT"
-          echo "stores=$STORES" >> "$GITHUB_OUTPUT"
-          echo "EasySell run date: $RUN_DATE"
-          echo "Stores: $STORES"
+          $stores = $env:INPUT_STORES
+          if ([string]::IsNullOrWhiteSpace($stores)) {
+            $stores = "CR,HN"
+          }
+
+          "run_date=$runDate" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "stores=$stores" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "EasySell run date: $runDate"
+          Write-Host "Stores: $stores"
 
       - name: Import EasySell upsells
+        shell: powershell
         run: |
-          check_secret() {
-            env_name="$1"
-            secret_name="$2"
-            if [ -z "${!env_name}" ]; then
-              echo "::error::Falta GitHub Repository Secret: $secret_name"
-              return 1
-            fi
-            return 0
+          if (Test-Path -LiteralPath $env:EASYSELL_DEBUG_DIR) {
+            Remove-Item -LiteralPath $env:EASYSELL_DEBUG_DIR -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path $env:EASYSELL_DEBUG_DIR | Out-Null
+
+          function Test-RequiredSecret {
+            param(
+              [string]$EnvName,
+              [string]$SecretName
+            )
+
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($EnvName))) {
+              Write-Host "::error::Falta GitHub Repository Secret: $SecretName"
+              return $false
+            }
+
+            return $true
           }
 
-          validate_store() {
-            store_key="$1"
-            missing=0
+          function Test-StoreSecrets {
+            param([string]$StoreKey)
 
-            case "$store_key" in
-              CR)
-                check_secret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL" || missing=1
-                check_secret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN" || missing=1
-                ;;
-              HN)
-                check_secret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL" || missing=1
-                check_secret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN" || missing=1
-                ;;
-              KA)
-                check_secret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL" || missing=1
-                check_secret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN" || missing=1
-                ;;
-              *)
-                echo "::error::Tienda no soportada: $store_key"
-                missing=1
-                ;;
-            esac
+            $valid = $true
+            switch ($StoreKey) {
+              "CR" {
+                $valid = (Test-RequiredSecret "STORE_CR_SHOPIFY_URL" "STORE_CR_SHOPIFY_URL") -and $valid
+                $valid = (Test-RequiredSecret "STORE_CR_SHOPIFY_TOKEN" "STORE_CR_SHOPIFY_TOKEN") -and $valid
+              }
+              "HN" {
+                $valid = (Test-RequiredSecret "STORE_HN_SHOPIFY_URL" "STORE_HN_SHOPIFY_URL") -and $valid
+                $valid = (Test-RequiredSecret "STORE_HN_SHOPIFY_TOKEN" "STORE_HN_SHOPIFY_TOKEN") -and $valid
+              }
+              "KA" {
+                $valid = (Test-RequiredSecret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL") -and $valid
+                $valid = (Test-RequiredSecret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN") -and $valid
+              }
+              default {
+                Write-Host "::error::Tienda no soportada: $StoreKey"
+                $valid = $false
+              }
+            }
 
-            return "$missing"
+            return $valid
           }
 
-          failed_stores=()
-          IFS=',' read -ra STORE_LIST <<< "${{ steps.vars.outputs.stores }}"
-          for raw_store in "${STORE_LIST[@]}"; do
-            store="$(echo "$raw_store" | xargs | tr '[:lower:]' '[:upper:]')"
-            if [ -z "$store" ]; then
+          $failedStores = @()
+          $storeList = "${{ steps.vars.outputs.stores }}".Split(",") |
+            ForEach-Object { $_.Trim().ToUpperInvariant() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+          foreach ($store in $storeList) {
+            Write-Host "::group::Import EasySell $store"
+            if (-not (Test-StoreSecrets $store)) {
+              $failedStores += "${store}:secrets"
+              Write-Host "::endgroup::"
               continue
-            fi
+            }
 
-            echo "::group::Import EasySell $store"
-            if ! validate_store "$store"; then
-              failed_stores+=("$store:secrets")
-              echo "::endgroup::"
-              continue
-            fi
+            python import_easysell_to_supabase.py --run-date "${{ steps.vars.outputs.run_date }}" --store "$store" --fail-on-zero
+            if ($LASTEXITCODE -ne 0) {
+              $failedStores += "${store}:import"
+            }
 
-            if ! python import_easysell_to_supabase.py \
-              --run-date "${{ steps.vars.outputs.run_date }}" \
-              --store "$store" \
-              --fail-on-zero; then
-              failed_stores+=("$store:import")
-            fi
-            echo "::endgroup::"
-          done
+            Write-Host "::endgroup::"
+          }
 
-          if [ "${#failed_stores[@]}" -gt 0 ]; then
-            echo "::error::Fallaron tiendas EasySell: ${failed_stores[*]}"
+          if ($failedStores.Count -gt 0) {
+            Write-Host "::error::Fallaron tiendas EasySell: $($failedStores -join ' ')"
             exit 1
-          fi
+          }
 
       - name: Upload EasySell diagnostics
         if: always()
