@@ -21,6 +21,7 @@ _PROMPT = (
     "- 'barcode' = columna CODIGO DE BARRAS (puede estar vacio '')\n"
     "- 'stock' = columna STOCK TOTAL (numero entero)\n"
     "- Incluye TODOS los productos visibles, sin omitir ninguno\n"
+    "- Si hay varios bloques/almacenes, no sumes: devuelve cada fila visible; el sistema agregara por producto\n"
     "- Devuelve SOLO el JSON, sin texto adicional"
 )
 
@@ -34,10 +35,10 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
         image_hash = _file_hash(path)
         if cache and cache.get("source_sha256") == image_hash:
             print(f"  Usando cache de imagen: {cache_path}")
-            return _products_to_inventory(cache.get("products", [])), {}
+            return _products_to_inventory(cache.get("products", []), store), {}
     elif cache:
         print(f"  Imagen no encontrada. Usando ultimo cache: {cache_path}")
-        return _products_to_inventory(cache.get("products", [])), {}
+        return _products_to_inventory(cache.get("products", []), store), {}
     else:
         raise FileNotFoundError(
             f"No se encontro la imagen de {store.name} en '{store.image_path}' ni cache previo.\n"
@@ -51,11 +52,11 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
         if not cache:
             raise
         print(f"  Vision fallo. Usando ultimo cache disponible: {cache_path}")
-        return _products_to_inventory(cache.get("products", [])), {}
+        return _products_to_inventory(cache.get("products", []), store), {}
 
     print(f"  Productos leidos de la imagen: {len(products)}")
     _write_cache(cache_path, store, path, products)
-    return _products_to_inventory(products), {}
+    return _products_to_inventory(products, store), {}
 
 
 def _read_products_with_vision(path: Path) -> list[dict]:
@@ -91,7 +92,8 @@ def _read_products_with_vision(path: Path) -> list[dict]:
     return data.get("products", [])
 
 
-def _products_to_inventory(products: list[dict]) -> list[dict]:
+def _products_to_inventory(products: list[dict], store: Store) -> list[dict]:
+    products = _aggregate_products(products, store)
     inventory: list[dict] = []
     for p in products:
         name = str(p.get("name", "")).strip()
@@ -104,6 +106,81 @@ def _products_to_inventory(products: list[dict]) -> list[dict]:
 
     print(f"  Productos cargados: {len(inventory)}")
     return inventory
+
+
+def _aggregate_products(products: list[dict], store: Store) -> list[dict]:
+    groups: dict[str, dict] = {}
+    order: list[str] = []
+    preferred_prefixes = _preferred_barcode_prefixes(store)
+
+    for p in products:
+        name = str(p.get("name", "")).strip()
+        barcode = str(p.get("barcode", "")).strip()
+        stock = int(p.get("stock", 0) or 0)
+        if not name:
+            continue
+
+        key = _product_group_key(name, barcode)
+        if key not in groups:
+            groups[key] = {"name": name, "barcode": barcode, "stock": 0}
+            order.append(key)
+
+        group = groups[key]
+        group["stock"] += stock
+        if _is_better_barcode(barcode, str(group.get("barcode", "")), preferred_prefixes):
+            group["barcode"] = barcode
+            group["name"] = name
+
+    if len(groups) != len(products):
+        print(f"  Productos agregados por SKU/producto: {len(products)} -> {len(groups)}")
+
+    return [groups[key] for key in order]
+
+
+def _product_group_key(name: str, barcode: str) -> str:
+    suffix = _barcode_suffix(barcode)
+    if suffix:
+        return f"barcode:{suffix}"
+    return f"name:{_normalize_text(name)}"
+
+
+def _barcode_suffix(barcode: str) -> str:
+    clean = "".join(ch for ch in str(barcode).upper() if ch.isalnum())
+    if not clean:
+        return ""
+
+    index = 0
+    while index < len(clean) and clean[index].isdigit():
+        index += 1
+    return clean[index:] or clean
+
+
+def _preferred_barcode_prefixes(store: Store) -> tuple[str, ...]:
+    if store.key == "KA":
+        # Kenku Argentina may report several warehouses with different prefixes
+        # such as 1381, 1505 and 1485. Keep the Shopify-facing SKU.
+        return ("1381",)
+    return ()
+
+
+def _is_better_barcode(candidate: str, current: str, preferred_prefixes: tuple[str, ...]) -> bool:
+    candidate = str(candidate).strip()
+    current = str(current).strip()
+    if not candidate:
+        return False
+    if not current:
+        return True
+
+    candidate_preferred = any(candidate.upper().startswith(prefix) for prefix in preferred_prefixes)
+    current_preferred = any(current.upper().startswith(prefix) for prefix in preferred_prefixes)
+    if candidate_preferred != current_preferred:
+        return candidate_preferred
+
+    return len(candidate) > len(current)
+
+
+def _normalize_text(value: str) -> str:
+    return " ".join(str(value).casefold().split())
 
 
 def _cache_path(store: Store) -> Path:
