@@ -48,10 +48,10 @@ def get_image_inventory_and_sales(store: Store) -> tuple[list[dict], dict]:
     print(f"  Leyendo imagen nueva: {path.name}")
     try:
         products = _read_products_with_vision(path)
-    except Exception:
+    except Exception as error:
         if not cache:
             raise
-        print(f"  Vision fallo. Usando ultimo cache disponible: {cache_path}")
+        print(f"  Vision fallo ({type(error).__name__}: {error}). Usando ultimo cache disponible: {cache_path}")
         return _products_to_inventory(cache.get("products", []), store), {}
 
     print(f"  Productos leidos de la imagen: {len(products)}")

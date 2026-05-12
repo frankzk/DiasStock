@@ -31,6 +31,7 @@ jobs:
       SHOPIFY_SALES_TIMEZONE: "America/Lima"
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       STORE_CR_NAME: "Mireva Costa Rica"
       STORE_CR_BOXFUL_EMAIL: ${{ secrets.STORE_CR_BOXFUL_EMAIL }}
       STORE_CR_BOXFUL_PASSWORD: ${{ secrets.STORE_CR_BOXFUL_PASSWORD }}
@@ -130,6 +131,7 @@ jobs:
               KA)
                 check_secret "STORE_KA_SHOPIFY_URL" "STORE_KA_SHOPIFY_URL" || missing=1
                 check_secret "STORE_KA_SHOPIFY_TOKEN" "STORE_KA_SHOPIFY_TOKEN" || missing=1
+                check_secret "ANTHROPIC_API_KEY" "ANTHROPIC_API_KEY" || missing=1
                 ;;
               *)
                 echo "::error::Tienda no soportada: $store_key"
