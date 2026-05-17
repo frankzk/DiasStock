@@ -67,6 +67,8 @@ Para que `Ventas 7d` no dependa del Excel local, vuelve a ejecutar `dashboard/su
 
 `vercel.json` agenda `/api/import-shopify-sales` todos los dias a las `11:30am America/Lima`. El endpoint guarda ventas por `store_key + sku + fecha` en `shopify_sales_daily`; el dashboard suma los ultimos 7 dias cerrados, sin contar el dia de hoy. Si corre el `2026-05-03`, usa `2026-04-26..2026-05-02`. Si la tabla aun no existe o no hay ventas importadas para una tienda, usa el valor antiguo de `inventory_snapshots.units_sold_7d`.
 
+El mismo importador tambien alimenta `product_funnel_daily`. Primero intenta traer sesiones y add-to-cart por SKU con ShopifyQL; si Shopify no expone esas dimensiones, consulta rutas de landing (`landing_page_path`) y las cruza con el catalogo Shopify (`handle -> SKU`). En cada fila guarda tambien `product_handle`, `product_url`, `landing_page_path` y `page_views` para auditar que URL se asigno a cada SKU. Si tampoco hay sesiones por ruta, cae a `sales` para conservar pedidos por SKU (`quantity_ordered`) y deja ATC/CR en `-`. Si solo falta esta tabla en Supabase, ejecuta `dashboard/product-funnel-schema.sql` en el SQL Editor. Puedes apagarlo con `SHOPIFY_FUNNEL_ENABLED=0` o `--no-funnel`. Si tu tienda/reporte entrega otra consulta valida, usa `SHOPIFY_FUNNEL_SHOPIFYQL_QUERY` o `STORE_XX_FUNNEL_SHOPIFYQL_QUERY` con placeholders `{START_DATE}` y `{END_DATE}`; el parser acepta columnas como `sessions`, `cart_adds`, `sessions_with_cart_additions`, `orders`, `quantity_ordered`, `net_items_sold`, `landing_page_path` y `page_views`.
+
 Para probar localmente:
 
 ```powershell

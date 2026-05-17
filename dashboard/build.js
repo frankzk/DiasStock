@@ -7,7 +7,7 @@ const dist = path.join(root, "dist");
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
 
-for (const file of ["index.html", "README.md", "supabase-schema.sql"]) {
+for (const file of ["index.html", "README.md", "supabase-schema.sql", "product-funnel-schema.sql"]) {
   fs.copyFileSync(path.join(root, file), path.join(dist, file));
 }
 

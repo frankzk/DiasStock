@@ -105,6 +105,34 @@ create table if not exists shopify_sales_import_runs (
 create index if not exists idx_shopify_sales_runs_store_date
 on shopify_sales_import_runs(store_key, run_date desc);
 
+create table if not exists product_funnel_daily (
+    id           bigserial primary key,
+    funnel_date  date not null,
+    store_key    text not null,
+    store_name   text,
+    sku          text not null,
+    product_name text,
+    product_handle text,
+    product_url  text,
+    landing_page_path text,
+    page_views   int not null default 0 check (page_views >= 0),
+    sessions     int not null default 0 check (sessions >= 0),
+    cart_adds    int not null default 0 check (cart_adds >= 0),
+    orders_count int not null default 0 check (orders_count >= 0),
+    source       text,
+    created_at   timestamptz default now(),
+    updated_at   timestamptz default now(),
+    unique(funnel_date, store_key, sku)
+);
+
+alter table product_funnel_daily add column if not exists product_handle text;
+alter table product_funnel_daily add column if not exists product_url text;
+alter table product_funnel_daily add column if not exists landing_page_path text;
+alter table product_funnel_daily add column if not exists page_views int not null default 0;
+
+create index if not exists idx_product_funnel_store_sku_date
+on product_funnel_daily(store_key, sku, funnel_date desc);
+
 create table if not exists ad_sheet_sources (
     id              bigserial primary key,
     spreadsheet_id  text not null,
@@ -272,6 +300,7 @@ alter table dashboard_user_profiles enable row level security;
 alter table user_store_access enable row level security;
 alter table shopify_sales_daily enable row level security;
 alter table shopify_sales_import_runs enable row level security;
+alter table product_funnel_daily enable row level security;
 alter table ad_sheet_sources enable row level security;
 alter table campaign_sku_mappings enable row level security;
 alter table ad_campaign_daily enable row level security;
@@ -360,6 +389,21 @@ on shopify_sales_import_runs
 for select
 to authenticated
 using (private.can_access_store(store_key));
+
+drop policy if exists "Authenticated read product funnel daily by store" on product_funnel_daily;
+create policy "Authenticated read product funnel daily by store"
+on product_funnel_daily
+for select
+to authenticated
+using (private.can_access_store(store_key));
+
+drop policy if exists "Admin manage product funnel daily" on product_funnel_daily;
+create policy "Admin manage product funnel daily"
+on product_funnel_daily
+for all
+to authenticated
+using (private.is_dashboard_admin())
+with check (private.is_dashboard_admin());
 
 drop policy if exists "Public manage ad sheet sources" on ad_sheet_sources;
 drop policy if exists "Authenticated read ad sheet sources by store" on ad_sheet_sources;

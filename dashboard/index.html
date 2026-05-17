@@ -1365,6 +1365,238 @@
       padding: 12px;
     }
 
+    .funnel-section {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: none;
+      padding: 8px;
+    }
+
+    .funnel-toolbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .funnel-toolbar h2 {
+      font-size: 14px;
+      line-height: 1.15;
+    }
+
+    .funnel-toolbar p {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .funnel-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .funnel-problem {
+      max-width: 560px;
+      border: 1px solid #f2cf95;
+      border-radius: 999px;
+      background: #fff8ec;
+      color: #9a5a08;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .funnel-table-wrap {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fcfdfc;
+    }
+
+    .funnel-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+
+    .funnel-table th,
+    .funnel-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 6px 8px;
+      text-align: right;
+      vertical-align: middle;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .funnel-table th {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      background: #f8faf8;
+    }
+
+    .funnel-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .funnel-table th:first-child,
+    .funnel-table td:first-child {
+      width: 30%;
+      text-align: left;
+    }
+
+    .funnel-table th:last-child,
+    .funnel-table td:last-child {
+      width: 24%;
+      text-align: left;
+    }
+
+    .funnel-product {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .funnel-product-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 22px;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .funnel-product strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+
+    .funnel-muted {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .funnel-url-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--brand);
+      background: #fff;
+      transition: background .15s ease, border-color .15s ease, color .15s ease;
+    }
+
+    .funnel-url-icon:hover {
+      background: #eef7f2;
+      border-color: #9dcab3;
+      color: #17633d;
+    }
+
+    .funnel-url-icon svg {
+      width: 13px;
+      height: 13px;
+      stroke-width: 2.4;
+    }
+
+    .funnel-rate {
+      display: inline-flex;
+      justify-content: flex-end;
+      min-width: 48px;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-weight: 900;
+    }
+
+    .funnel-rate.good {
+      background: #e4f7ea;
+      color: #08783e;
+    }
+
+    .funnel-rate.warn {
+      background: #fff0cf;
+      color: #9a5a08;
+    }
+
+    .funnel-rate.danger {
+      background: #ffe0df;
+      color: #b32318;
+    }
+
+    .funnel-rate.anomaly {
+      background: #e7f0ff;
+      color: #2459c9;
+    }
+
+    .funnel-rate.neutral {
+      background: #eef3f1;
+      color: var(--muted);
+    }
+
+    .funnel-flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .funnel-flag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .funnel-flag.good {
+      background: #e4f7ea;
+      color: #08783e;
+    }
+
+    .funnel-flag.warn {
+      background: #fff0cf;
+      color: #9a5a08;
+    }
+
+    .funnel-flag.danger {
+      background: #ffe0df;
+      color: #b32318;
+    }
+
+    .funnel-flag.anomaly {
+      background: #e7f0ff;
+      color: #2459c9;
+    }
+
+    .funnel-flag.neutral {
+      background: #eef3f1;
+      color: var(--muted);
+    }
+
     .table-section {
       overflow: hidden;
       box-shadow: none;
@@ -2039,6 +2271,21 @@
         grid-template-columns: 1fr;
       }
 
+      .funnel-toolbar {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .funnel-meta {
+        justify-content: flex-start;
+      }
+
+      .funnel-problem {
+        max-width: 100%;
+        border-radius: 7px;
+        white-space: normal;
+      }
+
       .search-field {
         grid-column: auto;
       }
@@ -2402,6 +2649,38 @@
       </div>
     </section>
 
+    <section class="funnel-section" aria-labelledby="funnelTitle">
+      <div class="funnel-toolbar">
+        <div>
+          <h2 id="funnelTitle">Funnel 7d</h2>
+          <p>URL producto -> sesiones -> pedidos</p>
+        </div>
+        <div class="funnel-meta">
+          <span class="count-pill" id="funnelCount">0 con funnel</span>
+          <span class="funnel-problem hidden" id="funnelProblem"></span>
+        </div>
+      </div>
+      <div class="funnel-table-wrap">
+        <table class="funnel-table">
+          <thead>
+            <tr>
+              <th style="width: 30%;">Producto</th>
+              <th style="width: 8%;">Pedidos</th>
+              <th style="width: 8%;">Unid.</th>
+              <th style="width: 10%;">Sesiones</th>
+              <th style="width: 11%;">Cart Adds</th>
+              <th style="width: 8%;">ATC%</th>
+              <th style="width: 9%;">CR Ped.</th>
+              <th style="width: 16%;">Lectura</th>
+            </tr>
+          </thead>
+          <tbody id="funnelBody">
+            <tr><td colspan="8" class="empty compact-empty">Sin datos de funnel cargados</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="table-section" aria-labelledby="tableTitle">
       <div class="table-toolbar">
         <div class="table-title-block">
@@ -2628,6 +2907,11 @@
       one_tick: { label: "1T", title: "1-Tick", expected: 2 },
       quantity_offer: { label: "Cant", title: "Cantidad", expected: 1 },
     };
+    const FUNNEL_BENCHMARKS = {
+      atc: { danger: 8, good: 12 },
+      checkout: { danger: 20, good: 24, high: 80 },
+      conversion: { danger: 1, good: 3 },
+    };
     const TABLE_COLUMNS = [
       { key: "date", label: "Fecha", type: "date" },
       { key: "storeName", label: "Tienda", type: "text" },
@@ -2657,9 +2941,11 @@
       easysellRuleProducts: [],
       shopifySalesDaily: [],
       shopifySalesRuns: [],
+      funnelDaily: [],
       stockImageUploads: [],
       salesProblem: "",
       easysellProblem: "",
+      funnelProblem: "",
       currentUser: null,
       currentProfile: null,
       currentAccess: [],
@@ -2777,6 +3063,9 @@
       portfolioModalChart: $("#portfolioModalChart"),
       portfolioModalAdsCount: $("#portfolioModalAdsCount"),
       portfolioModalNoAdsCount: $("#portfolioModalNoAdsCount"),
+      funnelBody: $("#funnelBody"),
+      funnelCount: $("#funnelCount"),
+      funnelProblem: $("#funnelProblem"),
       easysellModalBackdrop: $("#easysellModalBackdrop"),
       easysellModalClose: $("#easysellModalClose"),
       easysellModalTitle: $("#easysellModalTitle"),
@@ -2836,6 +3125,7 @@
       state.easysellRuleProducts = [];
       state.shopifySalesDaily = [];
       state.shopifySalesRuns = [];
+      state.funnelDaily = [];
       state.stockImageUploads = [];
       state.dashboardUsers = [];
       state.sheetCampaigns = {};
@@ -2844,6 +3134,8 @@
       state.editingAdsSheetUrl = false;
       state.adsProblem = "";
       state.salesProblem = "";
+      state.easysellProblem = "";
+      state.funnelProblem = "";
       state.expandedProductKeys.clear();
       state.priorityModalOpen = false;
       buildFilters();
@@ -3041,6 +3333,7 @@
       setLoading(true);
       state.adsProblem = "";
       state.easysellProblem = "";
+      state.funnelProblem = "";
       els.lastUpdated.textContent = "Cargando snapshots";
 
       try {
@@ -3060,6 +3353,7 @@
 
         state.rows = filterRowsForCurrentUser((data || []).map(normalizeRow));
         await loadShopifySalesTable(client);
+        await loadFunnelTable(client);
         await loadAdsTables(client);
         await loadEasySellTables(client);
         state.expandedProductKeys.clear();
@@ -3073,7 +3367,14 @@
         renderStockImageConfig();
         closeConfig();
         const now = new Date();
-        els.lastUpdated.textContent = `Actualizado ${now.toLocaleString("es-PE")}`;
+        const latestSnapshotDate = state.rows
+          .map((row) => row.date)
+          .filter(Boolean)
+          .sort()
+          .reverse()[0];
+        els.lastUpdated.textContent = latestSnapshotDate
+          ? `Datos hasta ${formatDate(latestSnapshotDate)} - cargado ${now.toLocaleString("es-PE")}`
+          : `Actualizado ${now.toLocaleString("es-PE")}`;
       } catch (error) {
         if (isAdmin()) {
           openConfig(error.message || "No se pudieron cargar los snapshots.");
@@ -3121,6 +3422,34 @@
       if (!error) return data || [];
       state.salesProblem = error?.message || "No se pudo cargar shopify_sales_daily.";
       return [];
+    }
+
+    async function loadFunnelTable(client) {
+      state.funnelProblem = "";
+      const rows = await fetchOptionalFunnelTable(
+        client
+          .from("product_funnel_daily")
+          .select("*")
+          .order("funnel_date", { ascending: false })
+          .limit(20000)
+      );
+      state.funnelDaily = filterRowsForCurrentUser(rows.map(normalizeFunnelDaily));
+      enrichRowsWithFunnel();
+    }
+
+    async function fetchOptionalFunnelTable(query) {
+      const { data, error } = await query;
+      if (!error) return data || [];
+      state.funnelProblem = formatFunnelSchemaError(error);
+      return [];
+    }
+
+    function formatFunnelSchemaError(error) {
+      const message = error?.message || String(error || "");
+      if (error?.code === "PGRST205" || message.includes("product_funnel_daily") || message.includes("schema cache")) {
+        return "Falta la tabla product_funnel_daily. Ejecuta dashboard/product-funnel-schema.sql para activar Funnel 7d.";
+      }
+      return message || "No se pudieron cargar los datos de Funnel 7d.";
     }
 
     function pruneAdsUiState() {
@@ -3288,6 +3617,7 @@
         easysellSummary: createEmptyEasySellSummary(),
         easysellRules: [],
         easysellHasRun: false,
+        funnel: createEmptyFunnelSummary(),
         salesTrend30: [],
         salesSource: "snapshot",
         salesWindowStart: addDays(row.run_date || "", -6),
@@ -3317,6 +3647,25 @@
         storeName: row.store_name || row.store_key || "",
         rowsImported: Number(row.rows_imported || 0),
         unitsSold: Number(row.units_sold || 0),
+      };
+    }
+
+    function normalizeFunnelDaily(row) {
+      return {
+        id: Number(row.id || 0),
+        date: row.funnel_date || "",
+        storeKey: row.store_key || "",
+        storeName: row.store_name || row.store_key || "",
+        sku: row.sku || "",
+        productName: row.product_name || "",
+        productHandle: row.product_handle || "",
+        productUrl: row.product_url || "",
+        landingPath: row.landing_page_path || "",
+        pageViews: Number(row.page_views || 0),
+        sessions: Number(row.sessions || 0),
+        cartAdds: Number(row.cart_adds || 0),
+        orders: Number(row.orders_count || 0),
+        source: row.source || "",
       };
     }
 
@@ -3517,6 +3866,99 @@
         row.alertParts = splitAlerts(row.baseAlert);
         row.alert = row.baseAlert;
       }
+    }
+
+    function createEmptyFunnelSummary() {
+      return {
+        hasData: false,
+        sessions: 0,
+        pageViews: 0,
+        cartAdds: 0,
+        orders: 0,
+        productUrl: "",
+        landingPath: "",
+        productHandle: "",
+        source: "",
+        atcRate: null,
+        checkoutRate: null,
+        conversionRate: null,
+        partial: false,
+        flags: [],
+      };
+    }
+
+    function enrichRowsWithFunnel() {
+      for (const row of state.rows) row.funnel = createEmptyFunnelSummary();
+      if (!state.rows.length || !state.funnelDaily.length) return;
+
+      const funnelByStoreSku = new Map();
+      for (const item of state.funnelDaily) {
+        const storeKey = normalizeKey(item.storeKey);
+        const skuKey = normalizeKey(item.sku);
+        if (!storeKey || !skuKey || !item.date) continue;
+        const key = `${storeKey}::${skuKey}`;
+        if (!funnelByStoreSku.has(key)) funnelByStoreSku.set(key, []);
+        funnelByStoreSku.get(key).push(item);
+      }
+
+      for (const row of state.rows) {
+        const storeKey = normalizeKey(row.storeKey);
+        const skuKey = normalizeKey(row.sku);
+        if (!storeKey || !skuKey) continue;
+        const endDate = row.salesWindowEnd || row.date;
+        const startDate = row.salesWindowStart || addDays(endDate, -6);
+        const entries = (funnelByStoreSku.get(`${storeKey}::${skuKey}`) || [])
+          .filter((item) => item.date >= startDate && item.date <= endDate);
+        const sessions = entries.reduce((sum, item) => sum + Number(item.sessions || 0), 0);
+        const pageViews = entries.reduce((sum, item) => sum + Number(item.pageViews || 0), 0);
+        const cartAdds = entries.reduce((sum, item) => sum + Number(item.cartAdds || 0), 0);
+        const orders = entries.reduce((sum, item) => sum + Number(item.orders || 0), 0);
+        if (!sessions && !cartAdds && !orders) continue;
+        const urlEntry = entries.find((item) => item.productUrl || item.landingPath || item.productHandle);
+
+        const summary = {
+          hasData: true,
+          sessions,
+          pageViews,
+          cartAdds,
+          orders,
+          productUrl: urlEntry?.productUrl || "",
+          landingPath: urlEntry?.landingPath || "",
+          productHandle: urlEntry?.productHandle || "",
+          source: urlEntry?.source || "",
+          atcRate: sessions > 0 ? roundNumber((cartAdds / sessions) * 100, 2) : null,
+          checkoutRate: cartAdds > 0 ? roundNumber((orders / cartAdds) * 100, 2) : null,
+          conversionRate: sessions > 0 ? roundNumber((orders / sessions) * 100, 2) : null,
+          partial: !sessions && !cartAdds && orders > 0,
+          flags: [],
+        };
+        summary.flags = getFunnelFlags(summary);
+        row.funnel = summary;
+      }
+    }
+
+    function getFunnelFlags(summary) {
+      const flags = [];
+      if (!summary.hasData) return flags;
+      if (summary.partial) {
+        flags.push({ label: "Solo pedidos", state: "neutral" });
+        return flags;
+      }
+      if (summary.atcRate !== null) {
+        if (summary.atcRate < FUNNEL_BENCHMARKS.atc.danger) flags.push({ label: "ATC bajo", state: "danger" });
+        else if (summary.atcRate < FUNNEL_BENCHMARKS.atc.good) flags.push({ label: "ATC revisar", state: "warn" });
+      }
+      if (summary.checkoutRate !== null) {
+        if (summary.checkoutRate > FUNNEL_BENCHMARKS.checkout.high) flags.push({ label: "Upsell post-compra", state: "anomaly" });
+        else if (summary.checkoutRate < FUNNEL_BENCHMARKS.checkout.danger) flags.push({ label: "Carrito->pedido bajo", state: "danger" });
+        else if (summary.checkoutRate < FUNNEL_BENCHMARKS.checkout.good) flags.push({ label: "Carrito->pedido revisar", state: "warn" });
+      }
+      if (summary.conversionRate !== null) {
+        if (summary.conversionRate < FUNNEL_BENCHMARKS.conversion.danger) flags.push({ label: "CR bajo", state: "danger" });
+        else if (summary.conversionRate < FUNNEL_BENCHMARKS.conversion.good) flags.push({ label: "CR revisar", state: "warn" });
+      }
+      if (!flags.length) flags.push({ label: "OK", state: "good" });
+      return flags;
     }
 
     function enrichRowsWithAdMetrics() {
@@ -5024,6 +5466,7 @@
       renderStatusBars();
       renderPriorityList();
       renderPortfolioMap();
+      renderFunnelPanel();
       if (state.priorityModalOpen) renderPriorityModal();
       if (state.portfolioModalOpen) renderPortfolioModalChart();
       if (state.easysellModalOpen) renderEasySellModal();
@@ -5090,6 +5533,130 @@
           </span>
         `;
       }).join("");
+    }
+
+    function renderFunnelPanel() {
+      if (!els.funnelBody || !els.funnelCount) return;
+      const rows = state.filteredRows.filter((row) => row.funnel?.hasData);
+      els.funnelCount.textContent = `${formatNumber(rows.length)} con funnel`;
+
+      if (els.funnelProblem) {
+        els.funnelProblem.textContent = state.funnelProblem || "";
+        els.funnelProblem.classList.toggle("hidden", !state.funnelProblem);
+      }
+
+      if (!rows.length) {
+        const message = state.funnelProblem || "Sin datos de funnel cargados para estos filtros.";
+        els.funnelBody.innerHTML = `<tr><td colspan="8" class="empty compact-empty">${escapeHtml(message)}</td></tr>`;
+        return;
+      }
+
+      const sortedRows = rows
+        .slice()
+        .sort((a, b) => getFunnelRiskScore(b.funnel) - getFunnelRiskScore(a.funnel) || b.funnel.sessions - a.funnel.sessions)
+        .slice(0, 15);
+
+      els.funnelBody.innerHTML = sortedRows.map(renderFunnelRow).join("");
+    }
+
+    function renderFunnelRow(row) {
+      const funnel = row.funnel || createEmptyFunnelSummary();
+      const urlLabel = funnel.landingPath || funnel.productUrl || "";
+      const urlIcon = renderFunnelUrlIcon(funnel.productUrl, urlLabel);
+      return `
+        <tr>
+          <td data-label="Producto">
+            <div class="funnel-product">
+              <div class="funnel-product-head">
+                <strong title="${escapeHtml(row.product)}">${escapeHtml(row.product || "-")}</strong>
+                ${urlIcon}
+              </div>
+              <span class="funnel-muted">${escapeHtml(row.storeName)} - ${escapeHtml(row.sku || "-")}</span>
+            </div>
+          </td>
+          <td data-label="Pedidos">${formatNumber(funnel.orders)}</td>
+          <td data-label="Unidades">${formatNumber(row.sold7 || 0)}</td>
+          <td data-label="Sesiones">${renderFunnelCount(funnel.sessions, funnel.partial)}</td>
+          <td data-label="Cart Adds">${renderFunnelCount(funnel.cartAdds, funnel.partial)}</td>
+          <td data-label="ATC%">${renderFunnelRate("atc", funnel.atcRate)}</td>
+          <td data-label="CR Ped.">${renderFunnelRate("conversion", funnel.conversionRate)}</td>
+          <td data-label="Lectura">${renderFunnelFlags(funnel.flags)}</td>
+        </tr>
+      `;
+    }
+
+    function renderFunnelUrlIcon(productUrl, label) {
+      const safeTitle = escapeHtml(label || productUrl || "URL de producto");
+      if (!productUrl) {
+        return label
+          ? `<span class="funnel-url-icon" title="${safeTitle}" aria-label="Ruta de producto">${linkIconSvg()}</span>`
+          : "";
+      }
+      return `
+        <a class="funnel-url-icon" href="${escapeHtml(productUrl)}" target="_blank" rel="noopener" title="${safeTitle}" aria-label="Abrir URL de producto">
+          ${linkIconSvg()}
+        </a>
+      `;
+    }
+
+    function linkIconSvg() {
+      return `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      `;
+    }
+
+    function renderFunnelFlags(flags) {
+      const safeFlags = flags && flags.length ? flags : [{ label: "Sin lectura", state: "neutral" }];
+      return `<div class="funnel-flags">${safeFlags.map((flag) => (
+        `<span class="funnel-flag ${safeFunnelState(flag.state)}">${escapeHtml(flag.label)}</span>`
+      )).join("")}</div>`;
+    }
+
+    function renderFunnelCount(value, partial) {
+      if (partial && !Number(value || 0)) return `<span class="funnel-rate neutral">-</span>`;
+      return formatNumber(value);
+    }
+
+    function renderFunnelRate(type, value) {
+      if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+        return `<span class="funnel-rate neutral">-</span>`;
+      }
+      return `<span class="funnel-rate ${funnelRateClass(type, value)}">${formatDecimal(value)}%</span>`;
+    }
+
+    function funnelRateClass(type, value) {
+      const number = Number(value);
+      if (type === "atc") {
+        if (number < FUNNEL_BENCHMARKS.atc.danger) return "danger";
+        if (number < FUNNEL_BENCHMARKS.atc.good) return "warn";
+        return "good";
+      }
+      if (type === "checkout") {
+        if (number > FUNNEL_BENCHMARKS.checkout.high) return "anomaly";
+        if (number < FUNNEL_BENCHMARKS.checkout.danger) return "danger";
+        if (number < FUNNEL_BENCHMARKS.checkout.good) return "warn";
+        return "good";
+      }
+      if (type === "conversion") {
+        if (number < FUNNEL_BENCHMARKS.conversion.danger) return "danger";
+        if (number < FUNNEL_BENCHMARKS.conversion.good) return "warn";
+        return "good";
+      }
+      return "neutral";
+    }
+
+    function safeFunnelState(stateName) {
+      return ["good", "warn", "danger", "anomaly", "neutral"].includes(stateName) ? stateName : "neutral";
+    }
+
+    function getFunnelRiskScore(summary) {
+      if (!summary?.hasData) return 0;
+      return (summary.flags || []).reduce((score, flag) => score + (
+        flag.state === "danger" ? 4 : flag.state === "warn" ? 2 : flag.state === "anomaly" ? 1 : 0
+      ), 0);
     }
 
     function renderPriorityListLegacy() {

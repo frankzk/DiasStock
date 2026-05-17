@@ -23,6 +23,7 @@ async function handler(req, res) {
       endDate: req.query.endDate || "",
       runDate: req.query.runDate || "",
       dryRun: req.query.dryRun === "1" || req.query.dryRun === "true",
+      funnel: !(req.query.funnel === "0" || req.query.funnel === "false" || req.query.noFunnel === "1"),
     });
     res.setHeader("Cache-Control", "no-store");
     res.status(result.ok ? 200 : 207).json(result);
