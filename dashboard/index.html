@@ -1741,6 +1741,17 @@
       min-width: 6px;
     }
 
+    .funnel-table .sort-button {
+      justify-content: flex-end;
+      text-align: right;
+    }
+
+    .funnel-table th:first-child .sort-button,
+    .funnel-table th:last-child .sort-button {
+      justify-content: flex-start;
+      text-align: left;
+    }
+
     td.number {
       text-align: right;
       font-variant-numeric: tabular-nums;
@@ -2664,14 +2675,14 @@
         <table class="funnel-table">
           <thead>
             <tr>
-              <th style="width: 30%;">Producto</th>
-              <th style="width: 8%;">Pedidos</th>
-              <th style="width: 8%;">Unid.</th>
-              <th style="width: 10%;">Sesiones</th>
-              <th style="width: 11%;">Cart Adds</th>
-              <th style="width: 8%;">ATC%</th>
-              <th style="width: 9%;">CR Ped.</th>
-              <th style="width: 16%;">Lectura</th>
+              <th style="width: 30%;"><button type="button" class="sort-button" data-funnel-sort-key="product">Producto <span class="sort-indicator"></span></button></th>
+              <th style="width: 8%;"><button type="button" class="sort-button" data-funnel-sort-key="units">Unid. <span class="sort-indicator"></span></button></th>
+              <th style="width: 10%;"><button type="button" class="sort-button" data-funnel-sort-key="sessions">Sesiones <span class="sort-indicator"></span></button></th>
+              <th style="width: 11%;"><button type="button" class="sort-button" data-funnel-sort-key="cartAdds">Cart Adds <span class="sort-indicator"></span></button></th>
+              <th style="width: 8%;"><button type="button" class="sort-button" data-funnel-sort-key="atcRate">ATC% <span class="sort-indicator"></span></button></th>
+              <th style="width: 8%;"><button type="button" class="sort-button" data-funnel-sort-key="orders">Pedidos <span class="sort-indicator"></span></button></th>
+              <th style="width: 9%;"><button type="button" class="sort-button" data-funnel-sort-key="conversionRate">CR Ped. <span class="sort-indicator"></span></button></th>
+              <th style="width: 16%;"><button type="button" class="sort-button" data-funnel-sort-key="risk">Lectura <span class="sort-indicator"></span></button></th>
             </tr>
           </thead>
           <tbody id="funnelBody">
@@ -2963,6 +2974,7 @@
       loading: false,
       client: null,
       sort: { key: "sold7", direction: "desc" },
+      funnelSort: { key: "orders", direction: "desc" },
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -5539,6 +5551,7 @@
       if (!els.funnelBody || !els.funnelCount) return;
       const rows = state.filteredRows.filter((row) => row.funnel?.hasData);
       els.funnelCount.textContent = `${formatNumber(rows.length)} con funnel`;
+      renderFunnelSortIndicators();
 
       if (els.funnelProblem) {
         els.funnelProblem.textContent = state.funnelProblem || "";
@@ -5553,10 +5566,78 @@
 
       const sortedRows = rows
         .slice()
-        .sort((a, b) => getFunnelRiskScore(b.funnel) - getFunnelRiskScore(a.funnel) || b.funnel.sessions - a.funnel.sessions)
+        .sort(compareFunnelRows)
         .slice(0, 15);
 
       els.funnelBody.innerHTML = sortedRows.map(renderFunnelRow).join("");
+    }
+
+    function renderFunnelSortIndicators() {
+      document.querySelectorAll("[data-funnel-sort-key]").forEach((button) => {
+        const indicator = button.querySelector(".sort-indicator");
+        const isActive = button.dataset.funnelSortKey === state.funnelSort.key;
+        button.setAttribute("aria-sort", isActive ? (state.funnelSort.direction === "asc" ? "ascending" : "descending") : "none");
+        if (indicator) indicator.textContent = isActive ? (state.funnelSort.direction === "asc" ? "↑" : "↓") : "";
+      });
+    }
+
+    function setFunnelSort(key) {
+      if (state.funnelSort.key === key) {
+        state.funnelSort.direction = state.funnelSort.direction === "asc" ? "desc" : "asc";
+      } else {
+        state.funnelSort = { key, direction: getDefaultFunnelSortDirection(key) };
+      }
+      renderFunnelPanel();
+    }
+
+    function getDefaultFunnelSortDirection(key) {
+      return key === "product" ? "asc" : "desc";
+    }
+
+    function compareFunnelRows(a, b) {
+      const sort = state.funnelSort || { key: "orders", direction: "desc" };
+      const primary = compareFunnelValues(
+        getFunnelSortValue(a, sort.key),
+        getFunnelSortValue(b, sort.key),
+        sort.key,
+        sort.direction
+      );
+      if (primary !== 0) return primary;
+
+      const byOrders = Number(b.funnel?.orders || 0) - Number(a.funnel?.orders || 0);
+      if (byOrders !== 0) return byOrders;
+      const bySessions = Number(b.funnel?.sessions || 0) - Number(a.funnel?.sessions || 0);
+      if (bySessions !== 0) return bySessions;
+      return String(a.product || "").localeCompare(String(b.product || ""), "es", { numeric: true, sensitivity: "base" });
+    }
+
+    function getFunnelSortValue(row, key) {
+      const funnel = row.funnel || createEmptyFunnelSummary();
+      if (key === "product") return row.product || "";
+      if (key === "units") return row.sold7;
+      if (key === "sessions") return funnel.sessions;
+      if (key === "cartAdds") return funnel.cartAdds;
+      if (key === "atcRate") return funnel.atcRate;
+      if (key === "orders") return funnel.orders;
+      if (key === "conversionRate") return funnel.conversionRate;
+      if (key === "risk") return getFunnelRiskScore(funnel);
+      return "";
+    }
+
+    function compareFunnelValues(a, b, key, direction) {
+      if (key === "product") {
+        const comparison = String(a || "").localeCompare(String(b || ""), "es", { numeric: true, sensitivity: "base" });
+        return direction === "asc" ? comparison : -comparison;
+      }
+
+      const aNumber = Number(a);
+      const bNumber = Number(b);
+      const aValid = Number.isFinite(aNumber);
+      const bValid = Number.isFinite(bNumber);
+      if (!aValid && !bValid) return 0;
+      if (!aValid) return 1;
+      if (!bValid) return -1;
+      return direction === "asc" ? aNumber - bNumber : bNumber - aNumber;
     }
 
     function renderFunnelRow(row) {
@@ -5574,11 +5655,11 @@
               <span class="funnel-muted">${escapeHtml(row.storeName)} - ${escapeHtml(row.sku || "-")}</span>
             </div>
           </td>
-          <td data-label="Pedidos">${formatNumber(funnel.orders)}</td>
           <td data-label="Unidades">${formatNumber(row.sold7 || 0)}</td>
           <td data-label="Sesiones">${renderFunnelCount(funnel.sessions, funnel.partial)}</td>
           <td data-label="Cart Adds">${renderFunnelCount(funnel.cartAdds, funnel.partial)}</td>
           <td data-label="ATC%">${renderFunnelRate("atc", funnel.atcRate)}</td>
+          <td data-label="Pedidos">${formatNumber(funnel.orders)}</td>
           <td data-label="CR Ped.">${renderFunnelRate("conversion", funnel.conversionRate)}</td>
           <td data-label="Lectura">${renderFunnelFlags(funnel.flags)}</td>
         </tr>
@@ -6593,6 +6674,9 @@
     ].forEach((input) => input.addEventListener("input", applyFilters));
     document.querySelectorAll("[data-sort-key]").forEach((button) => {
       button.addEventListener("click", () => setSort(button.dataset.sortKey));
+    });
+    document.querySelectorAll("[data-funnel-sort-key]").forEach((button) => {
+      button.addEventListener("click", () => setFunnelSort(button.dataset.funnelSortKey));
     });
     document.addEventListener("click", (event) => {
       if (!els.productPicker.contains(event.target)) setProductMenuOpen(false);
