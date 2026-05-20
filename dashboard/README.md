@@ -165,11 +165,12 @@ Tambien deben existir estos secrets:
 - `STORE_KA_SHOPIFY_URL`
 - `STORE_KA_SHOPIFY_TOKEN`
 
-El workflow corre todos los dias a las `12:15pm America/Lima`. Si Shopify invalida la sesion, vuelve a correr `generate_shopify_admin_session.py` y reemplaza `SHOPIFY_ADMIN_STORAGE_STATE_B64`.
+El workflow corre todos los dias a las `12:15pm America/Lima` para `CR,HN,KA`. Si Shopify invalida la sesion, vuelve a correr `generate_shopify_admin_session.py` y reemplaza `SHOPIFY_ADMIN_STORAGE_STATE_B64`.
 
 Para probar localmente:
 
 ```powershell
 py import_easysell_to_supabase.py --store CR --dry-run --limit-rules 2 --headed
+py import_easysell_to_supabase.py --store KA --dry-run --limit-rules 2 --headed
 py import_easysell_to_supabase.py --store CR
 ```

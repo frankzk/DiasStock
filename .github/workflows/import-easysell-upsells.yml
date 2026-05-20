@@ -13,7 +13,7 @@ on:
       stores:
         description: "Tiendas a procesar separadas por coma."
         required: false
-        default: "CR,HN"
+        default: "CR,HN,KA"
         type: string
 
 concurrency:
@@ -120,7 +120,13 @@ jobs:
 
           Test-RequiredSecret "SUPABASE_URL" "SUPABASE_URL"
           Test-RequiredSecret "SUPABASE_SERVICE_ROLE_KEY" "SUPABASE_SERVICE_ROLE_KEY"
-          Test-RequiredSecret "SHOPIFY_ADMIN_STORAGE_STATE_B64" "SHOPIFY_ADMIN_STORAGE_STATE_B64"
+
+          $hasLocalProfile = -not [string]::IsNullOrWhiteSpace($env:SHOPIFY_ADMIN_USER_DATA_DIR) -and (Test-Path -LiteralPath $env:SHOPIFY_ADMIN_USER_DATA_DIR)
+          $hasStorageState = -not [string]::IsNullOrWhiteSpace($env:SHOPIFY_ADMIN_STORAGE_STATE_B64)
+          if (-not $hasLocalProfile -and -not $hasStorageState) {
+            Write-Host "::error::Falta sesion Shopify: crea/actualiza el perfil local SHOPIFY_ADMIN_USER_DATA_DIR o agrega SHOPIFY_ADMIN_STORAGE_STATE_B64."
+            $missing = $true
+          }
 
           if ($missing) {
             exit 1
@@ -147,7 +153,7 @@ jobs:
 
           $stores = $env:INPUT_STORES
           if ([string]::IsNullOrWhiteSpace($stores)) {
-            $stores = "CR,HN"
+            $stores = "CR,HN,KA"
           }
 
           "run_date=$runDate" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8

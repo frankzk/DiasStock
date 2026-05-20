@@ -46,14 +46,12 @@ STORE_HN_SHOPIFY_URL
 STORE_HN_SHOPIFY_TOKEN
 ```
 
-Solo agrega estos si tambien vas a correr Kenku Argentina en EasySell:
-
 ```text
 STORE_KA_SHOPIFY_URL
 STORE_KA_SHOPIFY_TOKEN
 ```
 
-Por defecto el workflow procesa `CR,HN`.
+Por defecto el workflow procesa `CR,HN,KA`.
 
 ## 4. Renovar sesion de Shopify
 
@@ -77,7 +75,7 @@ Valores recomendados:
 
 ```text
 Fecha: vacio para hoy
-Tiendas: CR,HN
+Tiendas: CR,HN,KA
 ```
 
 Si el runner no aparece, revisa que:

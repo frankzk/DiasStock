@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 import requests
@@ -12,10 +13,10 @@ from src.config import Store
 from src.easysell_scraper import get_shopify_admin_slug, scrape_easysell_store
 
 
-DEFAULT_STORES = "CR,HN"
+DEFAULT_STORES = "CR,HN,KA"
 SUPABASE_PAGE_SIZE = 1000
 LIMA_TIMEZONE = timezone(timedelta(hours=-5))
-MAX_NUMERIC_14_2 = 999_999_999_999.99
+MAX_NUMERIC_14_2 = Decimal("999999999999.99")
 
 
 def configure_stdio_encoding() -> None:
@@ -94,7 +95,7 @@ def main() -> int:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Importa reglas EasySell COD Form a Supabase.")
     parser.add_argument("--run-date", default="", help="Fecha del run YYYY-MM-DD. Vacio = hoy America/Lima.")
-    parser.add_argument("--stores", default=DEFAULT_STORES, help="Tiendas separadas por coma. Default: CR,HN.")
+    parser.add_argument("--stores", default=DEFAULT_STORES, help="Tiendas separadas por coma. Default: CR,HN,KA.")
     parser.add_argument("--store", default="", help="Atajo para una sola tienda, por ejemplo CR.")
     parser.add_argument("--dry-run", action="store_true", help="Scrapea y muestra resumen sin guardar.")
     parser.add_argument("--headed", action="store_true", help="Abre Chromium visible para depurar.")
@@ -167,8 +168,8 @@ def sanitize_money(value: Any, field: str, context: str, default: float | None =
     if value is None or value == "":
         return default
     try:
-        amount = round(float(value), 2)
-    except (TypeError, ValueError):
+        amount = Decimal(str(value).strip()).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, TypeError, ValueError):
         print(f"Advertencia: {field} invalido en {context}: {value!r}. Se guarda vacio.", file=sys.stderr)
         return default
     if abs(amount) >= MAX_NUMERIC_14_2:
@@ -177,7 +178,7 @@ def sanitize_money(value: Any, field: str, context: str, default: float | None =
             file=sys.stderr,
         )
         return default
-    return amount
+    return float(amount)
 
 
 def save_store_result(client: "SupabaseClient", result: dict[str, Any]) -> None:
