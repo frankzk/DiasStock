@@ -217,8 +217,12 @@ def merge_easysell_rule(base: dict[str, Any], duplicate: dict[str, Any]) -> dict
             merged[field] = duplicate.get(field)
 
     for field in ["impressions", "orders_count", "conversion_rate", "additional_revenue"]:
-        if not merged.get(field) and duplicate.get(field):
+        if numeric_value(duplicate.get(field)) > numeric_value(merged.get(field)):
             merged[field] = duplicate.get(field)
+    if metrics_strength(duplicate) > metrics_strength(base):
+        for field in ["currency", "raw_metrics"]:
+            if duplicate.get(field):
+                merged[field] = duplicate.get(field)
 
     merged["offered_products"] = dedupe_payloads(
         list(base.get("offered_products") or []) + list(duplicate.get("offered_products") or []),
@@ -268,6 +272,21 @@ def payload_completeness_score(row: dict[str, Any]) -> int:
         if value not in (None, "", [], {}):
             score += 1
     return score
+
+
+def numeric_value(value: Any) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def metrics_strength(row: dict[str, Any]) -> float:
+    return (
+        numeric_value(row.get("impressions"))
+        + numeric_value(row.get("orders_count")) * 10
+        + numeric_value(row.get("additional_revenue")) / 1000
+    )
 
 
 def save_store_result(client: "SupabaseClient", result: dict[str, Any]) -> None:

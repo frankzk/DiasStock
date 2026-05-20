@@ -41,6 +41,7 @@ SECTION_CONFIGS = [
     },
 ]
 TIMEOUT = 60000
+MAX_RULE_PAGES = 50
 
 
 @dataclass
@@ -59,7 +60,15 @@ def scrape_easysell_store(
 ) -> dict[str, Any]:
     slug = get_shopify_admin_slug(store)
     user_data_dir = os.environ.get("SHOPIFY_ADMIN_USER_DATA_DIR", "").strip()
-    storage_state = load_shopify_storage_state(required=not user_data_dir)
+    has_user_data_dir = bool(user_data_dir and Path(user_data_dir).exists())
+    storage_state = load_shopify_storage_state(required=False)
+    if user_data_dir and not has_user_data_dir:
+        print(f"Advertencia: SHOPIFY_ADMIN_USER_DATA_DIR no existe: {user_data_dir}.")
+    if not has_user_data_dir and not storage_state:
+        raise RuntimeError(
+            "Falta sesion Shopify. Usa SHOPIFY_ADMIN_USER_DATA_DIR con un perfil local valido "
+            "o SHOPIFY_ADMIN_STORAGE_STATE_B64."
+        )
     resolver = ShopifyProductResolver(store)
     rules: list[dict[str, Any]] = []
 
@@ -67,7 +76,7 @@ def scrape_easysell_store(
         browser = None
         context = None
         try:
-            if user_data_dir:
+            if has_user_data_dir:
                 context = launch_persistent_admin_context(playwright, user_data_dir, headless)
                 apply_storage_state_to_context(context, storage_state)
                 page = context.pages[0] if context.pages else context.new_page()
@@ -130,11 +139,7 @@ def scrape_easysell_section(
             "En el runner local abre/resuelve la ventana de Chrome, o renueva el perfil "
             "SHOPIFY_ADMIN_USER_DATA_DIR/SHOPIFY_ADMIN_STORAGE_STATE_B64."
         )
-    scroll_to_load(surface)
-
-    cards = extract_rule_cards(surface)
-    if limit_rules > 0:
-        cards = cards[:limit_rules]
+    cards = collect_rule_cards(surface, limit_rules=limit_rules)
     print(f"    {len(cards)} regla(s) detectadas")
     if not cards:
         write_easysell_debug(page, surface, store, section)
@@ -147,8 +152,9 @@ def scrape_easysell_section(
 
         try:
             surface = get_prepared_easysell_surface(page, section)
-            fresh_cards = extract_rule_cards(surface)
-            detail_index = fresh_cards[index - 1]["index"] if index - 1 < len(fresh_cards) else card_info["index"]
+            if not go_to_rule_page(surface, int(card_info.get("page_number") or 1)):
+                raise RuntimeError(f"No se pudo volver a la pagina {card_info.get('page_number')}")
+            detail_index = find_visible_card_index(surface, card_info)
             open_card_detail(surface, detail_index)
             time.sleep(2)
             detail = extract_detail(surface, section)
@@ -157,13 +163,22 @@ def scrape_easysell_section(
         finally:
             page.goto(url, wait_until="domcontentloaded")
             time.sleep(1)
-            scroll_to_load(get_prepared_easysell_surface(page, section))
 
         rule_name = detail.get("name") or source_name
-        source_rule_id = detail.get("source_rule_id") or stable_key(rule_name)
+        source_rule_id = (
+            stable_key(rule_name)
+            if section["rule_type"] == "one_tick"
+            else detail.get("source_rule_id") or stable_key(rule_name)
+        )
         active = bool(card_info.get("active"))
         primary_products = detail.get("primary_products") or []
         offered_products = detail.get("offered_products") or []
+        if section["rule_type"] == "one_tick":
+            primary_products, offered_products = infer_one_tick_products_from_rule_name(
+                rule_name,
+                primary_products,
+                offered_products,
+            )
 
         if not primary_products and section["rule_type"] == "quantity_offer":
             print(
@@ -294,7 +309,7 @@ def load_shopify_storage_state(required: bool = True) -> dict[str, Any] | None:
 
     raise RuntimeError(
         "Falta sesion Shopify. Genera una con generate_shopify_admin_session.py "
-        "y guarda SHOPIFY_ADMIN_STORAGE_STATE_B64 en GitHub Secrets."
+        "y usa SHOPIFY_ADMIN_USER_DATA_DIR o guarda SHOPIFY_ADMIN_STORAGE_STATE_B64 en GitHub Secrets."
     )
 
 
@@ -303,11 +318,11 @@ def assert_shopify_session(page, store: Store) -> None:
     body_text = safe_inner_text(page, "body").lower()
     if "accounts.shopify.com" in current_url or "/login" in current_url:
         raise RuntimeError(
-            f"Sesion Shopify invalida para {store.key}. Renueva SHOPIFY_ADMIN_STORAGE_STATE_B64."
+            f"Sesion Shopify invalida para {store.key}. Renueva SHOPIFY_ADMIN_USER_DATA_DIR o SHOPIFY_ADMIN_STORAGE_STATE_B64."
         )
     if "log in" in body_text and "shopify" in body_text:
         raise RuntimeError(
-            f"Sesion Shopify invalida para {store.key}. Renueva SHOPIFY_ADMIN_STORAGE_STATE_B64."
+            f"Sesion Shopify invalida para {store.key}. Renueva SHOPIFY_ADMIN_USER_DATA_DIR o SHOPIFY_ADMIN_STORAGE_STATE_B64."
         )
 
 
@@ -343,9 +358,293 @@ def is_cloudflare_challenge(page) -> bool:
 
 
 def scroll_to_load(page) -> None:
-    for _ in range(8):
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        time.sleep(0.7)
+    scroll_to_bottom(page)
+
+
+def get_scroll_state(page) -> dict[str, int | bool]:
+    try:
+        return page.evaluate(
+            """
+            () => {
+              function scrollHost() {
+                const doc = document.scrollingElement || document.documentElement || document.body;
+                let best = doc;
+                let bestRange = Math.max(0, (doc?.scrollHeight || 0) - (doc?.clientHeight || window.innerHeight || 0));
+                for (const el of Array.from(document.querySelectorAll('body, body *'))) {
+                  const range = Math.max(0, (el.scrollHeight || 0) - (el.clientHeight || 0));
+                  if (range <= bestRange || range < 80) continue;
+                  const rect = el.getBoundingClientRect();
+                  if (rect.width <= 0 || rect.height <= 0) continue;
+                  const style = window.getComputedStyle(el);
+                  const overflow = `${style.overflowY} ${style.overflow}`;
+                  if (!/(auto|scroll|overlay)/i.test(overflow) && range < window.innerHeight * 0.6) continue;
+                  best = el;
+                  bestRange = range;
+                }
+                return best || doc;
+              }
+              const host = scrollHost();
+              const doc = document.scrollingElement || document.documentElement || document.body;
+              const isDocument = host === doc || host === document.documentElement || host === document.body;
+              const y = isDocument ? Math.max(window.scrollY || 0, host?.scrollTop || 0) : (host.scrollTop || 0);
+              const viewportHeight = isDocument ? (window.innerHeight || host?.clientHeight || 0) : (host.clientHeight || 0);
+              const scrollHeight = host?.scrollHeight || 0;
+              const maxY = Math.max(0, scrollHeight - viewportHeight);
+              return {
+                y: Math.round(y),
+                max_y: Math.round(maxY),
+                viewport_height: Math.round(viewportHeight),
+                at_bottom: y >= maxY - 8,
+              };
+            }
+            """
+        )
+    except Exception:
+        return {"y": 0, "max_y": 0, "viewport_height": 800, "at_bottom": True}
+
+
+def scroll_to_position(page, y: int | float | str | None) -> None:
+    try:
+        target = max(0, int(float(y or 0)))
+    except (TypeError, ValueError):
+        target = 0
+    try:
+        page.evaluate(
+            """
+            (targetY) => {
+              function scrollHost() {
+                const doc = document.scrollingElement || document.documentElement || document.body;
+                let best = doc;
+                let bestRange = Math.max(0, (doc?.scrollHeight || 0) - (doc?.clientHeight || window.innerHeight || 0));
+                for (const el of Array.from(document.querySelectorAll('body, body *'))) {
+                  const range = Math.max(0, (el.scrollHeight || 0) - (el.clientHeight || 0));
+                  if (range <= bestRange || range < 80) continue;
+                  const rect = el.getBoundingClientRect();
+                  if (rect.width <= 0 || rect.height <= 0) continue;
+                  const style = window.getComputedStyle(el);
+                  const overflow = `${style.overflowY} ${style.overflow}`;
+                  if (!/(auto|scroll|overlay)/i.test(overflow) && range < window.innerHeight * 0.6) continue;
+                  best = el;
+                  bestRange = range;
+                }
+                return best || doc;
+              }
+              const host = scrollHost();
+              const doc = document.scrollingElement || document.documentElement || document.body;
+              if (host === doc || host === document.documentElement || host === document.body) {
+                window.scrollTo(0, targetY);
+                host.scrollTop = targetY;
+              } else {
+                host.scrollTop = targetY;
+              }
+            }
+            """,
+            target,
+        )
+    except Exception:
+        return
+
+
+def scroll_forward(page, state: dict[str, Any] | None = None) -> bool:
+    state = state or get_scroll_state(page)
+    y = int(state.get("y") or 0)
+    max_y = int(state.get("max_y") or 0)
+    viewport_height = max(600, int(state.get("viewport_height") or 800))
+    next_y = min(max_y, y + int(viewport_height * 0.72))
+    if next_y <= y + 4:
+        return False
+    scroll_to_position(page, next_y)
+    return True
+
+
+def scroll_to_bottom(page) -> None:
+    for _ in range(12):
+        state = get_scroll_state(page)
+        if bool(state.get("at_bottom")):
+            break
+        if not scroll_forward(page, state):
+            break
+        time.sleep(0.55)
+
+
+def collect_rule_cards(page, limit_rules: int = 0) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for page_number in range(1, MAX_RULE_PAGES + 1):
+        page_cards, reached_limit = scan_rule_cards_on_current_page(
+            page,
+            page_number=page_number,
+            seen=seen,
+            limit_rules=limit_rules,
+            collected_count=len(cards),
+        )
+        cards.extend(page_cards)
+        if reached_limit:
+            return cards
+
+        scroll_to_bottom(page)
+        if not page_cards or not click_next_rule_page(page):
+            break
+
+        time.sleep(1.2)
+
+    return cards
+
+
+def scan_rule_cards_on_current_page(
+    page,
+    page_number: int,
+    seen: set[str],
+    limit_rules: int = 0,
+    collected_count: int = 0,
+) -> tuple[list[dict[str, Any]], bool]:
+    cards: list[dict[str, Any]] = []
+    scroll_to_position(page, 0)
+    time.sleep(0.4)
+
+    for scan_index in range(80):
+        state = get_scroll_state(page)
+        page_cards = extract_rule_cards(page)
+        for page_position, card in enumerate(page_cards, start=1):
+            key = card_match_key(card)
+            if key in seen:
+                continue
+            seen.add(key)
+            enriched = dict(card)
+            enriched["page_number"] = page_number
+            enriched["page_position"] = page_position
+            enriched["scan_index"] = scan_index
+            enriched["scroll_y"] = int(state.get("y") or 0)
+            enriched["viewport_height"] = int(state.get("viewport_height") or 0)
+            cards.append(enriched)
+            if limit_rules > 0 and collected_count + len(cards) >= limit_rules:
+                return cards, True
+
+        if bool(state.get("at_bottom")):
+            break
+        if not scroll_forward(page, state):
+            break
+        time.sleep(0.45)
+
+    return cards, False
+
+
+def card_match_key(card: dict[str, Any]) -> str:
+    name = clean_line(str(card.get("name") or ""))
+    text = clean_line(str(card.get("text") or ""))
+    return stable_key(f"{name} {text[:240]}")
+
+
+def go_to_rule_page(page, target_page_number: int) -> bool:
+    target_page_number = max(1, int(target_page_number or 1))
+    for _ in range(1, target_page_number):
+        if not click_next_rule_page(page):
+            return False
+        time.sleep(1.0)
+    return True
+
+
+def find_card_index(
+    cards: list[dict[str, Any]],
+    source_card: dict[str, Any],
+    allow_position_fallback: bool = True,
+) -> int:
+    source_key = card_match_key(source_card)
+    for card in cards:
+        if card_match_key(card) == source_key:
+            return int(card["index"])
+
+    source_name = stable_key(str(source_card.get("name") or ""))
+    if source_name:
+        for card in cards:
+            if stable_key(str(card.get("name") or "")) == source_name:
+                return int(card["index"])
+
+    if not allow_position_fallback:
+        raise RuntimeError("No se encontro la regla visible por nombre o metricas.")
+
+    page_position = int(source_card.get("page_position") or 0)
+    if 1 <= page_position <= len(cards):
+        return int(cards[page_position - 1]["index"])
+
+    raise RuntimeError("No se encontro la regla en la pagina actual.")
+
+
+def find_visible_card_index(page, source_card: dict[str, Any]) -> int:
+    base_y = int(source_card.get("scroll_y") or 0)
+    viewport_height = max(600, int(source_card.get("viewport_height") or 800))
+    max_y = int(get_scroll_state(page).get("max_y") or 0)
+    candidates = [
+        base_y,
+        base_y - int(viewport_height * 0.35),
+        base_y + int(viewport_height * 0.35),
+        base_y - int(viewport_height * 0.70),
+        base_y + int(viewport_height * 0.70),
+        0,
+        max_y,
+    ]
+    tried: set[int] = set()
+    last_error: Exception | None = None
+
+    for candidate in candidates:
+        y = min(max_y, max(0, int(candidate)))
+        if y in tried:
+            continue
+        tried.add(y)
+        scroll_to_position(page, y)
+        time.sleep(0.45)
+        fresh_cards = extract_rule_cards(page)
+        if not fresh_cards:
+            continue
+        try:
+            return find_card_index(fresh_cards, source_card, allow_position_fallback=False)
+        except RuntimeError as error:
+            last_error = error
+
+    raise RuntimeError(str(last_error or "No se encontro la regla visible."))
+
+
+def click_next_rule_page(page) -> bool:
+    try:
+        return bool(page.evaluate(
+            """
+            () => {
+              const candidates = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+              const isVisible = (el) => {
+                const rect = el.getBoundingClientRect();
+                const style = window.getComputedStyle(el);
+                return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+              };
+              const isDisabled = (el) => (
+                el.disabled ||
+                el.getAttribute('aria-disabled') === 'true' ||
+                /disabled/.test(String(el.className || '').toLowerCase())
+              );
+              const label = (el) => [
+                el.innerText,
+                el.getAttribute('aria-label'),
+                el.getAttribute('title'),
+                el.getAttribute('data-testid'),
+                el.getAttribute('class')
+              ].filter(Boolean).join(' ').toLowerCase();
+              const reject = /(crear|create|editar|edit|eliminar|delete|borrar|trash|buscar|search|duplicar|copy|guardar|save|cancelar|seleccionar|agregar|add)/i;
+              const accept = /(next|siguiente|proxima|pagina siguiente|right|chevron-right|arrow-right|pagination-next|\\u203a|\\u00bb)/i;
+              const visible = candidates.filter((el) => isVisible(el) && !isDisabled(el));
+
+              for (const el of visible) {
+                const text = label(el);
+                if (accept.test(text) && !reject.test(text)) {
+                  el.click();
+                  return true;
+                }
+              }
+              return false;
+            }
+            """
+        ))
+    except Exception:
+        return False
 
 
 def get_prepared_easysell_surface(page, section: dict[str, str], wait_seconds: int = 45):
@@ -579,8 +878,8 @@ def extract_rule_cards(page) -> list[dict[str, Any]]:
     return page.evaluate(
         """
         () => {
-          const metricPattern = /(últimos 30|ultimos 30|tasa de conversi|aún no hay datos|aun no hay datos|impresiones|pedidos|ingresos adicionales|aplicado a \\d+ productos?|productos espec)/i;
-          const metricPatternGlobal = /(últimos 30|ultimos 30|tasa de conversi|aún no hay datos|aun no hay datos|impresiones|pedidos|ingresos adicionales|aplicado a \\d+ productos?|productos espec)/gi;
+          const metricPattern = /(últimos 30|ultimos 30|tasa de conversi|aún no hay datos|aun no hay datos|impresiones|pedidos|ingresos adicionales)/i;
+          const metricPatternGlobal = /(últimos 30|ultimos 30|tasa de conversi|aún no hay datos|aun no hay datos|impresiones|pedidos|ingresos adicionales)/gi;
           const candidates = [];
           const seen = new Set();
 
@@ -728,15 +1027,6 @@ def split_products_by_section(
     if rule_type == "quantity_offer":
         return extract_quantity_offer_primary_products(body_text, products), []
 
-    if rule_type == "quantity_offer":
-        quantity_block = block_between(
-            body_text,
-            ["Aplicado a", "Seleccionar productos", "Productos especificos", "Productos específicos"],
-            ["Ultimos 30", "Últimos 30", "Tasa de conversion", "Tasa de conversión", "ingresos adicionales"],
-        )
-        primary = [product for product in products if product_in_block(product, quantity_block)]
-        return (primary or products[:1]), []
-
     primary_block = block_between(
         body_text,
         ["Si un cliente compr", "Seleccionar productos", "Productos especificos", "Productos específicos"],
@@ -758,6 +1048,47 @@ def split_products_by_section(
     primary_ids = {product.get("product_id") for product in primary}
     offered = [product for product in offered if product.get("product_id") not in primary_ids]
     return primary, offered
+
+
+def infer_one_tick_products_from_rule_name(
+    rule_name: str,
+    primary_products: list[dict[str, Any]],
+    offered_products: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    offer_name, primary_name = split_one_tick_rule_name(rule_name)
+    if not primary_name:
+        return primary_products, offered_products
+
+    all_products = dedupe_products(list(primary_products or []) + list(offered_products or []))
+    inferred_primary = best_product_by_name(primary_name, all_products)
+    inferred_offer = best_product_by_name(offer_name, all_products) if offer_name else None
+
+    primary = [inferred_primary or {"product_name": primary_name, "product_id": ""}]
+    offered = list(offered_products or [])
+    if offer_name:
+        offered = [inferred_offer or {"product_name": offer_name, "product_id": ""}]
+    return primary, offered
+
+
+def split_one_tick_rule_name(rule_name: str) -> tuple[str, str]:
+    parts = re.split(r"\s+en\s+", str(rule_name or "").strip(), maxsplit=1, flags=re.I)
+    if len(parts) != 2:
+        return "", ""
+    return parts[0].strip(), parts[1].strip()
+
+
+def best_product_by_name(
+    query: str,
+    products: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    best_product = None
+    best_score = 0.0
+    for product in products:
+        score = product_name_score(query, str(product.get("product_name") or ""))
+        if score > best_score:
+            best_product = product
+            best_score = score
+    return best_product if best_product and best_score >= 0.45 else None
 
 
 def extract_quantity_offer_primary_products(
@@ -798,12 +1129,12 @@ def extract_products_from_selected_quantity_block(text: str) -> list[dict[str, A
         if not line:
             continue
         normalized = normalize_text(line)
-        if "crear ofertas para estos productos" in normalized or normalized == "cambiar producto":
+        if "crear ofertas para estos productos" in normalized or "cambiar producto" in normalized:
             capturing = True
             continue
         if capturing and any(
             marker in normalized
-            for marker in ["ofertas", "diseno", "diseño", "plantilla", "vista previa"]
+            for marker in ["ofertas", "diseno", "plantilla", "vista previa", "mostrar ofertas"]
         ):
             break
         if capturing:
@@ -977,11 +1308,27 @@ class ShopifyProductResolver:
     def _list_products(self) -> list[dict[str, Any]]:
         if self.products_cache is not None:
             return self.products_cache
-        data = self._shopify_get("products.json", {
-            "limit": "250",
-            "fields": "id,title,image,variants",
-        })
-        self.products_cache = data.get("products") if data else []
+        products: list[dict[str, Any]] = []
+        since_id = ""
+        for _ in range(100):
+            params = {
+                "limit": "250",
+                "fields": "id,title,image,variants",
+            }
+            if since_id:
+                params["since_id"] = since_id
+            data = self._shopify_get("products.json", params)
+            page_products = data.get("products") if data else []
+            if not page_products:
+                break
+            products.extend(page_products)
+            if len(page_products) < 250:
+                break
+            next_since_id = str(max(int(product.get("id") or 0) for product in page_products))
+            if not next_since_id or next_since_id == since_id:
+                break
+            since_id = next_since_id
+        self.products_cache = products
         return self.products_cache
 
     def _resolve_product_id(self, product_id: str) -> ResolvedProduct | None:
@@ -1046,11 +1393,15 @@ def normalize_shopify_domain(value: str) -> str:
 
 def normalize_product_lookup(value: str) -> str:
     text = normalize_text(value)
+    text = re.sub(r"\bd3\s*\+?\s*k2\b", "d3 k2", text)
+    text = text.replace("d3k2", "d3 k2")
     replacements = {
         "magnesio": "magnesium",
         "magnesium": "magnesium",
         "capsula": "capsulas",
         "capsulas": "capsulas",
+        "champu": "shampoo",
+        "shampoo": "shampoo",
     }
     for source, target in replacements.items():
         text = re.sub(rf"\b{source}\b", target, text)
@@ -1064,7 +1415,10 @@ def product_name_score(query: str, title: str) -> float:
         return 0.0
     if query_norm == title_norm:
         return 1.0
-    if query_norm in title_norm or title_norm in query_norm:
+    if (
+        (len(query_norm) >= 4 and query_norm in title_norm)
+        or (len(title_norm) >= 4 and title_norm in query_norm)
+    ):
         return 0.9
 
     stop_words = {
@@ -1085,11 +1439,11 @@ def product_name_score(query: str, title: str) -> float:
     }
     query_tokens = {
         token for token in re.findall(r"[a-z0-9]+", query_norm)
-        if len(token) > 2 and token not in stop_words
+        if (len(token) > 2 or any(char.isdigit() for char in token)) and token not in stop_words
     }
     title_tokens = {
         token for token in re.findall(r"[a-z0-9]+", title_norm)
-        if len(token) > 2 and token not in stop_words
+        if (len(token) > 2 or any(char.isdigit() for char in token)) and token not in stop_words
     }
     if not query_tokens or not title_tokens:
         return 0.0
@@ -1209,7 +1563,10 @@ def extract_price_near(lines: list[str], index: int) -> float | None:
     match = re.search(rf"({CURRENCY_PATTERN})\s*([\d.,]+)", window, re.I)
     if not match:
         return None
-    return parse_decimal(match.group(2))
+    amount = parse_decimal(match.group(2))
+    if abs(amount) >= 999_999_999_999:
+        return None
+    return amount
 
 
 def extract_currency_near(lines: list[str], index: int) -> str:
