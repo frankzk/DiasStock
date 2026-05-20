@@ -181,8 +181,98 @@ def sanitize_money(value: Any, field: str, context: str, default: float | None =
     return float(amount)
 
 
+def dedupe_easysell_rules(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: dict[tuple[str, str], dict[str, Any]] = {}
+    duplicates = 0
+    for rule in rules:
+        key = (
+            str(rule.get("rule_type") or ""),
+            str(rule.get("external_id") or ""),
+        )
+        if key not in deduped:
+            deduped[key] = {**rule, "offered_products": list(rule.get("offered_products") or [])}
+            continue
+        duplicates += 1
+        deduped[key] = merge_easysell_rule(deduped[key], rule)
+
+    if duplicates:
+        print(f"Advertencia: {duplicates} regla(s) EasySell duplicadas se consolidaron antes de guardar.")
+    return list(deduped.values())
+
+
+def merge_easysell_rule(base: dict[str, Any], duplicate: dict[str, Any]) -> dict[str, Any]:
+    merged = {**base}
+    merged["active"] = bool(base.get("active") or duplicate.get("active"))
+    for field in [
+        "source_rule_id",
+        "rule_name",
+        "primary_product_id",
+        "primary_product_name",
+        "primary_sku",
+        "currency",
+        "raw_metrics",
+        "detail_url",
+    ]:
+        if not merged.get(field) and duplicate.get(field):
+            merged[field] = duplicate.get(field)
+
+    for field in ["impressions", "orders_count", "conversion_rate", "additional_revenue"]:
+        if not merged.get(field) and duplicate.get(field):
+            merged[field] = duplicate.get(field)
+
+    merged["offered_products"] = dedupe_payloads(
+        list(base.get("offered_products") or []) + list(duplicate.get("offered_products") or []),
+        lambda row: (
+            int(row.get("position") or 0),
+            row.get("product_id") or "",
+            row.get("sku") or "",
+            row.get("product_name") or "",
+        ),
+        label="producto ofrecido EasySell",
+        quiet=True,
+    )
+    return merged
+
+
+def dedupe_payloads(
+    rows: list[dict[str, Any]],
+    key_fn,
+    label: str,
+    quiet: bool = False,
+) -> list[dict[str, Any]]:
+    deduped: dict[Any, dict[str, Any]] = {}
+    duplicates = 0
+    for row in rows:
+        key = key_fn(row)
+        if key in deduped:
+            duplicates += 1
+            deduped[key] = prefer_payload(deduped[key], row)
+        else:
+            deduped[key] = row
+    if duplicates and not quiet:
+        print(f"Advertencia: {duplicates} {label}(s) duplicado(s) se consolidaron antes de guardar.")
+    return list(deduped.values())
+
+
+def prefer_payload(current: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
+    current_score = payload_completeness_score(current)
+    candidate_score = payload_completeness_score(candidate)
+    if candidate_score > current_score:
+        return candidate
+    return current
+
+
+def payload_completeness_score(row: dict[str, Any]) -> int:
+    score = 0
+    for value in row.values():
+        if value not in (None, "", [], {}):
+            score += 1
+    return score
+
+
 def save_store_result(client: "SupabaseClient", result: dict[str, Any]) -> None:
-    rules = result["rules"]
+    rules = dedupe_easysell_rules(result["rules"])
+    result = {**result, "rules": rules}
     running_payload = build_run_payload(result, rules, status="running")
     client.upsert(
         "easysell_import_runs",
@@ -276,6 +366,11 @@ def upsert_easysell_rules(
             "detail_url": rule.get("detail_url", ""),
         })
 
+    rule_payloads = dedupe_payloads(
+        rule_payloads,
+        lambda row: (row["run_date"], row["store_key"], row["rule_type"], row["external_id"]),
+        label="regla EasySell",
+    )
     saved_rules = []
     for chunk in chunks(rule_payloads, SUPABASE_PAGE_SIZE):
         saved_rules.extend(client.upsert(
@@ -320,6 +415,17 @@ def insert_easysell_rule_products(
                 "currency": product.get("currency", ""),
             })
 
+    product_payloads = dedupe_payloads(
+        product_payloads,
+        lambda row: (
+            row["rule_id"],
+            row["product_role"],
+            row["position"],
+            row.get("product_id") or "",
+            row.get("product_name") or "",
+        ),
+        label="producto EasySell",
+    )
     for chunk in chunks(product_payloads, SUPABASE_PAGE_SIZE):
         client.insert("easysell_rule_products", chunk, returning=False)
 
