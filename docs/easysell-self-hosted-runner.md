@@ -32,6 +32,29 @@ En la carpeta del runner, ejecuta PowerShell como administrador:
 
 Asi el runner queda prendido aunque cierres la ventana. La PC debe estar encendida y con internet cuando corra el cron.
 
+Si el servicio queda instalado como `NT AUTHORITY\Servicio de red` y el runner vive dentro de `C:\Users\Pc`, puede fallar antes de tomar trabajos porque esa cuenta no puede leer `C:\Users\Pc`. El log muestra algo como:
+
+```text
+Access to the path 'C:\Users\Pc' is denied.
+```
+
+En ese caso hay dos rutas validas:
+
+- Reinstalar/iniciar el servicio con una cuenta de Windows que pueda leer `C:\Users\Pc\actions-runner` y `C:\Users\Pc\.diasstock-shopify-admin-profile`.
+- Usar el watchdog local `ensure_easysell_runner.ps1`, que levanta `run.cmd` como el usuario `Pc` solo cuando el listener no esta corriendo.
+
+Watchdog recomendado en esta PC:
+
+```powershell
+schtasks /Create /TN "DiasStock EasySell Runner Watchdog" /SC MINUTE /MO 30 /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Users\Pc\DiasStock\ensure_easysell_runner.ps1" /F
+```
+
+Tambien se puede ejecutar manualmente:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Users\Pc\DiasStock\ensure_easysell_runner.ps1
+```
+
 ## 3. Secrets necesarios
 
 En `Settings > Secrets and variables > Actions`, confirma estos Repository Secrets:

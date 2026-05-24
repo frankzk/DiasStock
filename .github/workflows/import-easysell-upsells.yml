@@ -18,7 +18,8 @@ on:
 
 concurrency:
   group: import-easysell-upsells
-  cancel-in-progress: false
+  # Si el runner local estuvo apagado, descarta runs viejos en cola y conserva el mas reciente.
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -101,6 +102,71 @@ jobs:
           "PYTHONPATH=$repoRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           & $pythonExe --version
           & $pythonExe -m pip --version
+
+      - name: Load local env fallback
+        run: |
+          $localEnvPath = "C:\Users\Pc\DiasStock\.env"
+          if (-not (Test-Path -LiteralPath $localEnvPath)) {
+            Write-Host "Sin .env local de fallback."
+            exit 0
+          }
+
+          $allowedKeys = @(
+            "SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "SHOPIFY_ADMIN_STORAGE_STATE_B64",
+            "STORE_CR_NAME",
+            "STORE_CR_TYPE",
+            "STORE_CR_SHOPIFY_ADMIN_SLUG",
+            "STORE_CR_SHOPIFY_URL",
+            "STORE_CR_SHOPIFY_TOKEN",
+            "STORE_HN_NAME",
+            "STORE_HN_TYPE",
+            "STORE_HN_SHOPIFY_ADMIN_SLUG",
+            "STORE_HN_SHOPIFY_URL",
+            "STORE_HN_SHOPIFY_TOKEN",
+            "STORE_KA_NAME",
+            "STORE_KA_TYPE",
+            "STORE_KA_IMAGE_PATH",
+            "STORE_KA_SHOPIFY_ADMIN_SLUG",
+            "STORE_KA_SHOPIFY_URL",
+            "STORE_KA_SHOPIFY_TOKEN"
+          )
+          $loadedKeys = @()
+          foreach ($rawLine in Get-Content -LiteralPath $localEnvPath) {
+            $line = $rawLine.Trim()
+            if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
+              continue
+            }
+
+            $parts = $line.Split("=", 2)
+            if ($parts.Count -ne 2) {
+              continue
+            }
+
+            $key = $parts[0].Trim()
+            $value = $parts[1].Trim()
+            if ($allowedKeys -notcontains $key) {
+              continue
+            }
+
+            if ([string]::IsNullOrWhiteSpace($key) -or -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($key))) {
+              continue
+            }
+
+            if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+              $value = $value.Substring(1, $value.Length - 2)
+            }
+
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            $loadedKeys += $key
+          }
+
+          if ($loadedKeys.Count) {
+            Write-Host "Variables cargadas desde .env local: $($loadedKeys -join ', ')"
+          } else {
+            Write-Host "No se cargaron variables desde .env local."
+          }
 
       - name: Validate global secrets
         run: |
