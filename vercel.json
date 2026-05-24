@@ -6,6 +6,10 @@
     {
       "path": "/api/import-shopify-sales",
       "schedule": "30 16 * * *"
+    },
+    {
+      "path": "/api/import-ads",
+      "schedule": "50 16 * * *"
     }
   ]
 }

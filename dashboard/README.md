@@ -126,6 +126,8 @@ node import_ads_to_supabase.js
 
 El importador lee solo las fuentes activas con tienda asignada, normaliza `FECHA`, `Campaign Name` y `Spend`, aplica los mapeos campaña -> SKU y sube `ad_campaign_daily`. El dashboard calcula `Gasto Ads 7d` y `CPA 7d` contra las ventas visibles.
 
+En Vercel, `vercel.json` agenda `/api/import-ads` todos los dias a las `11:50am America/Lima`. El endpoint usa `SUPABASE_SERVICE_ROLE_KEY` para escribir `ad_campaign_daily`; si defines `CRON_SECRET` o `ADS_IMPORT_SECRET`, las llamadas manuales deben enviar `Authorization: Bearer <secret>`.
+
 ### Sheets privados
 
 Si el Google Sheet no puede ser publico, crea una Google Service Account, comparte el Sheet con el email de esa service account y agrega estas variables en Vercel y/o `.env` local:
